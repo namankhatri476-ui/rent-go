@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Printer, Laptop, Sofa, CheckCircle } from "lucide-react";
+import { ArrowRight, Printer, Laptop, Sofa, CheckCircle, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
@@ -7,8 +7,11 @@ import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import TrustBadges from "@/components/TrustBadges";
 import { printerProducts } from "@/data/products";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const { user, isVendor, isAdmin } = useAuth();
+  
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -19,32 +22,52 @@ const Index = () => {
           <div className="max-w-3xl mx-auto text-center space-y-6">
             <Badge variant="success" className="mb-4">
               <CheckCircle className="w-3 h-3 mr-1" />
-              Trusted by 50,000+ customers
+              Multi-Vendor Rental Marketplace
             </Badge>
             
             <h1 className="section-header text-4xl md:text-5xl lg:text-6xl">
               Rent Quality Products,{" "}
-              <span className="text-gradient-primary">Pay Monthly</span>
+              <span className="text-gradient-primary">From Verified Vendors</span>
             </h1>
             
             <p className="section-subheader mx-auto text-lg md:text-xl">
-              Get premium printers and electronics on rent with flexible plans. 
-              Free delivery, easy returns, and 100% refundable deposits.
+              India's trusted marketplace connecting you with verified vendors offering printers, electronics, furniture, and more on flexible rental plans.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/products">
                 <Button variant="hero" size="xl" className="gap-2 w-full sm:w-auto">
-                  Browse Printers
+                  Browse Products
                   <ArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
-              <Link to="/how-it-works">
-                <Button variant="hero-outline" size="xl" className="w-full sm:w-auto">
-                  How It Works
+              <Link to={user ? (isVendor ? "/vendor" : "/vendor/register") : "/auth"}>
+                <Button variant="hero-outline" size="xl" className="w-full sm:w-auto gap-2">
+                  <Building2 className="w-5 h-5" />
+                  Become a Vendor
                 </Button>
               </Link>
             </div>
+            
+            {/* Quick Links for logged in users */}
+            {user && (isVendor || isAdmin) && (
+              <div className="flex justify-center gap-4 pt-4">
+                {isAdmin && (
+                  <Link to="/admin">
+                    <Badge variant="outline" className="cursor-pointer hover:bg-primary/10">
+                      Go to Admin Dashboard →
+                    </Badge>
+                  </Link>
+                )}
+                {isVendor && (
+                  <Link to="/vendor">
+                    <Badge variant="outline" className="cursor-pointer hover:bg-primary/10">
+                      Go to Vendor Dashboard →
+                    </Badge>
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -162,7 +185,7 @@ const Index = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-5xl mx-auto">
             {[
-              { step: "1", title: "Choose Product", desc: "Browse & select your preferred product" },
+              { step: "1", title: "Choose Product", desc: "Browse & select from verified vendors" },
               { step: "2", title: "Select Plan", desc: "Pick 3, 6, or 12 month rental duration" },
               { step: "3", title: "Pay Deposit", desc: "One-time deposit + delivery charges only" },
               { step: "4", title: "Get Delivered", desc: "Free doorstep delivery & installation" }
@@ -191,18 +214,37 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-primary">
+      {/* Vendor CTA Section */}
+      <section className="py-16 bg-gradient-to-r from-primary to-primary/80">
         <div className="container mx-auto px-4 text-center">
+          <Building2 className="w-16 h-16 text-primary-foreground mx-auto mb-6" />
           <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-            Ready to Start Renting?
+            Start Selling on RentEase
           </h2>
           <p className="text-primary-foreground/80 max-w-xl mx-auto mb-8">
+            Join our growing community of verified vendors. List your products, reach more customers, and grow your rental business.
+          </p>
+          <Link to={user ? (isVendor ? "/vendor" : "/vendor/register") : "/auth"}>
+            <Button variant="accent" size="xl" className="gap-2">
+              Register as Vendor
+              <ArrowRight className="w-5 h-5" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Customer CTA Section */}
+      <section className="py-16">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+            Ready to Start Renting?
+          </h2>
+          <p className="text-muted-foreground max-w-xl mx-auto mb-8">
             Join thousands of happy customers. No long-term commitments, 
             flexible plans, and hassle-free experience.
           </p>
           <Link to="/products">
-            <Button variant="accent" size="xl" className="gap-2">
+            <Button variant="hero" size="xl" className="gap-2">
               Get Started Today
               <ArrowRight className="w-5 h-5" />
             </Button>

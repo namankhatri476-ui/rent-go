@@ -1,12 +1,21 @@
 import { Link } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, Printer, Search } from "lucide-react";
+import { ShoppingCart, User, Menu, X, Printer, Search, Building2, Shield, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Header = () => {
   const { itemCount } = useCart();
+  const { user, profile, isVendor, isAdmin, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -27,7 +36,7 @@ const Header = () => {
               Home
             </Link>
             <Link to="/products" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Printers
+              Products
             </Link>
             <Link to="/how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               How It Works
@@ -49,12 +58,58 @@ const Header = () => {
                 </Badge>
               )}
             </Link>
-            <Link to="/auth">
-              <Button variant="outline" size="sm" className="gap-2">
-                <User className="w-4 h-4" />
-                Login
-              </Button>
-            </Link>
+            
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <User className="w-4 h-4" />
+                    {profile?.full_name?.split(' ')[0] || 'Account'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
+                        <Shield className="w-4 h-4" />
+                        Admin Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {isVendor && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/vendor" className="flex items-center gap-2 cursor-pointer">
+                        <Building2 className="w-4 h-4" />
+                        Vendor Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {!isVendor && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/vendor/register" className="flex items-center gap-2 cursor-pointer">
+                        <Building2 className="w-4 h-4" />
+                        Become a Vendor
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={signOut}
+                    className="flex items-center gap-2 cursor-pointer text-destructive"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <User className="w-4 h-4" />
+                  Login
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -95,7 +150,7 @@ const Header = () => {
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Printers
+                Products
               </Link>
               <Link 
                 to="/how-it-works" 
@@ -104,12 +159,57 @@ const Header = () => {
               >
                 How It Works
               </Link>
-              <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="outline" size="sm" className="gap-2 w-full">
-                  <User className="w-4 h-4" />
-                  Login
-                </Button>
-              </Link>
+              
+              {user ? (
+                <>
+                  {isAdmin && (
+                    <Link 
+                      to="/admin" 
+                      className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Admin Dashboard
+                    </Link>
+                  )}
+                  {isVendor && (
+                    <Link 
+                      to="/vendor" 
+                      className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Vendor Dashboard
+                    </Link>
+                  )}
+                  {!isVendor && (
+                    <Link 
+                      to="/vendor/register" 
+                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Become a Vendor
+                    </Link>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 w-full"
+                    onClick={() => {
+                      signOut();
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="outline" size="sm" className="gap-2 w-full">
+                    <User className="w-4 h-4" />
+                    Login
+                  </Button>
+                </Link>
+              )}
             </nav>
           </div>
         )}
