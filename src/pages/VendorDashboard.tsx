@@ -1,34 +1,27 @@
-import { Building2, Package, ShoppingCart, TrendingUp, Plus, Clock, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useVendorStats, useVendorOrders } from '@/hooks/useVendorData';
+import VendorLayout from '@/components/vendor/VendorLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Building2, Package, ShoppingCart, TrendingUp, Plus, Clock, CheckCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
 
 const VendorDashboard = () => {
-  const { profile, vendorProfile, signOut } = useAuth();
+  const { vendorProfile } = useAuth();
+  const { data: stats, isLoading: statsLoading } = useVendorStats();
+  const { data: orders } = useVendorOrders();
+
+  const recentOrders = orders?.slice(0, 5) || [];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="text-2xl font-bold text-primary">RentEase</Link>
-            <span className="text-sm text-muted-foreground px-2 py-1 bg-muted rounded">Vendor Portal</span>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              Welcome, {profile?.full_name || vendorProfile?.business_name}
-            </span>
-            <Button variant="ghost" size="sm" onClick={signOut}>
-              Sign Out
-            </Button>
-          </div>
+    <VendorLayout>
+      <div className="p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Vendor Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back, {vendorProfile?.business_name}</p>
         </div>
-      </header>
 
-      <div className="container mx-auto px-4 py-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
@@ -37,8 +30,10 @@ const VendorDashboard = () => {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">0 pending approval</p>
+              <div className="text-2xl font-bold">{stats?.products || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats?.pendingProducts || 0} pending approval
+              </p>
             </CardContent>
           </Card>
 
@@ -48,18 +43,20 @@ const VendorDashboard = () => {
               <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">0 new today</p>
+              <div className="text-2xl font-bold">{stats?.activeOrders || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats?.orders || 0} total orders
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">This Month's Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹0</div>
+              <div className="text-2xl font-bold">₹{stats?.totalEarnings?.toLocaleString() || 0}</div>
               <p className="text-xs text-muted-foreground">After 30% commission</p>
             </CardContent>
           </Card>
@@ -70,13 +67,15 @@ const VendorDashboard = () => {
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹0</div>
-              <p className="text-xs text-muted-foreground">Next payout: --</p>
+              <div className="text-2xl font-bold text-amber-600">
+                ₹{stats?.pendingPayouts?.toLocaleString() || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">Next payout: Weekly</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions & Status */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <Card className="lg:col-span-2">
             <CardHeader>
@@ -130,7 +129,9 @@ const VendorDashboard = () => {
                 <Clock className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="font-medium">Commission Rate</p>
-                  <p className="text-sm text-muted-foreground">30% platform fee</p>
+                  <p className="text-sm text-muted-foreground">
+                    {vendorProfile?.commission_rate || 30}% platform fee
+                  </p>
                 </div>
               </div>
               
@@ -150,15 +151,43 @@ const VendorDashboard = () => {
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No orders yet</p>
-              <p className="text-sm">Orders will appear here once customers start renting your products.</p>
-            </div>
+            {recentOrders.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No orders yet</p>
+                <p className="text-sm">Orders will appear here once customers start renting your products.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentOrders.map((order) => (
+                  <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-4">
+                      {order.products?.images?.[0] && (
+                        <img 
+                          src={order.products.images[0]} 
+                          alt=""
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                      )}
+                      <div>
+                        <p className="font-medium">{order.order_number}</p>
+                        <p className="text-sm text-muted-foreground">{order.products?.name}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-green-600">₹{order.vendor_payout?.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(order.created_at), 'MMM dd, yyyy')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
-    </div>
+    </VendorLayout>
   );
 };
 
