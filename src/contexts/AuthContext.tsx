@@ -18,6 +18,14 @@ interface VendorProfile {
   user_id: string;
   business_name: string;
   business_email: string;
+  business_phone: string | null;
+  business_address: string | null;
+  gst_number: string | null;
+  pan_number: string | null;
+  bank_account_name: string | null;
+  bank_account_number: string | null;
+  bank_ifsc: string | null;
+  commission_rate: number;
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
 }
 
@@ -92,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Fetch vendor profile if exists
       const { data: vendorData } = await supabase
         .from('vendors')
-        .select('id, user_id, business_name, business_email, status')
+        .select('*')
         .eq('user_id', userId)
         .maybeSingle();
       

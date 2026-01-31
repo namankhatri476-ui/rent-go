@@ -1,0 +1,428 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import AdminLayout from '@/components/admin/AdminLayout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { toast } from 'sonner';
+import { Search, Eye, ShoppingCart } from 'lucide-react';
+import { format } from 'date-fns';
+
+type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+
+const AdminOrders = () => {
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+
+  const { data: orders, isLoading } = useQuery({
+    queryKey: ['admin-orders'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          products (name, images),
+          vendors (business_name),
+          rental_plans (label, duration_months, monthly_rent)
+        `)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: string; status: OrderStatus }) => {
+      const updateData: any = { status };
+      
+      // Add timestamps based on status
+      if (status === 'confirmed') updateData.confirmed_at = new Date().toISOString();
+      if (status === 'shipped') updateData.shipped_at = new Date().toISOString();
+      if (status === 'delivered') updateData.delivered_at = new Date().toISOString();
+      if (status === 'cancelled') updateData.cancelled_at = new Date().toISOString();
+      
+      const { error } = await supabase
+        .from('orders')
+        .update(updateData)
+        .eq('id', orderId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      toast.success('Order status updated');
+    },
+    onError: (error) => {
+      toast.error('Failed to update order status');
+      console.error(error);
+    },
+  });
+
+  const filteredOrders = orders?.filter((order) => {
+    const matchesSearch = 
+      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.products?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.vendors?.business_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const getStatusBadge = (status: OrderStatus) => {
+    const variants: Record<OrderStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      pending: 'secondary',
+      confirmed: 'default',
+      processing: 'default',
+      shipped: 'default',
+      delivered: 'default',
+      cancelled: 'destructive',
+      returned: 'outline',
+    };
+    const colors: Record<OrderStatus, string> = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      confirmed: 'bg-blue-100 text-blue-800',
+      processing: 'bg-purple-100 text-purple-800',
+      shipped: 'bg-indigo-100 text-indigo-800',
+      delivered: 'bg-green-100 text-green-800',
+      cancelled: 'bg-red-100 text-red-800',
+      returned: 'bg-gray-100 text-gray-800',
+    };
+    return <span className={`px-2 py-1 rounded-full text-xs ${colors[status]}`}>{status}</span>;
+  };
+
+  return (
+    <AdminLayout>
+      <div className="p-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">Order Management</h1>
+            <p className="text-muted-foreground">View and manage all orders</p>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by order number, product, or vendor..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="shipped">Shipped</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="returned">Returned</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Orders Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Orders ({filteredOrders?.length || 0})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="text-center py-8">Loading orders...</div>
+            ) : filteredOrders?.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No orders found</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order #</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Vendor</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Payable Now</TableHead>
+                    <TableHead>Monthly</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders?.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-mono text-sm">
+                        {order.order_number}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {order.products?.images?.[0] && (
+                            <img 
+                              src={order.products.images[0]} 
+                              alt=""
+                              className="w-8 h-8 object-cover rounded"
+                            />
+                          )}
+                          <span className="truncate max-w-[150px]">{order.products?.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{order.vendors?.business_name}</TableCell>
+                      <TableCell>{order.rental_plans?.label}</TableCell>
+                      <TableCell>₹{order.payable_now_total?.toLocaleString()}</TableCell>
+                      <TableCell>₹{order.monthly_total?.toLocaleString()}/mo</TableCell>
+                      <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>
+                        {format(new Date(order.created_at), 'MMM dd, yyyy')}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setSelectedOrder(order)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Order Details Dialog */}
+        <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Order Details - {selectedOrder?.order_number}</DialogTitle>
+            </DialogHeader>
+            {selectedOrder && (
+              <div className="space-y-6 py-4">
+                {/* Status Update */}
+                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Current Status</p>
+                    <p className="font-medium">{getStatusBadge(selectedOrder.status)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select 
+                      value={selectedOrder.status}
+                      onValueChange={(status) => {
+                        updateStatusMutation.mutate({ 
+                          orderId: selectedOrder.id, 
+                          status: status as OrderStatus 
+                        });
+                        setSelectedOrder({ ...selectedOrder, status });
+                      }}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="processing">Processing</SelectItem>
+                        <SelectItem value="shipped">Shipped</SelectItem>
+                        <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="returned">Returned</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Product & Vendor Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Product</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-3">
+                        {selectedOrder.products?.images?.[0] && (
+                          <img 
+                            src={selectedOrder.products.images[0]} 
+                            alt=""
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                        )}
+                        <div>
+                          <p className="font-medium">{selectedOrder.products?.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {selectedOrder.rental_plans?.label} ({selectedOrder.rental_plans?.duration_months} months)
+                          </p>
+                          <p className="text-sm">Qty: {selectedOrder.quantity}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Vendor</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="font-medium">{selectedOrder.vendors?.business_name}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Payment Breakdown */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Payment Breakdown</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Payable Now (One-time)</p>
+                        <div className="space-y-1 mt-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Security Deposit</span>
+                            <span>₹{selectedOrder.security_deposit?.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Delivery Fee</span>
+                            <span>₹{selectedOrder.delivery_fee?.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Installation Fee</span>
+                            <span>₹{selectedOrder.installation_fee?.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between font-medium pt-2 border-t">
+                            <span>Total Payable Now</span>
+                            <span>₹{selectedOrder.payable_now_total?.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Monthly Payable (Subscription)</p>
+                        <div className="space-y-1 mt-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Monthly Rent</span>
+                            <span>₹{selectedOrder.monthly_rent?.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>GST (18%)</span>
+                            <span>₹{selectedOrder.monthly_gst?.toLocaleString()}</span>
+                          </div>
+                          {selectedOrder.protection_plan_fee > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span>Protection Plan</span>
+                              <span>₹{selectedOrder.protection_plan_fee?.toLocaleString()}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between font-medium pt-2 border-t">
+                            <span>Monthly Total</span>
+                            <span>₹{selectedOrder.monthly_total?.toLocaleString()}/mo</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Commission Info */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Commission & Payout</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Platform Commission</span>
+                        <span className="font-medium text-primary">₹{selectedOrder.platform_commission?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Vendor Payout</span>
+                        <span className="font-medium">₹{selectedOrder.vendor_payout?.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Timeline */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Order Timeline</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Created</span>
+                        <span>{format(new Date(selectedOrder.created_at), 'PPp')}</span>
+                      </div>
+                      {selectedOrder.confirmed_at && (
+                        <div className="flex justify-between">
+                          <span>Confirmed</span>
+                          <span>{format(new Date(selectedOrder.confirmed_at), 'PPp')}</span>
+                        </div>
+                      )}
+                      {selectedOrder.shipped_at && (
+                        <div className="flex justify-between">
+                          <span>Shipped</span>
+                          <span>{format(new Date(selectedOrder.shipped_at), 'PPp')}</span>
+                        </div>
+                      )}
+                      {selectedOrder.delivered_at && (
+                        <div className="flex justify-between">
+                          <span>Delivered</span>
+                          <span>{format(new Date(selectedOrder.delivered_at), 'PPp')}</span>
+                        </div>
+                      )}
+                      {selectedOrder.cancelled_at && (
+                        <div className="flex justify-between text-destructive">
+                          <span>Cancelled</span>
+                          <span>{format(new Date(selectedOrder.cancelled_at), 'PPp')}</span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    </AdminLayout>
+  );
+};
+
+export default AdminOrders;

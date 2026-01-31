@@ -1,34 +1,24 @@
-import { Users, Package, ShoppingCart, TrendingUp, Building2, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAdminStats, usePendingVendors, usePendingProducts } from '@/hooks/useAdminStats';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Building2, Package, ShoppingCart, TrendingUp, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { format } from 'date-fns';
 
 const AdminDashboard = () => {
-  const { profile, signOut } = useAuth();
+  const { data: stats, isLoading: statsLoading } = useAdminStats();
+  const { data: pendingVendors } = usePendingVendors();
+  const { data: pendingProducts } = usePendingProducts();
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="text-2xl font-bold text-primary">RentEase</Link>
-            <span className="text-sm text-white px-2 py-1 bg-destructive rounded">Admin</span>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              {profile?.full_name || profile?.email}
-            </span>
-            <Button variant="ghost" size="sm" onClick={signOut}>
-              Sign Out
-            </Button>
-          </div>
+    <AdminLayout>
+      <div className="p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Overview of your rental marketplace</p>
         </div>
-      </header>
 
-      <div className="container mx-auto px-4 py-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
@@ -37,8 +27,10 @@ const AdminDashboard = () => {
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">0 pending approval</p>
+              <div className="text-2xl font-bold">{stats?.vendors || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats?.pendingVendors || 0} pending approval
+              </p>
             </CardContent>
           </Card>
 
@@ -48,8 +40,10 @@ const AdminDashboard = () => {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">0 pending approval</p>
+              <div className="text-2xl font-bold">{stats?.products || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats?.pendingProducts || 0} pending approval
+              </p>
             </CardContent>
           </Card>
 
@@ -59,8 +53,10 @@ const AdminDashboard = () => {
               <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">₹0 GMV this month</p>
+              <div className="text-2xl font-bold">{stats?.orders || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                ₹{stats?.totalRevenue?.toLocaleString() || 0} GMV
+              </p>
             </CardContent>
           </Card>
 
@@ -70,98 +66,39 @@ const AdminDashboard = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹0</div>
+              <div className="text-2xl font-bold">₹{stats?.platformRevenue?.toLocaleString() || 0}</div>
               <p className="text-xs text-muted-foreground">30% commission earned</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Admin Actions */}
+        {/* Pending Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Management</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button variant="outline" asChild className="h-auto py-4 flex flex-col items-center gap-2">
-                <Link to="/admin/vendors">
-                  <Building2 className="h-6 w-6" />
-                  <span>Manage Vendors</span>
-                </Link>
-              </Button>
-              
-              <Button variant="outline" asChild className="h-auto py-4 flex flex-col items-center gap-2">
-                <Link to="/admin/products">
-                  <Package className="h-6 w-6" />
-                  <span>Review Products</span>
-                </Link>
-              </Button>
-              
-              <Button variant="outline" asChild className="h-auto py-4 flex flex-col items-center gap-2">
-                <Link to="/admin/orders">
-                  <ShoppingCart className="h-6 w-6" />
-                  <span>All Orders</span>
-                </Link>
-              </Button>
-              
-              <Button variant="outline" asChild className="h-auto py-4 flex flex-col items-center gap-2">
-                <Link to="/admin/categories">
-                  <Package className="h-6 w-6" />
-                  <span>Categories</span>
-                </Link>
-              </Button>
-              
-              <Button variant="outline" asChild className="h-auto py-4 flex flex-col items-center gap-2">
-                <Link to="/admin/users">
-                  <Users className="h-6 w-6" />
-                  <span>Users</span>
-                </Link>
-              </Button>
-              
-              <Button variant="outline" asChild className="h-auto py-4 flex flex-col items-center gap-2">
-                <Link to="/admin/payouts">
-                  <TrendingUp className="h-6 w-6" />
-                  <span>Payouts</span>
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
+          <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle>Pending Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <Link to="/admin/vendors" className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
                 <div className="flex items-center gap-3">
                   <AlertCircle className="h-5 w-5 text-amber-500" />
                   <span className="text-sm">Vendor Approvals</span>
                 </div>
-                <span className="text-sm font-medium">0</span>
-              </div>
+                <span className="text-sm font-medium">{pendingVendors?.length || 0}</span>
+              </Link>
               
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <Link to="/admin/products" className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
                 <div className="flex items-center gap-3">
                   <AlertCircle className="h-5 w-5 text-amber-500" />
                   <span className="text-sm">Product Reviews</span>
                 </div>
-                <span className="text-sm font-medium">0</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-3">
-                  <AlertCircle className="h-5 w-5 text-amber-500" />
-                  <span className="text-sm">Pending Payouts</span>
-                </div>
-                <span className="text-sm font-medium">0</span>
-              </div>
+                <span className="text-sm font-medium">{pendingProducts?.length || 0}</span>
+              </Link>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
+          {/* Recent Vendor Applications */}
+          <Card className="lg:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Recent Vendor Applications</CardTitle>
               <Button variant="ghost" size="sm" asChild>
@@ -169,30 +106,71 @@ const AdminDashboard = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No pending applications</p>
-              </div>
+              {pendingVendors?.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No pending applications</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingVendors?.slice(0, 5).map((vendor) => (
+                    <div key={vendor.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium">{vendor.business_name}</p>
+                        <p className="text-sm text-muted-foreground">{vendor.business_email}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(vendor.created_at), 'MMM dd, yyyy')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
+        </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Recent Product Submissions</CardTitle>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/admin/products">View All</Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
+        {/* Recent Products */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Products Awaiting Review</CardTitle>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/admin/products">View All</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {pendingProducts?.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No pending products</p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {pendingProducts?.slice(0, 6).map((product) => (
+                  <div key={product.id} className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-3 mb-2">
+                      {product.images?.[0] && (
+                        <img 
+                          src={product.images[0]} 
+                          alt={product.name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                      )}
+                      <div>
+                        <p className="font-medium truncate">{product.name}</p>
+                        <p className="text-xs text-muted-foreground">{product.vendors?.business_name}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 
