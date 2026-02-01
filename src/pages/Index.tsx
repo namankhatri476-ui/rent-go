@@ -11,6 +11,11 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const { user, isVendor, isAdmin } = useAuth();
+
+  useEffect(() => {
+    document.title = "RentEase | Home";
+  }, []);
+
   
   return (
     <div className="min-h-screen flex flex-col bg-background">
