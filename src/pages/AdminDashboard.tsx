@@ -1,22 +1,72 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAdminStats, usePendingVendors, usePendingProducts } from '@/hooks/useAdminStats';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Package, ShoppingCart, TrendingUp, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Building2, Package, ShoppingCart, TrendingUp, AlertCircle, Database, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext';
+import { seedSampleProducts, hasProducts } from '@/services/seedData';
+import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const AdminDashboard = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { data: stats, isLoading: statsLoading } = useAdminStats();
   const { data: pendingVendors } = usePendingVendors();
   const { data: pendingProducts } = usePendingProducts();
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const { data: productsExist } = useQuery({
+    queryKey: ['hasProducts'],
+    queryFn: hasProducts,
+  });
+
+  const handleSeedData = async () => {
+    if (!user) return;
+    
+    setIsSeeding(true);
+    try {
+      const result = await seedSampleProducts(user.id);
+      if (result.success) {
+        toast.success("Sample data seeded successfully!");
+        queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+        queryClient.invalidateQueries({ queryKey: ['hasProducts'] });
+      } else {
+        toast.error("Failed to seed data", { description: result.error });
+      }
+    } catch (error: any) {
+      toast.error("Error seeding data", { description: error.message });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   return (
     <AdminLayout>
       <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Overview of your rental marketplace</p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <p className="text-muted-foreground">Overview of your rental marketplace</p>
+          </div>
+          {!productsExist && (
+            <Button onClick={handleSeedData} disabled={isSeeding}>
+              {isSeeding ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Seeding...
+                </>
+              ) : (
+                <>
+                  <Database className="mr-2 h-4 w-4" />
+                  Seed Sample Products
+                </>
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Stats Grid */}

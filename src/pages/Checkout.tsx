@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, CreditCard, Smartphone, Building2, CheckCircle } from "lucide-react";
+import { ArrowLeft, CreditCard, Smartphone, Building2, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,12 +8,15 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CheckoutSummary from "@/components/CheckoutSummary";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { processCheckout } from "@/services/checkoutService";
 import { toast } from "sonner";
 
 type PaymentMethod = "upi" | "card" | "netbanking";
 
 const Checkout = () => {
   const { items, getBreakdown, clearCart } = useCart();
+  const { user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const breakdown = getBreakdown();
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
@@ -25,6 +28,7 @@ const Checkout = () => {
     phone: "",
     address: "",
     city: "",
+    state: "",
     pincode: "",
     upiId: "",
     cardNumber: "",
@@ -33,6 +37,26 @@ const Checkout = () => {
     bankName: ""
   });
 
+  // Pre-fill form with user profile data
+  useEffect(() => {
+    if (profile) {
+      setFormData(prev => ({
+        ...prev,
+        fullName: profile.full_name || "",
+        email: profile.email || "",
+        phone: profile.phone || "",
+      }));
+    }
+  }, [profile]);
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      toast.error("Please sign in to checkout");
+      navigate("/auth?redirect=/checkout");
+    }
+  }, [user, authLoading, navigate]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -40,23 +64,63 @@ const Checkout = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.fullName || !formData.email || !formData.phone || !formData.address) {
+    if (!user) {
+      toast.error("Please sign in to checkout");
+      navigate("/auth?redirect=/checkout");
+      return;
+    }
+
+    if (!formData.fullName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.state || !formData.pincode) {
       toast.error("Please fill in all required fields");
       return;
     }
 
     setIsProcessing(true);
 
-    // Simulate payment processing
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const result = await processCheckout(
+        user.id,
+        items,
+        breakdown,
+        {
+          ...formData,
+          paymentMethod,
+        }
+      );
 
-    setIsProcessing(false);
-    clearCart();
-    toast.success("Order placed successfully!", {
-      description: "You will receive a confirmation email shortly."
-    });
-    navigate("/order-success");
+      if (result.success) {
+        clearCart();
+        toast.success("Order placed successfully!", {
+          description: `Order numbers: ${result.orderNumbers.join(", ")}`
+        });
+        navigate("/order-success", { state: { orderNumbers: result.orderNumbers } });
+      } else {
+        toast.error("Failed to place order", {
+          description: result.error || "Please try again"
+        });
+      }
+    } catch (error: any) {
+      console.error("Checkout error:", error);
+      toast.error("An error occurred", {
+        description: error.message || "Please try again"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -149,7 +213,7 @@ const Checkout = () => {
                       required
                     />
                   </div>
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">City *</Label>
                       <Input
@@ -157,6 +221,17 @@ const Checkout = () => {
                         name="city"
                         placeholder="Mumbai"
                         value={formData.city}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="state">State *</Label>
+                      <Input
+                        id="state"
+                        name="state"
+                        placeholder="Maharashtra"
+                        value={formData.state}
                         onChange={handleInputChange}
                         required
                       />

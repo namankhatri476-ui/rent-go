@@ -1,11 +1,12 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { CheckCircle, Package, Calendar, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 const OrderSuccess = () => {
-  const orderNumber = `RE${Date.now().toString().slice(-8)}`;
+  const location = useLocation();
+  const orderNumbers: string[] = location.state?.orderNumbers || [`RE${Date.now().toString().slice(-8)}`];
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -35,8 +36,12 @@ const OrderSuccess = () => {
               style={{ animationDelay: "0.2s" }}
             >
               <div className="flex items-center justify-between pb-4 border-b border-border">
-                <span className="text-sm text-muted-foreground">Order Number</span>
-                <span className="font-bold text-foreground">{orderNumber}</span>
+                <span className="text-sm text-muted-foreground">Order Number{orderNumbers.length > 1 ? 's' : ''}</span>
+                <div className="text-right">
+                  {orderNumbers.map((num, idx) => (
+                    <span key={idx} className="font-bold text-foreground block">{num}</span>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-4">
