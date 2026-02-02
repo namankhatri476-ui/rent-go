@@ -25,6 +25,9 @@ const VendorRegister = () => {
   // Check for pending vendor registration from signup
   useEffect(() => {
     if (!user) return;
+    
+    // Skip if already a vendor (prevents duplicate submission)
+    if (isVendor && vendorProfile) return;
 
     // 1) Prefer sessionStorage (same-tab flow)
     const pendingData = sessionStorage.getItem('pendingVendorRegistration');
@@ -45,7 +48,7 @@ const VendorRegister = () => {
       setFormData(prev => ({ ...prev, ...metaData }));
       handleAutoSubmit(metaData);
     }
-  }, [user]);
+  }, [user, isVendor, vendorProfile]);
 
   // Redirect if already a vendor
   useEffect(() => {
