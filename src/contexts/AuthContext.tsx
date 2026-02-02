@@ -40,7 +40,16 @@ interface AuthContextType {
   isAdmin: boolean;
   isCustomer: boolean;
   isApprovedVendor: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    options?: {
+      userType?: AppRole;
+      vendorRegistration?: VendorRegistrationData;
+      redirectTo?: string;
+    }
+  ) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   registerAsVendor: (businessData: VendorRegistrationData) => Promise<{ error: Error | null }>;
@@ -155,9 +164,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp: AuthContextType['signUp'] = async (email, password, fullName, options) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = options?.redirectTo ?? `${window.location.origin}/`;
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -166,6 +175,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
+            user_type: options?.userType ?? 'customer',
+            ...(options?.vendorRegistration
+              ? { vendor_registration: options.vendorRegistration }
+              : {}),
           },
         },
       });
@@ -230,6 +243,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Refresh user data
       await fetchUserData(user.id);
+
+      // Clear any vendor registration metadata so it doesn't auto-submit again
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            vendor_registration: null,
+          },
+        });
+      } catch {
+        // Non-blocking
+      }
       
       return { error: null };
     } catch (error) {
