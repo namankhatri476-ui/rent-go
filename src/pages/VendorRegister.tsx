@@ -24,16 +24,26 @@ const VendorRegister = () => {
 
   // Check for pending vendor registration from signup
   useEffect(() => {
+    if (!user) return;
+
+    // 1) Prefer sessionStorage (same-tab flow)
     const pendingData = sessionStorage.getItem('pendingVendorRegistration');
-    if (pendingData && user) {
+    if (pendingData) {
       const data = JSON.parse(pendingData);
       setFormData(prev => ({ ...prev, ...data }));
       sessionStorage.removeItem('pendingVendorRegistration');
-      
-      // Auto-submit if all required fields are present and user is authenticated
+
       if (data.business_name && data.business_email) {
         handleAutoSubmit(data);
       }
+      return;
+    }
+
+    // 2) Fallback to auth metadata (survives email verification/new tab)
+    const metaData = (user.user_metadata as any)?.vendor_registration;
+    if (metaData?.business_name && metaData?.business_email) {
+      setFormData(prev => ({ ...prev, ...metaData }));
+      handleAutoSubmit(metaData);
     }
   }, [user]);
 

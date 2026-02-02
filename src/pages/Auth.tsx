@@ -135,7 +135,28 @@ const Auth = () => {
           toast.success("Welcome back!");
         }
       } else {
-        const { error } = await signUp(formData.email, formData.password, formData.name);
+        const { error } = await signUp(
+          formData.email,
+          formData.password,
+          formData.name,
+          userType === 'vendor'
+            ? {
+                userType: 'vendor',
+                vendorRegistration: {
+                  business_name: formData.businessName,
+                  business_email: formData.businessEmail,
+                  business_phone: formData.businessPhone,
+                  business_address: formData.businessAddress,
+                  gst_number: formData.gstNumber,
+                },
+                // After email verification, land directly on vendor registration (auto-submits)
+                redirectTo: `${window.location.origin}/vendor/register`,
+              }
+            : {
+                userType: 'customer',
+                redirectTo: `${window.location.origin}/`,
+              }
+        );
         
         if (error) {
           if (error.message.includes("User already registered")) {
@@ -145,7 +166,8 @@ const Auth = () => {
           }
         } else {
           toast.success("Account created successfully! Please check your email to verify your account.");
-          // If vendor signup, store vendor data for after email verification
+          // If vendor signup, keep sessionStorage too (helps same-tab flow),
+          // but primary persistence is now auth metadata.
           if (userType === "vendor") {
             sessionStorage.setItem('pendingVendorRegistration', JSON.stringify({
               business_name: formData.businessName,
