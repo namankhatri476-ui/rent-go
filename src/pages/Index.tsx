@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Printer, Laptop, Sofa, CheckCircle, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
