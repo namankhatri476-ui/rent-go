@@ -144,10 +144,9 @@ const Auth = () => {
             toast.error(error.message);
           }
         } else {
-          toast.success("Account created successfully!");
-          // If vendor signup, we'll handle vendor registration after auth
+          toast.success("Account created successfully! Please check your email to verify your account.");
+          // If vendor signup, store vendor data for after email verification
           if (userType === "vendor") {
-            // Store vendor data temporarily to complete registration
             sessionStorage.setItem('pendingVendorRegistration', JSON.stringify({
               business_name: formData.businessName,
               business_email: formData.businessEmail,
@@ -155,6 +154,8 @@ const Auth = () => {
               business_address: formData.businessAddress,
               gst_number: formData.gstNumber,
             }));
+            // Navigate to vendor register page - will auto-submit when user verifies email
+            navigate('/vendor/register');
           }
         }
       }
