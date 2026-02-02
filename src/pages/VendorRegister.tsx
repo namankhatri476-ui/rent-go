@@ -25,17 +25,17 @@ const VendorRegister = () => {
   // Check for pending vendor registration from signup
   useEffect(() => {
     const pendingData = sessionStorage.getItem('pendingVendorRegistration');
-    if (pendingData) {
+    if (pendingData && user) {
       const data = JSON.parse(pendingData);
       setFormData(prev => ({ ...prev, ...data }));
       sessionStorage.removeItem('pendingVendorRegistration');
       
-      // Auto-submit if all required fields are present
+      // Auto-submit if all required fields are present and user is authenticated
       if (data.business_name && data.business_email) {
         handleAutoSubmit(data);
       }
     }
-  }, []);
+  }, [user]);
 
   // Redirect if already a vendor
   useEffect(() => {
