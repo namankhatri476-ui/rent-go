@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,9 +18,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
 
 interface RentalPlan {
+  id?: string;
   label: string;
   duration_months: number;
   monthly_rent: number;
@@ -31,8 +32,10 @@ interface RentalPlan {
 
 const VendorProductForm = () => {
   const navigate = useNavigate();
+  const { id: productId } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { vendorProfile } = useAuth();
+  const isEditMode = !!productId;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -57,6 +60,55 @@ const VendorProductForm = () => {
   const [specKey, setSpecKey] = useState('');
   const [specValue, setSpecValue] = useState('');
 
+  // Fetch product data for edit mode
+  const { data: existingProduct, isLoading: isLoadingProduct } = useQuery({
+    queryKey: ['vendor-product', productId],
+    enabled: isEditMode,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          rental_plans (*)
+        `)
+        .eq('id', productId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Populate form with existing data
+  useEffect(() => {
+    if (existingProduct) {
+      setFormData({
+        name: existingProduct.name || '',
+        slug: existingProduct.slug || '',
+        brand: existingProduct.brand || '',
+        description: existingProduct.description || '',
+        category_id: existingProduct.category_id || '',
+        features: existingProduct.features?.length ? existingProduct.features : [''],
+        images: existingProduct.images?.length ? existingProduct.images : [''],
+        specifications: (existingProduct.specifications as Record<string, string>) || {},
+        tags: existingProduct.tags?.length ? existingProduct.tags : [''],
+        in_stock: existingProduct.in_stock ?? true,
+        stock_quantity: existingProduct.stock_quantity ?? 10,
+      });
+
+      if (existingProduct.rental_plans?.length) {
+        setRentalPlans(existingProduct.rental_plans.map((plan: any) => ({
+          id: plan.id,
+          label: plan.label,
+          duration_months: plan.duration_months,
+          monthly_rent: plan.monthly_rent,
+          security_deposit: plan.security_deposit,
+          delivery_fee: plan.delivery_fee || 0,
+          installation_fee: plan.installation_fee || 0,
+        })));
+      }
+    }
+  }, [existingProduct]);
+
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
@@ -74,7 +126,6 @@ const VendorProductForm = () => {
     mutationFn: async () => {
       if (!vendorProfile?.id) throw new Error('Vendor profile not found');
 
-      // Create product
       const slug = formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-');
       const { data: product, error: productError } = await supabase
         .from('products')
@@ -98,19 +149,22 @@ const VendorProductForm = () => {
 
       if (productError) throw productError;
 
-      // Create rental plans
       const plansToInsert = rentalPlans
         .filter(p => p.monthly_rent > 0)
         .map(plan => ({
           product_id: product.id,
-          ...plan,
+          label: plan.label,
+          duration_months: plan.duration_months,
+          monthly_rent: plan.monthly_rent,
+          security_deposit: plan.security_deposit,
+          delivery_fee: plan.delivery_fee,
+          installation_fee: plan.installation_fee,
         }));
 
       if (plansToInsert.length > 0) {
         const { error: plansError } = await supabase
           .from('rental_plans')
           .insert(plansToInsert);
-
         if (plansError) throw plansError;
       }
 
@@ -123,6 +177,69 @@ const VendorProductForm = () => {
     },
     onError: (error) => {
       toast.error('Failed to create product');
+      console.error(error);
+    },
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: async () => {
+      if (!vendorProfile?.id || !productId) throw new Error('Missing required data');
+
+      const slug = formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-');
+      const { error: productError } = await supabase
+        .from('products')
+        .update({
+          name: formData.name,
+          slug,
+          brand: formData.brand || null,
+          description: formData.description || null,
+          category_id: formData.category_id || null,
+          features: formData.features.filter(f => f.trim()),
+          images: formData.images.filter(i => i.trim()),
+          specifications: formData.specifications,
+          tags: formData.tags.filter(t => t.trim()),
+          in_stock: formData.in_stock,
+          stock_quantity: formData.stock_quantity,
+          status: 'pending', // Reset to pending for re-approval
+        })
+        .eq('id', productId);
+
+      if (productError) throw productError;
+
+      // Delete existing rental plans and insert new ones
+      const { error: deleteError } = await supabase
+        .from('rental_plans')
+        .delete()
+        .eq('product_id', productId);
+      if (deleteError) throw deleteError;
+
+      const plansToInsert = rentalPlans
+        .filter(p => p.monthly_rent > 0)
+        .map(plan => ({
+          product_id: productId,
+          label: plan.label,
+          duration_months: plan.duration_months,
+          monthly_rent: plan.monthly_rent,
+          security_deposit: plan.security_deposit,
+          delivery_fee: plan.delivery_fee,
+          installation_fee: plan.installation_fee,
+        }));
+
+      if (plansToInsert.length > 0) {
+        const { error: plansError } = await supabase
+          .from('rental_plans')
+          .insert(plansToInsert);
+        if (plansError) throw plansError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendor-products'] });
+      queryClient.invalidateQueries({ queryKey: ['vendor-product', productId] });
+      toast.success('Product updated successfully! It will be reviewed by admin.');
+      navigate('/vendor/products');
+    },
+    onError: (error) => {
+      toast.error('Failed to update product');
       console.error(error);
     },
   });
@@ -140,7 +257,11 @@ const VendorProductForm = () => {
       return;
     }
 
-    createProductMutation.mutate();
+    if (isEditMode) {
+      updateProductMutation.mutate();
+    } else {
+      createProductMutation.mutate();
+    }
   };
 
   const addFeature = () => setFormData({ ...formData, features: [...formData.features, ''] });
@@ -175,6 +296,18 @@ const VendorProductForm = () => {
     setFormData({ ...formData, specifications: newSpecs });
   };
 
+  if (isEditMode && isLoadingProduct) {
+    return (
+      <VendorLayout>
+        <div className="p-8 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </VendorLayout>
+    );
+  }
+
+  const isSubmitting = createProductMutation.isPending || updateProductMutation.isPending;
+
   return (
     <VendorLayout>
       <div className="p-8 max-w-4xl">
@@ -184,8 +317,10 @@ const VendorProductForm = () => {
         </Button>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Add New Product</h1>
-          <p className="text-muted-foreground">Create a new rental product listing</p>
+          <h1 className="text-3xl font-bold">{isEditMode ? 'Edit Product' : 'Add New Product'}</h1>
+          <p className="text-muted-foreground">
+            {isEditMode ? 'Update your product listing' : 'Create a new rental product listing'}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -479,7 +614,7 @@ const VendorProductForm = () => {
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {formData.tags.map((tag, index) => (
-                  <div key={index} className="flex items-center gap-1 bg-muted px-2 py-1 rounded">
+                  <div key={index} className="flex gap-1">
                     <Input
                       value={tag}
                       onChange={(e) => {
@@ -488,16 +623,15 @@ const VendorProductForm = () => {
                         setFormData({ ...formData, tags: newTags });
                       }}
                       placeholder="Tag"
-                      className="h-6 w-24 text-sm"
+                      className="w-32"
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
                       onClick={() => removeTag(index)}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
@@ -511,11 +645,21 @@ const VendorProductForm = () => {
 
           {/* Submit */}
           <div className="flex gap-4">
-            <Button type="button" variant="outline" onClick={() => navigate('/vendor/products')}>
-              Cancel
+            <Button 
+              type="submit" 
+              size="lg" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isEditMode ? 'Update Product' : 'Create Product'}
             </Button>
-            <Button type="submit" disabled={createProductMutation.isPending}>
-              {createProductMutation.isPending ? 'Creating...' : 'Create Product'}
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="lg"
+              onClick={() => navigate('/vendor/products')}
+            >
+              Cancel
             </Button>
           </div>
         </form>

@@ -25,6 +25,7 @@ import VendorPending from "./pages/VendorPending";
 import VendorRejected from "./pages/VendorRejected";
 import VendorProducts from "./pages/vendor/VendorProducts";
 import VendorProductForm from "./pages/vendor/VendorProductForm";
+import VendorProductView from "./pages/vendor/VendorProductView";
 import VendorOrders from "./pages/vendor/VendorOrders";
 import VendorPayouts from "./pages/vendor/VendorPayouts";
 import VendorSettings from "./pages/vendor/VendorSettings";
@@ -99,6 +100,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRoles={['vendor']} requireApprovedVendor>
                     <VendorProductForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/vendor/products/:id"
+                element={
+                  <ProtectedRoute requiredRoles={['vendor']} requireApprovedVendor>
+                    <VendorProductView />
                   </ProtectedRoute>
                 }
               />
