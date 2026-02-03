@@ -203,7 +203,7 @@ const AdminOrders = () => {
                         </div>
                       </TableCell>
                       <TableCell>{order.vendors?.business_name}</TableCell>
-                      <TableCell>{order.rental_plans?.label}</TableCell>
+                      <TableCell>{order.rental_duration_months} Months</TableCell>
                       <TableCell>₹{order.payable_now_total?.toLocaleString()}</TableCell>
                       <TableCell>₹{order.monthly_total?.toLocaleString()}/mo</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
