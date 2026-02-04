@@ -33,7 +33,8 @@ const ProductDetail = () => {
     queryKey: ['product-detail', slug],
     enabled: !!slug,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First try to find by slug
+      let { data, error } = await supabase
         .from('products')
         .select(`
           *,
@@ -42,8 +43,26 @@ const ProductDetail = () => {
         `)
         .eq('slug', slug)
         .eq('status', 'approved')
-        .single();
+        .maybeSingle();
+      
+      // If not found by slug, try by ID (for UUID-based URLs)
+      if (!data && slug) {
+        const idResult = await supabase
+          .from('products')
+          .select(`
+            *,
+            categories (name),
+            rental_plans (*)
+          `)
+          .eq('id', slug)
+          .eq('status', 'approved')
+          .maybeSingle();
+        data = idResult.data;
+        error = idResult.error;
+      }
+      
       if (error) throw error;
+      if (!data) throw new Error('Product not found');
       return data;
     },
   });
