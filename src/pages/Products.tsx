@@ -132,11 +132,15 @@ const Products = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {products?.map((product) => {
                 const lowestRent = getLowestRent(product.rental_plans);
+                // Use slug if valid, otherwise fall back to ID
+                const productUrl = product.slug && !product.slug.includes('/') 
+                  ? `/product/${product.slug}` 
+                  : `/product/${product.id}`;
                 
                 return (
                   <Link 
                     key={product.id} 
-                    to={`/product/${product.slug}`}
+                    to={productUrl}
                     className="block"
                   >
                     <Card className="group overflow-hidden border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg h-full">
