@@ -39,7 +39,7 @@ const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
    const { data, error } = await supabase
