@@ -40,17 +40,17 @@ const AdminOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
 const { data: orders, isLoading } = useQuery({
-  queryKey: ['admin-orders'],
+  queryKey: ['adminorders'],
   queryFn: async () => {
     const { data, error } = await supabase
       .from('orders')
-      .select(
+      .select(`
       *,
         products ( name, images ),
         vendors ( business_name ),
         rental_plans ( label, duration_months, monthly_rent )
       )
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }`);
 
     if (error) throw error;
     return data;
