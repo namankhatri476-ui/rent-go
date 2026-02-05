@@ -122,31 +122,17 @@ const VendorProductForm = () => {
     },
   });
 
-  // Generate a URL-safe slug from product name
-  const generateSlug = (name: string): string => {
-    return name
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .replace(/-+/g, '-') // Replace multiple hyphens with single
-      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
-  };
-
   const createProductMutation = useMutation({
     mutationFn: async () => {
       if (!vendorProfile?.id) throw new Error('Vendor profile not found');
 
-      // Generate unique slug with timestamp to prevent collisions
-      const baseSlug = formData.slug || generateSlug(formData.name);
-      const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`;
-      
+      const slug = formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-');
       const { data: product, error: productError } = await supabase
         .from('products')
         .insert({
           vendor_id: vendorProfile.id,
           name: formData.name,
-          slug: uniqueSlug,
+          slug,
           brand: formData.brand || null,
           description: formData.description || null,
           category_id: formData.category_id || null,
@@ -199,8 +185,7 @@ const VendorProductForm = () => {
     mutationFn: async () => {
       if (!vendorProfile?.id || !productId) throw new Error('Missing required data');
 
-      // Keep existing slug if not changed, otherwise generate new one
-      const slug = formData.slug || generateSlug(formData.name);
+      const slug = formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-');
       const { error: productError } = await supabase
         .from('products')
         .update({

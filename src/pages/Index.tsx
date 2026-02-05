@@ -1,43 +1,17 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, Printer, Laptop, Sofa, CheckCircle, Building2, Star, Shield, Truck, Loader2 } from "lucide-react";
+import { ArrowRight, Printer, Laptop, Sofa, CheckCircle, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ProductCard from "@/components/ProductCard";
 import TrustBadges from "@/components/TrustBadges";
+import { printerProducts } from "@/data/products";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const { user, isVendor, isAdmin } = useAuth();
-
-  // Fetch featured products from database
-  const { data: featuredProducts, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ['featured-products'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          categories (name),
-          rental_plans (*)
-        `)
-        .eq('status', 'approved')
-        .eq('in_stock', true)
-        .order('created_at', { ascending: false })
-        .limit(4);
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const getLowestRent = (rentalPlans: any[]) => {
-    if (!rentalPlans || rentalPlans.length === 0) return null;
-    return Math.min(...rentalPlans.map(p => p.monthly_rent));
-  };
 
   useEffect(() => {
     document.title = "RentEase | Home";
@@ -196,88 +170,9 @@ const Index = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {isLoadingProducts ? (
-              <div className="col-span-full flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : featuredProducts && featuredProducts.length > 0 ? (
-              featuredProducts.map((product) => {
-                const lowestRent = getLowestRent(product.rental_plans);
-                const productUrl = product.slug && !product.slug.includes('/') 
-                  ? `/product/${product.slug}` 
-                  : `/product/${product.id}`;
-
-                return (
-                  <Link key={product.id} to={productUrl} className="block">
-                    <Card className="group overflow-hidden border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg h-full">
-                      <div className="aspect-[4/3] relative overflow-hidden bg-muted">
-                        {product.images?.[0] ? (
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                            No Image
-                          </div>
-                        )}
-                        {product.tags?.[0] && (
-                          <Badge className="absolute top-3 left-3" variant="accent">
-                            {product.tags[0]}
-                          </Badge>
-                        )}
-                      </div>
-                      <CardContent className="p-4">
-                        <div className="mb-2">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            {product.brand}
-                          </p>
-                          <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
-                        </div>
-                        
-                        {/* Rating */}
-                        <div className="flex items-center gap-1 mb-3">
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm font-medium">{product.rating || 0}</span>
-                          <span className="text-xs text-muted-foreground">
-                            ({product.review_count || 0})
-                          </span>
-                        </div>
-
-                        {/* Price */}
-                        {lowestRent && (
-                          <div className="flex items-baseline gap-1 mb-3">
-                            <span className="text-lg font-bold text-primary">
-                              ₹{lowestRent.toLocaleString()}
-                            </span>
-                            <span className="text-sm text-muted-foreground">/month</span>
-                          </div>
-                        )}
-
-                        {/* Features */}
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Truck className="w-3.5 h-3.5" />
-                            <span>Free Delivery</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Shield className="w-3.5 h-3.5" />
-                            <span>Protection</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                );
-              })
-            ) : (
-              <div className="col-span-full text-center py-8">
-                <p className="text-muted-foreground">No products available yet. Check back soon!</p>
-              </div>
-            )}
+            {printerProducts.slice(0, 4).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
           </div>
         </div>
       </section>
