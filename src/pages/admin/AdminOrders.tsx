@@ -39,45 +39,27 @@ const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
-  // ✅ FIXED: Using ALL correct foreign key names from your Supabase schema
-  const { data: orders, isLoading, error } = useQuery({
-    queryKey: ['admin-orders'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          products:orders_product_id_fkey (
-            name,
-            images
-          ),
-          vendors:orders_vendor_id_fkey (
-            business_name
-          ),
-          rental_plans:orders_rental_plan_id_fkey (
-            label,
-            duration_months,
-            monthly_rent
-          ),
-          addresses:orders_address_id_fkey (
-            street,
-            city,
-            state,
-            postal_code,
-            country
-          )
-        `)
-        .order('created_at', { ascending: false });
+const { data: orders, isLoading } = useQuery({
+  queryKey: ['admin-orders'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+      *,
+        products ( name, images ),
+        vendors ( business_name ),
+        rental_plans ( label, duration_months, monthly_rent )
+      )
+      .order('created_at', { ascending: false }`);
 
-      if (error) {
-        console.error('❌ Supabase error:', error);
-        throw error;
-      }
-      
-      console.log('✅ Orders loaded:', data?.length);
-      return data;
-    },
-  });
+    if (error) throw error;
+    return data;
+  },
+});
+
+// ✅ SAFE DEBUG (remove later)
+console.log('ADMIN ORDERS:', orders);
+
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string; status: OrderStatus }) => {
@@ -108,7 +90,7 @@ const AdminOrders = () => {
 
   const filteredOrders = orders?.filter((order) => {
     const matchesSearch = 
-      order.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.products?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.vendors?.business_name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
@@ -116,6 +98,15 @@ const AdminOrders = () => {
   });
 
   const getStatusBadge = (status: OrderStatus) => {
+    const variants: Record<OrderStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      pending: 'secondary',
+      confirmed: 'default',
+      processing: 'default',
+      shipped: 'default',
+      delivered: 'default',
+      cancelled: 'destructive',
+      returned: 'outline',
+    };
     const colors: Record<OrderStatus, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
       confirmed: 'bg-blue-100 text-blue-800',
@@ -125,7 +116,7 @@ const AdminOrders = () => {
       cancelled: 'bg-red-100 text-red-800',
       returned: 'bg-gray-100 text-gray-800',
     };
-    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status]}`}>{status}</span>;
+    return <span className={`px-2 py-1 rounded-full text-xs ${colors[status]}`}>{status}</span>;
   };
 
   return (
@@ -177,15 +168,7 @@ const AdminOrders = () => {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p>Loading orders...</p>
-              </div>
-            ) : error ? (
-              <div className="text-center py-8 text-red-600">
-                <p className="font-semibold">Failed to load orders</p>
-                <p className="text-sm mt-2">{error.message}</p>
-              </div>
+              <div className="text-center py-8">Loading orders...</div>
             ) : filteredOrders?.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -221,10 +204,10 @@ const AdminOrders = () => {
                               className="w-8 h-8 object-cover rounded"
                             />
                           )}
-                          <span className="truncate max-w-[150px]">{order.products?.name || 'N/A'}</span>
+                          <span className="truncate max-w-[150px]">{order.products?.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{order.vendors?.business_name || 'N/A'}</TableCell>
+                      <TableCell>{order.vendors?.business_name}</TableCell>
                       <TableCell>{order.rental_duration_months} Months</TableCell>
                       <TableCell>₹{order.payable_now_total?.toLocaleString()}</TableCell>
                       <TableCell>₹{order.monthly_total?.toLocaleString()}/mo</TableCell>
@@ -261,7 +244,7 @@ const AdminOrders = () => {
                 <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                   <div>
                     <p className="text-sm text-muted-foreground">Current Status</p>
-                    <p className="font-medium mt-1">{getStatusBadge(selectedOrder.status)}</p>
+                    <p className="font-medium">{getStatusBadge(selectedOrder.status)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Select 
@@ -325,22 +308,6 @@ const AdminOrders = () => {
                     </CardContent>
                   </Card>
                 </div>
-
-                {/* Shipping Address */}
-                {selectedOrder.addresses && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Shipping Address</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-sm">
-                        <p>{selectedOrder.addresses.street}</p>
-                        <p>{selectedOrder.addresses.city}, {selectedOrder.addresses.state} {selectedOrder.addresses.postal_code}</p>
-                        <p>{selectedOrder.addresses.country}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
 
                 {/* Payment Breakdown */}
                 <Card>
