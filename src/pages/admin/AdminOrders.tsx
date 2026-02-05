@@ -39,48 +39,44 @@ const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
-  // ✅ Enhanced query with better error handling
+  // ✅ FIXED: Using ALL correct foreign key names from your Supabase schema
   const { data: orders, isLoading, error } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
-      console.log('🔍 Fetching orders...');
-      
       const { data, error } = await supabase
         .from('orders')
         .select(`
           *,
-          products!orders_product_id_fkey (
+          products:orders_product_id_fkey (
             name,
             images
           ),
-          vendors!orders_vendor_id_fkey (
+          vendors:orders_vendor_id_fkey (
             business_name
           ),
-          rental_plans!orders_rental_plan_id_fkey (
+          rental_plans:orders_rental_plan_id_fkey (
             label,
             duration_months,
             monthly_rent
+          ),
+          addresses:orders_address_id_fkey (
+            street,
+            city,
+            state,
+            postal_code,
+            country
           )
         `)
         .order('created_at', { ascending: false });
 
-      console.log('📊 Query result:', { data, error });
-      
       if (error) {
         console.error('❌ Supabase error:', error);
         throw error;
       }
       
-      console.log('✅ Orders fetched:', data?.length, 'orders');
+      console.log('✅ Orders loaded:', data?.length);
       return data;
     },
-  });
-
-  // Debug logging
-  console.log('🎯 Current state:', { 
-    ordersCount: orders?.length, 
-    isLoading, 
-    error: error?.message 
   });
 
   const updateStatusMutation = useMutation({
@@ -129,7 +125,7 @@ const AdminOrders = () => {
       cancelled: 'bg-red-100 text-red-800',
       returned: 'bg-gray-100 text-gray-800',
     };
-    return <span className={`px-2 py-1 rounded-full text-xs ${colors[status]}`}>{status}</span>;
+    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status]}`}>{status}</span>;
   };
 
   return (
@@ -141,16 +137,6 @@ const AdminOrders = () => {
             <p className="text-muted-foreground">View and manage all orders</p>
           </div>
         </div>
-
-        {/* Debug Info - REMOVE IN PRODUCTION */}
-        {error && (
-          <Card className="mb-6 border-red-500">
-            <CardContent className="pt-6">
-              <p className="text-red-600 font-semibold">❌ Error loading orders:</p>
-              <pre className="text-xs mt-2 bg-red-50 p-2 rounded">{JSON.stringify(error, null, 2)}</pre>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Filters */}
         <Card className="mb-6">
@@ -187,10 +173,7 @@ const AdminOrders = () => {
         {/* Orders Table */}
         <Card>
           <CardHeader>
-            <CardTitle>
-              Orders ({filteredOrders?.length || 0})
-              {isLoading && <span className="text-sm text-muted-foreground ml-2">(Loading...)</span>}
-            </CardTitle>
+            <CardTitle>Orders ({filteredOrders?.length || 0})</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -201,19 +184,12 @@ const AdminOrders = () => {
             ) : error ? (
               <div className="text-center py-8 text-red-600">
                 <p className="font-semibold">Failed to load orders</p>
-                <p className="text-sm mt-2">Check console for details</p>
-              </div>
-            ) : !orders || orders.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No orders found in database</p>
-                <p className="text-sm mt-2">Check your database connection and table structure</p>
+                <p className="text-sm mt-2">{error.message}</p>
               </div>
             ) : filteredOrders?.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No orders match your filters</p>
-                <p className="text-sm mt-2">{orders.length} total orders in database</p>
+                <p>No orders found</p>
               </div>
             ) : (
               <Table>
@@ -234,7 +210,7 @@ const AdminOrders = () => {
                   {filteredOrders?.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell className="font-mono text-sm">
-                        {order.order_number || 'N/A'}
+                        {order.order_number}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -245,18 +221,16 @@ const AdminOrders = () => {
                               className="w-8 h-8 object-cover rounded"
                             />
                           )}
-                          <span className="truncate max-w-[150px]">
-                            {order.products?.name || 'Unknown Product'}
-                          </span>
+                          <span className="truncate max-w-[150px]">{order.products?.name || 'N/A'}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{order.vendors?.business_name || 'Unknown Vendor'}</TableCell>
-                      <TableCell>{order.rental_duration_months || 'N/A'} Months</TableCell>
-                      <TableCell>₹{order.payable_now_total?.toLocaleString() || '0'}</TableCell>
-                      <TableCell>₹{order.monthly_total?.toLocaleString() || '0'}/mo</TableCell>
+                      <TableCell>{order.vendors?.business_name || 'N/A'}</TableCell>
+                      <TableCell>{order.rental_duration_months} Months</TableCell>
+                      <TableCell>₹{order.payable_now_total?.toLocaleString()}</TableCell>
+                      <TableCell>₹{order.monthly_total?.toLocaleString()}/mo</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
                       <TableCell>
-                        {order.created_at ? format(new Date(order.created_at), 'MMM dd, yyyy') : 'N/A'}
+                        {format(new Date(order.created_at), 'MMM dd, yyyy')}
                       </TableCell>
                       <TableCell>
                         <Button
@@ -287,7 +261,7 @@ const AdminOrders = () => {
                 <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                   <div>
                     <p className="text-sm text-muted-foreground">Current Status</p>
-                    <p className="font-medium">{getStatusBadge(selectedOrder.status)}</p>
+                    <p className="font-medium mt-1">{getStatusBadge(selectedOrder.status)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Select 
@@ -351,6 +325,22 @@ const AdminOrders = () => {
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Shipping Address */}
+                {selectedOrder.addresses && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Shipping Address</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-sm">
+                        <p>{selectedOrder.addresses.street}</p>
+                        <p>{selectedOrder.addresses.city}, {selectedOrder.addresses.state} {selectedOrder.addresses.postal_code}</p>
+                        <p>{selectedOrder.addresses.country}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Payment Breakdown */}
                 <Card>
