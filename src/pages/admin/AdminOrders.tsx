@@ -39,27 +39,22 @@ const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
-const { data: orders, isLoading } = useQuery({
-  queryKey: ['admin-orders'],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-      *,
-        products ( name, images ),
-        vendors ( business_name ),
-        rental_plans ( label, duration_months, monthly_rent )
-      )
-      .order('created_at', { ascending: false }`);
+  const { data: orders, isLoading } = useQuery({
+    queryKey: ['admin-orders'],
+    queryFn: async () => {
+   const { data, error } = await supabase
+     .from('orders')
+     .select(
+       *,
+     products (name, images), 
+     vendors (business_name), 
+     rental_plans (label, duration_months, monthly_rent) )
+    .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data;
-  },
-});
-
-// ✅ SAFE DEBUG (remove later)
-console.log('ADMIN ORDERS:', orders);
-
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string; status: OrderStatus }) => {
