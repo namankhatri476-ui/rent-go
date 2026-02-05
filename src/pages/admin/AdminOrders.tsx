@@ -39,27 +39,49 @@ const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
-  // ✅ FIXED: Corrected the SQL query syntax
-  const { data: orders, isLoading } = useQuery({
+  // ✅ Enhanced query with better error handling
+  const { data: orders, isLoading, error } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
+      console.log('🔍 Fetching orders...');
+      
       const { data, error } = await supabase
         .from('orders')
         .select(`
           *,
-          products ( name, images ),
-          vendors ( business_name ),
-          rental_plans ( label, duration_months, monthly_rent )
+          products!orders_product_id_fkey (
+            name,
+            images
+          ),
+          vendors!orders_vendor_id_fkey (
+            business_name
+          ),
+          rental_plans!orders_rental_plan_id_fkey (
+            label,
+            duration_months,
+            monthly_rent
+          )
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('📊 Query result:', { data, error });
+      
+      if (error) {
+        console.error('❌ Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Orders fetched:', data?.length, 'orders');
       return data;
     },
   });
 
-  // ✅ SAFE DEBUG (remove later)
-  console.log('ADMIN ORDERS:', orders);
+  // Debug logging
+  console.log('🎯 Current state:', { 
+    ordersCount: orders?.length, 
+    isLoading, 
+    error: error?.message 
+  });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string; status: OrderStatus }) => {
@@ -90,7 +112,7 @@ const AdminOrders = () => {
 
   const filteredOrders = orders?.filter((order) => {
     const matchesSearch = 
-      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.products?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.vendors?.business_name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
@@ -98,15 +120,6 @@ const AdminOrders = () => {
   });
 
   const getStatusBadge = (status: OrderStatus) => {
-    const variants: Record<OrderStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      pending: 'secondary',
-      confirmed: 'default',
-      processing: 'default',
-      shipped: 'default',
-      delivered: 'default',
-      cancelled: 'destructive',
-      returned: 'outline',
-    };
     const colors: Record<OrderStatus, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
       confirmed: 'bg-blue-100 text-blue-800',
@@ -128,6 +141,16 @@ const AdminOrders = () => {
             <p className="text-muted-foreground">View and manage all orders</p>
           </div>
         </div>
+
+        {/* Debug Info - REMOVE IN PRODUCTION */}
+        {error && (
+          <Card className="mb-6 border-red-500">
+            <CardContent className="pt-6">
+              <p className="text-red-600 font-semibold">❌ Error loading orders:</p>
+              <pre className="text-xs mt-2 bg-red-50 p-2 rounded">{JSON.stringify(error, null, 2)}</pre>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Filters */}
         <Card className="mb-6">
@@ -164,15 +187,33 @@ const AdminOrders = () => {
         {/* Orders Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Orders ({filteredOrders?.length || 0})</CardTitle>
+            <CardTitle>
+              Orders ({filteredOrders?.length || 0})
+              {isLoading && <span className="text-sm text-muted-foreground ml-2">(Loading...)</span>}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8">Loading orders...</div>
+              <div className="text-center py-8">
+                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p>Loading orders...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8 text-red-600">
+                <p className="font-semibold">Failed to load orders</p>
+                <p className="text-sm mt-2">Check console for details</p>
+              </div>
+            ) : !orders || orders.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No orders found in database</p>
+                <p className="text-sm mt-2">Check your database connection and table structure</p>
+              </div>
             ) : filteredOrders?.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No orders found</p>
+                <p>No orders match your filters</p>
+                <p className="text-sm mt-2">{orders.length} total orders in database</p>
               </div>
             ) : (
               <Table>
@@ -193,7 +234,7 @@ const AdminOrders = () => {
                   {filteredOrders?.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell className="font-mono text-sm">
-                        {order.order_number}
+                        {order.order_number || 'N/A'}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -204,16 +245,18 @@ const AdminOrders = () => {
                               className="w-8 h-8 object-cover rounded"
                             />
                           )}
-                          <span className="truncate max-w-[150px]">{order.products?.name}</span>
+                          <span className="truncate max-w-[150px]">
+                            {order.products?.name || 'Unknown Product'}
+                          </span>
                         </div>
                       </TableCell>
-                      <TableCell>{order.vendors?.business_name}</TableCell>
-                      <TableCell>{order.rental_duration_months} Months</TableCell>
-                      <TableCell>₹{order.payable_now_total?.toLocaleString()}</TableCell>
-                      <TableCell>₹{order.monthly_total?.toLocaleString()}/mo</TableCell>
+                      <TableCell>{order.vendors?.business_name || 'Unknown Vendor'}</TableCell>
+                      <TableCell>{order.rental_duration_months || 'N/A'} Months</TableCell>
+                      <TableCell>₹{order.payable_now_total?.toLocaleString() || '0'}</TableCell>
+                      <TableCell>₹{order.monthly_total?.toLocaleString() || '0'}/mo</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
                       <TableCell>
-                        {format(new Date(order.created_at), 'MMM dd, yyyy')}
+                        {order.created_at ? format(new Date(order.created_at), 'MMM dd, yyyy') : 'N/A'}
                       </TableCell>
                       <TableCell>
                         <Button
