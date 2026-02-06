@@ -43,6 +43,7 @@ const VendorProductForm = () => {
     brand: '',
     description: '',
     category_id: '',
+    location_id: '',
     features: [''],
     images: [''],
     specifications: {} as Record<string, string>,
@@ -87,6 +88,7 @@ const VendorProductForm = () => {
         brand: existingProduct.brand || '',
         description: existingProduct.description || '',
         category_id: existingProduct.category_id || '',
+        location_id: existingProduct.location_id || '',
         features: existingProduct.features?.length ? existingProduct.features : [''],
         images: existingProduct.images?.length ? existingProduct.images : [''],
         specifications: (existingProduct.specifications as Record<string, string>) || {},
@@ -122,6 +124,19 @@ const VendorProductForm = () => {
     },
   });
 
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const createProductMutation = useMutation({
     mutationFn: async () => {
       if (!vendorProfile?.id) throw new Error('Vendor profile not found');
@@ -136,6 +151,7 @@ const VendorProductForm = () => {
           brand: formData.brand || null,
           description: formData.description || null,
           category_id: formData.category_id || null,
+          location_id: formData.location_id || null,
           features: formData.features.filter(f => f.trim()),
           images: formData.images.filter(i => i.trim()),
           specifications: formData.specifications,
@@ -194,6 +210,7 @@ const VendorProductForm = () => {
           brand: formData.brand || null,
           description: formData.description || null,
           category_id: formData.category_id || null,
+          location_id: formData.location_id || null,
           features: formData.features.filter(f => f.trim()),
           images: formData.images.filter(i => i.trim()),
           specifications: formData.specifications,
@@ -370,14 +387,31 @@ const VendorProductForm = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="slug">URL Slug</Label>
-                  <Input
-                    id="slug"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    placeholder="auto-generated if empty"
-                  />
+                  <Label htmlFor="location">Service Location *</Label>
+                  <Select 
+                    value={formData.location_id} 
+                    onValueChange={(v) => setFormData({ ...formData, location_id: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select city where you rent" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locations?.map((loc) => (
+                        <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="slug">URL Slug</Label>
+                <Input
+                  id="slug"
+                  value={formData.slug}
+                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                  placeholder="auto-generated if empty"
+                />
               </div>
 
               <div className="space-y-2">
