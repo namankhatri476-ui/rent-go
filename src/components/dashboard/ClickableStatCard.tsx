@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -19,9 +20,11 @@ const ClickableStatCard = ({
   href,
   valueClassName,
 }: ClickableStatCardProps) => {
+  const navigate = useNavigate();
+  
   const handleClick = () => {
-    // Hard refresh navigation for fresh data
-    window.location.href = href;
+    // Use soft routing for better UX
+    navigate(href);
   };
 
   return (

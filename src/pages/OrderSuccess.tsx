@@ -84,6 +84,11 @@ const OrderSuccess = () => {
               className="flex flex-col sm:flex-row gap-3 justify-center animate-fade-in"
               style={{ animationDelay: "0.4s" }}
             >
+              <Link to="/my-orders">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                  View My Orders
+                </Button>
+              </Link>
               <Link to="/">
                 <Button variant="hero" size="lg" className="gap-2 w-full sm:w-auto">
                   Continue Shopping
