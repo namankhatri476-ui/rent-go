@@ -95,6 +95,39 @@ export type Database = {
         }
         Relationships: []
       }
+      locations: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          is_popular: boolean | null
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_popular?: boolean | null
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_popular?: boolean | null
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       monthly_payments: {
         Row: {
           auto_debit_date: string | null
@@ -338,6 +371,7 @@ export type Database = {
           id: string
           images: string[] | null
           in_stock: boolean
+          location_id: string | null
           name: string
           rating: number | null
           rejection_reason: string | null
@@ -361,6 +395,7 @@ export type Database = {
           id?: string
           images?: string[] | null
           in_stock?: boolean
+          location_id?: string | null
           name: string
           rating?: number | null
           rejection_reason?: string | null
@@ -384,6 +419,7 @@ export type Database = {
           id?: string
           images?: string[] | null
           in_stock?: boolean
+          location_id?: string | null
           name?: string
           rating?: number | null
           rejection_reason?: string | null
@@ -402,6 +438,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
           {

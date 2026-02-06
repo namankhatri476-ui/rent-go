@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "@/contexts/LocationContext";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import LocationSelector from "@/components/LocationSelector";
 
 const Header = () => {
   const { itemCount } = useCart();
@@ -30,17 +32,24 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
+  const { selectedLocation } = useLocation();
+
   // Search products
   const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ['search-products', searchQuery],
+    queryKey: ['search-products', searchQuery, selectedLocation?.id],
     enabled: searchQuery.length >= 2,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
-        .select('id, name, slug, brand, images')
+        .select('id, name, slug, brand, images, location_id')
         .eq('status', 'approved')
-        .or(`name.ilike.%${searchQuery}%,brand.ilike.%${searchQuery}%`)
-        .limit(10);
+        .or(`name.ilike.%${searchQuery}%,brand.ilike.%${searchQuery}%`);
+      
+      if (selectedLocation?.id) {
+        query = query.eq('location_id', selectedLocation.id);
+      }
+      
+      const { data, error } = await query.limit(10);
       if (error) throw error;
       return data;
     },
@@ -73,6 +82,9 @@ const Header = () => {
               </div>
               <span className="text-xl font-bold text-foreground">RentEase</span>
             </Link>
+
+            {/* Location Selector */}
+            <LocationSelector />
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-8">

@@ -2,32 +2,39 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLocation } from "@/contexts/LocationContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
-import { Filter, SlidersHorizontal, Star, Loader2 } from "lucide-react";
+import { Filter, SlidersHorizontal, Star, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 const Products = () => {
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const { selectedLocation } = useLocation();
 
   // Fetch approved products from Supabase
   const { data: products, isLoading } = useQuery({
-    queryKey: ['approved-products', selectedBrand],
+    queryKey: ['approved-products', selectedBrand, selectedLocation?.id],
     queryFn: async () => {
       let query = supabase
         .from('products')
         .select(`
           *,
           categories (name),
-          rental_plans (*)
+          rental_plans (*),
+          locations (name)
         `)
         .eq('status', 'approved')
         .eq('in_stock', true);
 
       if (selectedBrand) {
         query = query.eq('brand', selectedBrand);
+      }
+
+      if (selectedLocation?.id) {
+        query = query.eq('location_id', selectedLocation.id);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -71,13 +78,20 @@ const Products = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-                Products on Rent
+                Products on Rent {selectedLocation ? `in ${selectedLocation.name}` : ''}
               </h1>
               <p className="text-muted-foreground mt-1">
                 {products?.length || 0} products available
+                {selectedLocation && ` in ${selectedLocation.name}`}
               </p>
             </div>
             <div className="flex items-center gap-3">
+              {selectedLocation && (
+                <Badge variant="secondary" className="gap-1">
+                  <MapPin className="w-3 h-3" />
+                  {selectedLocation.name}
+                </Badge>
+              )}
               <Button variant="outline" size="sm" className="gap-2">
                 <Filter className="w-4 h-4" />
                 Filter
