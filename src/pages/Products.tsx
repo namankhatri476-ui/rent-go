@@ -40,18 +40,11 @@ const Products = () => {
     },
   });
 
-  // Combine database products with static products (fallback)
+  // Combine database products with static products (always show static as fallback)
   const products = useMemo(() => {
     const dbProductsList = dbProducts || [];
     
-    // If we have database products, use them; otherwise fallback to static products
-    if (dbProductsList.length > 0) {
-      return selectedBrand 
-        ? dbProductsList.filter(p => p.brand === selectedBrand)
-        : dbProductsList;
-    }
-    
-    // Fallback to static products (converted to match DB structure)
+    // Convert static products to match DB structure
     const staticProducts = printerProducts.map(p => ({
       id: p.id,
       name: p.name,
@@ -70,13 +63,24 @@ const Products = () => {
         security_deposit: rp.securityDeposit,
       })),
       categories: { name: p.category },
-      locations: selectedLocation ? { name: selectedLocation.name } : null,
+      locations: null,
+      isStatic: true, // Mark as static for identification
     }));
     
-    return selectedBrand 
-      ? staticProducts.filter(p => p.brand === selectedBrand)
-      : staticProducts;
-  }, [dbProducts, selectedBrand, selectedLocation]);
+    // Combine both: DB products first, then static products
+    // Filter out static products that might have same slug as DB products
+    const dbSlugs = new Set(dbProductsList.map(p => p.slug));
+    const uniqueStaticProducts = staticProducts.filter(p => !dbSlugs.has(p.slug));
+    
+    const allProducts = [...dbProductsList, ...uniqueStaticProducts];
+    
+    // Apply brand filter
+    const filteredProducts = selectedBrand 
+      ? allProducts.filter(p => p.brand === selectedBrand)
+      : allProducts;
+    
+    return filteredProducts;
+  }, [dbProducts, selectedBrand]);
 
   // Get unique brands from both sources
   const brands = useMemo(() => {
