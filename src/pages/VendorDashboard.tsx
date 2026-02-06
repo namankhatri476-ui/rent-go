@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, Package, ShoppingCart, TrendingUp, Plus, Clock, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
+import ClickableStatCard from '@/components/dashboard/ClickableStatCard';
 
 const VendorDashboard = () => {
   const { vendorProfile } = useAuth();
@@ -22,57 +23,40 @@ const VendorDashboard = () => {
           <p className="text-muted-foreground">Welcome back, {vendorProfile?.business_name}</p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Clickable Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.products || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.pendingProducts || 0} pending approval
-              </p>
-            </CardContent>
-          </Card>
+          <ClickableStatCard
+            title="Total Products"
+            value={stats?.products || 0}
+            subtitle={`${stats?.pendingProducts || 0} pending approval`}
+            icon={Package}
+            href="/vendor/products"
+          />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
-              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.activeOrders || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.orders || 0} total orders
-              </p>
-            </CardContent>
-          </Card>
+          <ClickableStatCard
+            title="Active Orders"
+            value={stats?.activeOrders || 0}
+            subtitle={`${stats?.orders || 0} total orders`}
+            icon={ShoppingCart}
+            href="/vendor/orders"
+          />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹{stats?.totalEarnings?.toLocaleString() || 0}</div>
-              <p className="text-xs text-muted-foreground">After 30% commission</p>
-            </CardContent>
-          </Card>
+          <ClickableStatCard
+            title="Total Earnings"
+            value={`₹${stats?.totalEarnings?.toLocaleString() || 0}`}
+            subtitle="After 30% commission"
+            icon={TrendingUp}
+            href="/vendor/payouts"
+          />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Payouts</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600">
-                ₹{stats?.pendingPayouts?.toLocaleString() || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">Next payout: Weekly</p>
-            </CardContent>
-          </Card>
+          <ClickableStatCard
+            title="Pending Payouts"
+            value={`₹${stats?.pendingPayouts?.toLocaleString() || 0}`}
+            subtitle="Next payout: Weekly"
+            icon={Building2}
+            href="/vendor/payouts"
+            valueClassName="text-amber-600"
+          />
         </div>
 
         {/* Quick Actions & Status */}

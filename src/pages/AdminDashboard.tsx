@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { seedSampleProducts, hasProducts } from '@/services/seedData';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import ClickableStatCard from '@/components/dashboard/ClickableStatCard';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -69,57 +70,39 @@ const AdminDashboard = () => {
           )}
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Clickable Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.vendors || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.pendingVendors || 0} pending approval
-              </p>
-            </CardContent>
-          </Card>
+          <ClickableStatCard
+            title="Total Vendors"
+            value={stats?.vendors || 0}
+            subtitle={`${stats?.pendingVendors || 0} pending approval`}
+            icon={Building2}
+            href="/admin/vendors"
+          />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.products || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.pendingProducts || 0} pending approval
-              </p>
-            </CardContent>
-          </Card>
+          <ClickableStatCard
+            title="Total Products"
+            value={stats?.products || 0}
+            subtitle={`${stats?.pendingProducts || 0} pending approval`}
+            icon={Package}
+            href="/admin/products"
+          />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.orders || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                ₹{stats?.totalRevenue?.toLocaleString() || 0} GMV
-              </p>
-            </CardContent>
-          </Card>
+          <ClickableStatCard
+            title="Total Orders"
+            value={stats?.orders || 0}
+            subtitle={`₹${stats?.totalRevenue?.toLocaleString() || 0} GMV`}
+            icon={ShoppingCart}
+            href="/admin/orders"
+          />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Platform Revenue</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹{stats?.platformRevenue?.toLocaleString() || 0}</div>
-              <p className="text-xs text-muted-foreground">30% commission earned</p>
-            </CardContent>
-          </Card>
+          <ClickableStatCard
+            title="Platform Revenue"
+            value={`₹${stats?.platformRevenue?.toLocaleString() || 0}`}
+            subtitle="30% commission earned"
+            icon={TrendingUp}
+            href="/admin/reports"
+          />
         </div>
 
         {/* Pending Actions */}
