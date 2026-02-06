@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,14 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { Filter, SlidersHorizontal, Star, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { printerProducts } from "@/data/products";
 
 const Products = () => {
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const { selectedLocation } = useLocation();
 
   // Fetch approved products from Supabase
-  const { data: products, isLoading } = useQuery({
-    queryKey: ['approved-products', selectedBrand, selectedLocation?.id],
+  const { data: dbProducts, isLoading } = useQuery({
+    queryKey: ['approved-products', selectedLocation?.id],
     queryFn: async () => {
       let query = supabase
         .from('products')
@@ -29,10 +30,6 @@ const Products = () => {
         .eq('status', 'approved')
         .eq('in_stock', true);
 
-      if (selectedBrand) {
-        query = query.eq('brand', selectedBrand);
-      }
-
       if (selectedLocation?.id) {
         query = query.eq('location_id', selectedLocation.id);
       }
@@ -43,20 +40,50 @@ const Products = () => {
     },
   });
 
-  // Get unique brands for filter
-  const { data: brands } = useQuery({
-    queryKey: ['product-brands'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('brand')
-        .eq('status', 'approved')
-        .not('brand', 'is', null);
-      if (error) throw error;
-      const uniqueBrands = [...new Set(data.map(p => p.brand).filter(Boolean))];
-      return uniqueBrands as string[];
-    },
-  });
+  // Combine database products with static products (fallback)
+  const products = useMemo(() => {
+    const dbProductsList = dbProducts || [];
+    
+    // If we have database products, use them; otherwise fallback to static products
+    if (dbProductsList.length > 0) {
+      return selectedBrand 
+        ? dbProductsList.filter(p => p.brand === selectedBrand)
+        : dbProductsList;
+    }
+    
+    // Fallback to static products (converted to match DB structure)
+    const staticProducts = printerProducts.map(p => ({
+      id: p.id,
+      name: p.name,
+      brand: p.brand,
+      slug: p.slug,
+      description: p.description,
+      images: p.images,
+      rating: p.rating,
+      review_count: p.reviewCount,
+      tags: p.tags,
+      rental_plans: p.rentalPlans.map(rp => ({
+        id: rp.id,
+        monthly_rent: rp.monthlyRent,
+        duration_months: rp.duration,
+        label: rp.label,
+        security_deposit: rp.securityDeposit,
+      })),
+      categories: { name: p.category },
+      locations: selectedLocation ? { name: selectedLocation.name } : null,
+    }));
+    
+    return selectedBrand 
+      ? staticProducts.filter(p => p.brand === selectedBrand)
+      : staticProducts;
+  }, [dbProducts, selectedBrand, selectedLocation]);
+
+  // Get unique brands from both sources
+  const brands = useMemo(() => {
+    const dbBrands = (dbProducts || []).map(p => p.brand).filter(Boolean);
+    const staticBrands = printerProducts.map(p => p.brand);
+    return [...new Set([...dbBrands, ...staticBrands])] as string[];
+  }, [dbProducts]);
 
   const getLowestRent = (rentalPlans: any[]) => {
     if (!rentalPlans || rentalPlans.length === 0) return null;
