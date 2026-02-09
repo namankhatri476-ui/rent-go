@@ -78,6 +78,137 @@ export async function saveAddress(
 }
 
 /**
+ * Ensure product exists in database, creating if needed for demo purposes
+ */
+async function ensureProductExists(
+  userId: string,
+  item: CartItem
+): Promise<{ productId: string; vendorId: string; rentalPlanId: string } | null> {
+  const productSlug = item.product.slug;
+  
+  // First, try to find the product by slug
+  let { data: existingProduct } = await supabase
+    .from("products")
+    .select("id, vendor_id")
+    .eq("slug", productSlug)
+    .maybeSingle();
+
+  let vendorId: string;
+  let productId: string;
+
+  if (existingProduct) {
+    productId = existingProduct.id;
+    vendorId = existingProduct.vendor_id;
+  } else {
+    // Product doesn't exist - create a demo vendor and product
+    // First check if user has a vendor profile
+    let { data: vendor } = await supabase
+      .from("vendors")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!vendor) {
+      // Check if any vendor exists
+      const { data: anyVendor } = await supabase
+        .from("vendors")
+        .select("id")
+        .limit(1)
+        .maybeSingle();
+
+      if (anyVendor) {
+        vendorId = anyVendor.id;
+      } else {
+        // Create a demo vendor for this user
+        const { data: newVendor, error: vendorError } = await supabase
+          .from("vendors")
+          .insert({
+            user_id: userId,
+            business_name: "Demo Rentals",
+            business_email: "demo@rentals.com",
+            status: "approved",
+          })
+          .select("id")
+          .single();
+
+        if (vendorError) {
+          console.error("Error creating vendor:", vendorError);
+          return null;
+        }
+        vendorId = newVendor.id;
+      }
+    } else {
+      vendorId = vendor.id;
+    }
+
+    // Create the product
+    const { data: newProduct, error: productError } = await supabase
+      .from("products")
+      .insert({
+        vendor_id: vendorId,
+        name: item.product.name,
+        slug: productSlug,
+        brand: item.product.brand,
+        description: item.product.description,
+        features: item.product.features,
+        images: item.product.images,
+        specifications: item.product.specifications,
+        tags: item.product.tags,
+        rating: item.product.rating,
+        review_count: item.product.reviewCount,
+        in_stock: item.product.inStock,
+        stock_quantity: 10,
+        status: "approved",
+      })
+      .select("id")
+      .single();
+
+    if (productError) {
+      console.error("Error creating product:", productError);
+      return null;
+    }
+    productId = newProduct.id;
+  }
+
+  // Now get or create the rental plan
+  let { data: existingPlan } = await supabase
+    .from("rental_plans")
+    .select("id")
+    .eq("product_id", productId)
+    .eq("duration_months", item.selectedPlan.duration)
+    .maybeSingle();
+
+  let rentalPlanId: string;
+
+  if (existingPlan) {
+    rentalPlanId = existingPlan.id;
+  } else {
+    const { data: newPlan, error: planError } = await supabase
+      .from("rental_plans")
+      .insert({
+        product_id: productId,
+        duration_months: item.selectedPlan.duration,
+        monthly_rent: item.selectedPlan.monthlyRent,
+        security_deposit: item.selectedPlan.securityDeposit,
+        label: item.selectedPlan.label,
+        delivery_fee: item.product.deliveryFee,
+        installation_fee: item.product.installationFee,
+        is_active: true,
+      })
+      .select("id")
+      .single();
+
+    if (planError) {
+      console.error("Error creating rental plan:", planError);
+      return null;
+    }
+    rentalPlanId = newPlan.id;
+  }
+
+  return { productId, vendorId, rentalPlanId };
+}
+
+/**
  * Create orders for all cart items
  * In rental model, each cart item becomes a separate order
  */
@@ -102,65 +233,14 @@ export async function createOrders(
       const platformCommission = Math.round(monthlyRent * commissionRate);
       const vendorPayout = monthlyRent - platformCommission;
 
-      // For demo purposes, we'll use a placeholder vendor_id
-      // In production, this would come from the product's vendor
-      const { data: defaultVendor } = await supabase
-        .from("vendors")
-        .select("id")
-        .limit(1)
-        .maybeSingle();
-
-      // For demo, we need to handle the case where we don't have database products
-      // We'll create a mock product reference or use existing ones
-      const { data: existingProduct } = await supabase
-        .from("products")
-        .select("id, vendor_id")
-        .limit(1)
-        .maybeSingle();
-
-      // Get or create a rental plan reference
-      let rentalPlanId: string;
-      let vendorId: string;
-      let productId: string;
-
-      if (existingProduct) {
-        productId = existingProduct.id;
-        vendorId = existingProduct.vendor_id;
-        
-        // Get existing rental plan or create one
-        const { data: existingPlan } = await supabase
-          .from("rental_plans")
-          .select("id")
-          .eq("product_id", productId)
-          .limit(1)
-          .maybeSingle();
-        
-        if (existingPlan) {
-          rentalPlanId = existingPlan.id;
-        } else {
-          // Create a rental plan for this product
-          const { data: newPlan, error: planError } = await supabase
-            .from("rental_plans")
-            .insert({
-              product_id: productId,
-              duration_months: item.selectedPlan.duration,
-              monthly_rent: item.selectedPlan.monthlyRent,
-              security_deposit: item.selectedPlan.securityDeposit,
-              label: item.selectedPlan.label,
-              delivery_fee: item.product.deliveryFee,
-              installation_fee: item.product.installationFee,
-            })
-            .select("id")
-            .single();
-          
-          if (planError) throw planError;
-          rentalPlanId = newPlan.id;
-        }
-      } else {
-        // No products in database - this is a demo/development scenario
-        // We need to skip order creation or inform the user
-        throw new Error("No products available in database. Please add products through the vendor dashboard first.");
+      // Ensure product exists in database (auto-create for static products)
+      const productData = await ensureProductExists(userId, item);
+      
+      if (!productData) {
+        throw new Error(`Failed to process product: ${item.product.name}. Please try again.`);
       }
+
+      const { productId, vendorId, rentalPlanId } = productData;
 
       // Generate order number
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
