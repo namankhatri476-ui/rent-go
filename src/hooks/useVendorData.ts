@@ -100,7 +100,7 @@ export const useVendorOrders = () => {
         .select(`
           *,
           products (name, images),
-          rental_plans (label, duration_months, monthly_rent)
+          rental_plans!orders_rental_plan_id_fkey (label, duration_months, monthly_rent)
         `)
         .eq('vendor_id', vendorProfile!.id)
         .order('created_at', { ascending: false });
