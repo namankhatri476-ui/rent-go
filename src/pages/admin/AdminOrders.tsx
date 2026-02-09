@@ -49,7 +49,7 @@ const AdminOrders = () => {
           *,
           products (name, images),
           vendors (business_name),
-          rental_plans (label, duration_months, monthly_rent)
+          rental_plans!orders_rental_plan_id_fkey (label, duration_months, monthly_rent)
         `)
         .order('created_at', { ascending: false });
       
