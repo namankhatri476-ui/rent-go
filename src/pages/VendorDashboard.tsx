@@ -10,8 +10,8 @@ import ClickableStatCard from '@/components/dashboard/ClickableStatCard';
 
 const VendorDashboard = () => {
   const { vendorProfile } = useAuth();
-  const { data: stats, isLoading: statsLoading } = useVendorStats();
-  const { data: orders } = useVendorOrders();
+  const { data: stats, isLoading: statsLoading, error: statsError } = useVendorStats();
+  const { data: orders, error: ordersError } = useVendorOrders();
 
   const recentOrders = orders?.slice(0, 5) || [];
 
@@ -22,6 +22,15 @@ const VendorDashboard = () => {
           <h1 className="text-3xl font-bold">Vendor Dashboard</h1>
           <p className="text-muted-foreground">Welcome back, {vendorProfile?.business_name}</p>
         </div>
+
+        {(statsError || ordersError) && (
+          <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm">
+            <p className="font-medium text-destructive">Some vendor data failed to load</p>
+            <p className="mt-1 text-muted-foreground">
+              {(statsError as any)?.message || (ordersError as any)?.message || 'Unknown error'}
+            </p>
+          </div>
+        )}
 
         {/* Stats Grid - Clickable Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

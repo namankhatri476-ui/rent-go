@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useVendorOrders } from '@/hooks/useVendorData';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,30 +30,55 @@ import {
 import { toast } from 'sonner';
 import { Search, Eye, ShoppingCart } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext';
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
 
 const VendorOrders = () => {
   const queryClient = useQueryClient();
+  const { user, vendorProfile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
-  const { data: orders, isLoading } = useVendorOrders();
+  const { data: orders, isLoading, error } = useVendorOrders();
+  const [vendorIdFromRpc, setVendorIdFromRpc] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      if (!user) return;
+      const { data, error: rpcError } = await supabase.rpc('get_vendor_id', { _user_id: user.id });
+      if (!cancelled) {
+        if (rpcError) {
+          console.error('get_vendor_id RPC error:', rpcError);
+          setVendorIdFromRpc('RPC_ERROR');
+        } else {
+          setVendorIdFromRpc(data ?? null);
+        }
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string; status: OrderStatus }) => {
       const updateData: any = { status };
-      
+
       if (status === 'confirmed') updateData.confirmed_at = new Date().toISOString();
       if (status === 'shipped') updateData.shipped_at = new Date().toISOString();
       if (status === 'delivered') updateData.delivered_at = new Date().toISOString();
-      
+
       const { error } = await supabase
         .from('orders')
         .update(updateData)
         .eq('id', orderId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -167,13 +192,35 @@ const VendorOrders = () => {
             <CardTitle>Orders ({filteredOrders?.length || 0})</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {error ? (
+              <div className="space-y-4">
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm">
+                  <p className="font-medium text-destructive">Failed to load vendor orders</p>
+                  <p className="mt-1 text-muted-foreground">{(error as any)?.message ?? 'Unknown error'}</p>
+                </div>
+
+                <div className="rounded-lg border bg-muted/40 p-4 text-xs text-muted-foreground">
+                  <p><span className="font-medium">Debug</span></p>
+                  <p>user.id: {user?.id ?? '—'}</p>
+                  <p>vendorProfile.id: {vendorProfile?.id ?? '—'}</p>
+                  <p>get_vendor_id(user): {vendorIdFromRpc ?? '—'}</p>
+                  <p className="mt-2">If vendorProfile.id and get_vendor_id(user) differ, you likely have multiple vendor rows for one user or an order is linked to a different vendor id.</p>
+                </div>
+              </div>
+            ) : isLoading ? (
               <div className="text-center py-8">Loading orders...</div>
             ) : filteredOrders?.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No orders found</p>
                 <p className="text-sm">Orders will appear here when customers rent your products</p>
+
+                <div className="mt-6 mx-auto max-w-xl rounded-lg border bg-muted/40 p-4 text-left text-xs text-muted-foreground">
+                  <p className="font-medium">Debug</p>
+                  <p>user.id: {user?.id ?? '—'}</p>
+                  <p>vendorProfile.id: {vendorProfile?.id ?? '—'}</p>
+                  <p>get_vendor_id(user): {vendorIdFromRpc ?? '—'}</p>
+                </div>
               </div>
             ) : (
               <Table>
