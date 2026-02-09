@@ -9,46 +9,69 @@ export const useVendorStats = () => {
     queryKey: ['vendor-stats', vendorProfile?.id],
     enabled: !!vendorProfile?.id,
     queryFn: async () => {
-      // NOTE: We rely on backend row-level access rules to scope data to the
-      // currently authenticated vendor. This avoids "0 rows" issues when the
-      // client-side vendor id doesn't match the stored order/vendor ids.
+      const vendorId = vendorProfile!.id;
+      console.log('[useVendorStats] Fetching stats for vendor:', vendorId);
 
-      // Fetch products count
+      // Fetch products count - filter by vendor_id explicitly
       const { count: productCount, error: productCountError } = await supabase
         .from('products')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('vendor_id', vendorId);
 
-      if (productCountError) throw productCountError;
+      if (productCountError) {
+        console.error('[useVendorStats] productCount error:', productCountError);
+        throw productCountError;
+      }
 
       const { count: pendingProducts, error: pendingProductsError } = await supabase
         .from('products')
         .select('*', { count: 'exact', head: true })
+        .eq('vendor_id', vendorId)
         .eq('status', 'pending');
 
-      if (pendingProductsError) throw pendingProductsError;
+      if (pendingProductsError) {
+        console.error('[useVendorStats] pendingProducts error:', pendingProductsError);
+        throw pendingProductsError;
+      }
 
-      // Fetch orders count
+      // Fetch orders count - filter by vendor_id explicitly
       const { count: orderCount, error: orderCountError } = await supabase
         .from('orders')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('vendor_id', vendorId);
 
-      if (orderCountError) throw orderCountError;
+      console.log('[useVendorStats] orderCount:', orderCount, 'error:', orderCountError);
 
-      // "Active" = anything that is not cancelled/returned (includes pending)
+      if (orderCountError) {
+        console.error('[useVendorStats] orderCount error:', orderCountError);
+        throw orderCountError;
+      }
+
+      // "Active" = pending, confirmed, processing, shipped, delivered
       const { count: activeOrders, error: activeOrdersError } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
+        .eq('vendor_id', vendorId)
         .in('status', ['pending', 'confirmed', 'processing', 'shipped', 'delivered']);
 
-      if (activeOrdersError) throw activeOrdersError;
+      console.log('[useVendorStats] activeOrders:', activeOrders, 'error:', activeOrdersError);
 
-      // Fetch earnings
+      if (activeOrdersError) {
+        console.error('[useVendorStats] activeOrders error:', activeOrdersError);
+        throw activeOrdersError;
+      }
+
+      // Fetch earnings - only from confirmed+ orders
       const { data: orders, error: earningsError } = await supabase
         .from('orders')
         .select('vendor_payout')
+        .eq('vendor_id', vendorId)
         .in('status', ['confirmed', 'delivered', 'processing', 'shipped']);
 
-      if (earningsError) throw earningsError;
+      if (earningsError) {
+        console.error('[useVendorStats] earnings error:', earningsError);
+        throw earningsError;
+      }
 
       const totalEarnings = orders?.reduce((sum, o) => sum + Number(o.vendor_payout), 0) || 0;
 
@@ -56,13 +79,17 @@ export const useVendorStats = () => {
       const { data: payouts, error: payoutsError } = await supabase
         .from('vendor_payouts')
         .select('amount')
+        .eq('vendor_id', vendorId)
         .eq('status', 'pending');
 
-      if (payoutsError) throw payoutsError;
+      if (payoutsError) {
+        console.error('[useVendorStats] payouts error:', payoutsError);
+        throw payoutsError;
+      }
 
       const pendingPayouts = payouts?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
-      return {
+      const result = {
         products: productCount || 0,
         pendingProducts: pendingProducts || 0,
         orders: orderCount || 0,
@@ -70,6 +97,9 @@ export const useVendorStats = () => {
         totalEarnings,
         pendingPayouts,
       };
+
+      console.log('[useVendorStats] Final result:', result);
+      return result;
     },
   });
 };
@@ -88,6 +118,7 @@ export const useVendorProducts = () => {
           categories (name),
           rental_plans (*)
         `)
+        .eq('vendor_id', vendorProfile!.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -103,6 +134,9 @@ export const useVendorOrders = () => {
     queryKey: ['vendor-orders', vendorProfile?.id],
     enabled: !!vendorProfile?.id,
     queryFn: async () => {
+      const vendorId = vendorProfile!.id;
+      console.log('[useVendorOrders] Fetching orders for vendor:', vendorId);
+
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -110,9 +144,15 @@ export const useVendorOrders = () => {
           products (name, images),
           rental_plans!orders_rental_plan_id_fkey (label, duration_months, monthly_rent)
         `)
+        .eq('vendor_id', vendorId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('[useVendorOrders] Result:', { count: data?.length, error });
+
+      if (error) {
+        console.error('[useVendorOrders] Error:', error);
+        throw error;
+      }
       return data;
     },
   });
@@ -128,6 +168,7 @@ export const useVendorPayouts = () => {
       const { data, error } = await supabase
         .from('vendor_payouts')
         .select('*')
+        .eq('vendor_id', vendorProfile!.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
