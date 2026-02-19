@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useVendorOrders } from '@/hooks/useVendorData';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,70 +5,33 @@ import VendorLayout from '@/components/vendor/VendorLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { useState } from 'react';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Search, Eye, ShoppingCart } from 'lucide-react';
+import { Search, Eye, ShoppingCart, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
-import { useAuth } from '@/contexts/AuthContext';
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
 
 const VendorOrders = () => {
   const queryClient = useQueryClient();
-  const { user, vendorProfile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   const { data: orders, isLoading, error } = useVendorOrders();
-  const [vendorIdFromRpc, setVendorIdFromRpc] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
-      if (!user) return;
-      const { data, error: rpcError } = await supabase.rpc('get_vendor_id', { _user_id: user.id });
-      if (!cancelled) {
-        if (rpcError) {
-          console.error('get_vendor_id RPC error:', rpcError);
-          setVendorIdFromRpc('RPC_ERROR');
-        } else {
-          setVendorIdFromRpc(data ?? null);
-        }
-      }
-    };
-
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string; status: OrderStatus }) => {
       const updateData: any = { status };
-
       if (status === 'confirmed') updateData.confirmed_at = new Date().toISOString();
       if (status === 'shipped') updateData.shipped_at = new Date().toISOString();
       if (status === 'delivered') updateData.delivered_at = new Date().toISOString();
@@ -78,7 +40,6 @@ const VendorOrders = () => {
         .from('orders')
         .update(updateData)
         .eq('id', orderId);
-
       if (error) throw error;
     },
     onSuccess: () => {
@@ -110,7 +71,6 @@ const VendorOrders = () => {
     return <span className={`px-2 py-1 rounded-full text-xs ${colors[status]}`}>{status}</span>;
   };
 
-  // Calculate stats
   const pendingCount = orders?.filter(o => o.status === 'pending').length || 0;
   const activeCount = orders?.filter(o => ['confirmed', 'processing', 'shipped', 'delivered'].includes(o.status)).length || 0;
 
@@ -127,27 +87,21 @@ const VendorOrders = () => {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Pending Orders</CardTitle></CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-amber-600">{pendingCount}</div>
               <p className="text-xs text-muted-foreground">Awaiting confirmation</p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Active Orders</CardTitle></CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">{activeCount}</div>
               <p className="text-xs text-muted-foreground">In progress</p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Orders</CardTitle></CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{orders?.length || 0}</div>
               <p className="text-xs text-muted-foreground">All time</p>
@@ -161,17 +115,10 @@ const VendorOrders = () => {
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by order number..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
+                <Input placeholder="Search by order number..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
               </div>
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by status" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
@@ -188,24 +135,12 @@ const VendorOrders = () => {
 
         {/* Orders Table */}
         <Card>
-          <CardHeader>
-            <CardTitle>Orders ({filteredOrders?.length || 0})</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Orders ({filteredOrders?.length || 0})</CardTitle></CardHeader>
           <CardContent>
             {error ? (
-              <div className="space-y-4">
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm">
-                  <p className="font-medium text-destructive">Failed to load vendor orders</p>
-                  <p className="mt-1 text-muted-foreground">{(error as any)?.message ?? 'Unknown error'}</p>
-                </div>
-
-                <div className="rounded-lg border bg-muted/40 p-4 text-xs text-muted-foreground">
-                  <p><span className="font-medium">Debug</span></p>
-                  <p>user.id: {user?.id ?? '—'}</p>
-                  <p>vendorProfile.id: {vendorProfile?.id ?? '—'}</p>
-                  <p>get_vendor_id(user): {vendorIdFromRpc ?? '—'}</p>
-                  <p className="mt-2">If vendorProfile.id and get_vendor_id(user) differ, you likely have multiple vendor rows for one user or an order is linked to a different vendor id.</p>
-                </div>
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm">
+                <p className="font-medium text-destructive">Failed to load orders</p>
+                <p className="mt-1 text-muted-foreground">{(error as any)?.message ?? 'Unknown error'}</p>
               </div>
             ) : isLoading ? (
               <div className="text-center py-8">Loading orders...</div>
@@ -214,13 +149,6 @@ const VendorOrders = () => {
                 <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No orders found</p>
                 <p className="text-sm">Orders will appear here when customers rent your products</p>
-
-                <div className="mt-6 mx-auto max-w-xl rounded-lg border bg-muted/40 p-4 text-left text-xs text-muted-foreground">
-                  <p className="font-medium">Debug</p>
-                  <p>user.id: {user?.id ?? '—'}</p>
-                  <p>vendorProfile.id: {vendorProfile?.id ?? '—'}</p>
-                  <p>get_vendor_id(user): {vendorIdFromRpc ?? '—'}</p>
-                </div>
               </div>
             ) : (
               <Table>
@@ -238,35 +166,21 @@ const VendorOrders = () => {
                 <TableBody>
                   {filteredOrders?.map((order) => (
                     <TableRow key={order.id}>
-                      <TableCell className="font-mono text-sm">
-                        {order.order_number}
-                      </TableCell>
+                      <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {order.products?.images?.[0] && (
-                            <img 
-                              src={order.products.images[0]} 
-                              alt=""
-                              className="w-8 h-8 object-cover rounded"
-                            />
+                            <img src={order.products.images[0]} alt="" className="w-8 h-8 object-cover rounded" />
                           )}
                           <span className="truncate max-w-[150px]">{order.products?.name}</span>
                         </div>
                       </TableCell>
                       <TableCell>{order.rental_plans?.label}</TableCell>
-                      <TableCell className="font-medium text-green-600">
-                        ₹{order.vendor_payout?.toLocaleString()}
-                      </TableCell>
+                      <TableCell className="font-medium text-green-600">₹{order.vendor_payout?.toLocaleString()}</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>{format(new Date(order.created_at), 'MMM dd, yyyy')}</TableCell>
                       <TableCell>
-                        {format(new Date(order.created_at), 'MMM dd, yyyy')}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setSelectedOrder(order)}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -280,7 +194,7 @@ const VendorOrders = () => {
 
         {/* Order Details Dialog */}
         <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Order Details - {selectedOrder?.order_number}</DialogTitle>
             </DialogHeader>
@@ -296,16 +210,11 @@ const VendorOrders = () => {
                     <Select 
                       value={selectedOrder.status}
                       onValueChange={(status) => {
-                        updateStatusMutation.mutate({ 
-                          orderId: selectedOrder.id, 
-                          status: status as OrderStatus 
-                        });
+                        updateStatusMutation.mutate({ orderId: selectedOrder.id, status: status as OrderStatus });
                         setSelectedOrder({ ...selectedOrder, status });
                       }}
                     >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="confirmed">Confirmed</SelectItem>
@@ -322,11 +231,7 @@ const VendorOrders = () => {
                   <CardContent className="pt-4">
                     <div className="flex items-center gap-4">
                       {selectedOrder.products?.images?.[0] && (
-                        <img 
-                          src={selectedOrder.products.images[0]} 
-                          alt=""
-                          className="w-16 h-16 object-cover rounded"
-                        />
+                        <img src={selectedOrder.products.images[0]} alt="" className="w-16 h-16 object-cover rounded" />
                       )}
                       <div>
                         <p className="font-medium">{selectedOrder.products?.name}</p>
@@ -339,11 +244,34 @@ const VendorOrders = () => {
                   </CardContent>
                 </Card>
 
+                {/* Customer Address */}
+                {selectedOrder.addresses && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Customer Address
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-1">
+                        <p className="font-medium">{selectedOrder.addresses.full_name}</p>
+                        <p className="text-sm text-muted-foreground">{selectedOrder.addresses.phone}</p>
+                        <p className="text-sm">
+                          {selectedOrder.addresses.address_line1}
+                          {selectedOrder.addresses.address_line2 && `, ${selectedOrder.addresses.address_line2}`}
+                        </p>
+                        <p className="text-sm">
+                          {selectedOrder.addresses.city}, {selectedOrder.addresses.state} - {selectedOrder.addresses.pincode}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Earnings */}
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Your Earnings</CardTitle>
-                  </CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Your Earnings</CardTitle></CardHeader>
                   <CardContent>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
@@ -364,9 +292,7 @@ const VendorOrders = () => {
 
                 {/* Timeline */}
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Timeline</CardTitle>
-                  </CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Timeline</CardTitle></CardHeader>
                   <CardContent>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">

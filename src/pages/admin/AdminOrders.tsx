@@ -7,28 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Search, Eye, ShoppingCart } from 'lucide-react';
+import { Search, Eye, ShoppingCart, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
@@ -42,27 +30,22 @@ const AdminOrders = () => {
   const { data: orders, isLoading, error } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
-      console.log('Fetching admin orders...');
       const { data, error } = await supabase
         .from('orders')
         .select(`
           *,
           products (name, images),
           vendors (business_name),
-          rental_plans!orders_rental_plan_id_fkey (label, duration_months, monthly_rent)
+          rental_plans!orders_rental_plan_id_fkey (label, duration_months, monthly_rent),
+          addresses (full_name, phone, address_line1, address_line2, city, state, pincode)
         `)
         .order('created_at', { ascending: false });
       
-      if (error) {
-        console.error('Error fetching orders:', error);
-        throw error;
-      }
-      console.log('Orders fetched:', data?.length);
+      if (error) throw error;
       return data;
     },
   });
 
-  // Log any query errors
   if (error) {
     console.error('Query error:', error);
   }
@@ -71,7 +54,6 @@ const AdminOrders = () => {
     mutationFn: async ({ orderId, status }: { orderId: string; status: OrderStatus }) => {
       const updateData: any = { status };
       
-      // Add timestamps based on status
       if (status === 'confirmed') updateData.confirmed_at = new Date().toISOString();
       if (status === 'shipped') updateData.shipped_at = new Date().toISOString();
       if (status === 'delivered') updateData.delivered_at = new Date().toISOString();
@@ -83,9 +65,27 @@ const AdminOrders = () => {
         .eq('id', orderId);
       
       if (error) throw error;
+
+      // Auto-create vendor payout when order is confirmed
+      if (status === 'confirmed') {
+        const order = orders?.find(o => o.id === orderId);
+        if (order) {
+          const { error: payoutError } = await supabase
+            .from('vendor_payouts')
+            .insert({
+              vendor_id: order.vendor_id,
+              order_id: orderId,
+              amount: order.vendor_payout,
+              payout_type: 'order_confirmation',
+              status: 'pending',
+            });
+          if (payoutError) console.error('Payout creation error:', payoutError);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-payouts'] });
       toast.success('Order status updated');
     },
     onError: (error) => {
@@ -104,15 +104,6 @@ const AdminOrders = () => {
   });
 
   const getStatusBadge = (status: OrderStatus) => {
-    const variants: Record<OrderStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      pending: 'secondary',
-      confirmed: 'default',
-      processing: 'default',
-      shipped: 'default',
-      delivered: 'default',
-      cancelled: 'destructive',
-      returned: 'outline',
-    };
     const colors: Record<OrderStatus, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
       confirmed: 'bg-blue-100 text-blue-800',
@@ -198,17 +189,11 @@ const AdminOrders = () => {
                 <TableBody>
                   {filteredOrders?.map((order) => (
                     <TableRow key={order.id}>
-                      <TableCell className="font-mono text-sm">
-                        {order.order_number}
-                      </TableCell>
+                      <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {order.products?.images?.[0] && (
-                            <img 
-                              src={order.products.images[0]} 
-                              alt=""
-                              className="w-8 h-8 object-cover rounded"
-                            />
+                            <img src={order.products.images[0]} alt="" className="w-8 h-8 object-cover rounded" />
                           )}
                           <span className="truncate max-w-[150px]">{order.products?.name}</span>
                         </div>
@@ -218,15 +203,9 @@ const AdminOrders = () => {
                       <TableCell>₹{order.payable_now_total?.toLocaleString()}</TableCell>
                       <TableCell>₹{order.monthly_total?.toLocaleString()}/mo</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>{format(new Date(order.created_at), 'MMM dd, yyyy')}</TableCell>
                       <TableCell>
-                        {format(new Date(order.created_at), 'MMM dd, yyyy')}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setSelectedOrder(order)}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -256,16 +235,11 @@ const AdminOrders = () => {
                     <Select 
                       value={selectedOrder.status}
                       onValueChange={(status) => {
-                        updateStatusMutation.mutate({ 
-                          orderId: selectedOrder.id, 
-                          status: status as OrderStatus 
-                        });
+                        updateStatusMutation.mutate({ orderId: selectedOrder.id, status: status as OrderStatus });
                         setSelectedOrder({ ...selectedOrder, status });
                       }}
                     >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="confirmed">Confirmed</SelectItem>
@@ -282,17 +256,11 @@ const AdminOrders = () => {
                 {/* Product & Vendor Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Product</CardTitle>
-                    </CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm">Product</CardTitle></CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-3">
                         {selectedOrder.products?.images?.[0] && (
-                          <img 
-                            src={selectedOrder.products.images[0]} 
-                            alt=""
-                            className="w-16 h-16 object-cover rounded"
-                          />
+                          <img src={selectedOrder.products.images[0]} alt="" className="w-16 h-16 object-cover rounded" />
                         )}
                         <div>
                           <p className="font-medium">{selectedOrder.products?.name}</p>
@@ -306,20 +274,41 @@ const AdminOrders = () => {
                   </Card>
                   
                   <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Vendor</CardTitle>
-                    </CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm">Vendor</CardTitle></CardHeader>
                     <CardContent>
                       <p className="font-medium">{selectedOrder.vendors?.business_name}</p>
                     </CardContent>
                   </Card>
                 </div>
 
+                {/* Customer Address */}
+                {selectedOrder.addresses && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Customer Address
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-1">
+                        <p className="font-medium">{selectedOrder.addresses.full_name}</p>
+                        <p className="text-sm text-muted-foreground">{selectedOrder.addresses.phone}</p>
+                        <p className="text-sm">
+                          {selectedOrder.addresses.address_line1}
+                          {selectedOrder.addresses.address_line2 && `, ${selectedOrder.addresses.address_line2}`}
+                        </p>
+                        <p className="text-sm">
+                          {selectedOrder.addresses.city}, {selectedOrder.addresses.state} - {selectedOrder.addresses.pincode}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Payment Breakdown */}
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Payment Breakdown</CardTitle>
-                  </CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Payment Breakdown</CardTitle></CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -372,9 +361,7 @@ const AdminOrders = () => {
 
                 {/* Commission Info */}
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Commission & Payout</CardTitle>
-                  </CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Commission & Payout</CardTitle></CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex justify-between">
@@ -391,9 +378,7 @@ const AdminOrders = () => {
 
                 {/* Timeline */}
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Order Timeline</CardTitle>
-                  </CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Order Timeline</CardTitle></CardHeader>
                   <CardContent>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">

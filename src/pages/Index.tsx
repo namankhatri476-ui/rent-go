@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Printer, Laptop, Sofa, CheckCircle, Building2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { ArrowRight, Printer, CheckCircle, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
@@ -17,7 +19,51 @@ const Index = () => {
     document.title = "RentEase | Home";
   }, []);
 
-  
+  // Fetch dynamic categories from DB
+  const { data: categories } = useQuery({
+    queryKey: ['homepage-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('name')
+        .limit(6);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch featured products from DB (first 4 approved products)
+  const { data: featuredProducts } = useQuery({
+    queryKey: ['featured-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories (name),
+          rental_plans (*)
+        `)
+        .eq('status', 'approved')
+        .eq('in_stock', true)
+        .order('created_at', { ascending: false })
+        .limit(4);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Use DB products if available, otherwise fall back to static
+  const displayProducts = featuredProducts && featuredProducts.length > 0
+    ? featuredProducts
+    : null;
+
+  // Category icon mapping
+  const getCategoryIcon = (name: string) => {
+    return <Printer className="w-8 h-8" />;
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -55,7 +101,6 @@ const Index = () => {
               </Link>
             </div>
             
-            {/* Quick Links for logged in users */}
             {user && (isVendor || isAdmin) && (
               <div className="flex justify-center gap-4 pt-4">
                 {isAdmin && (
@@ -85,66 +130,64 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Categories Preview */}
+      {/* Dynamic Categories */}
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="section-header text-3xl md:text-4xl mb-4">
-              Browse Categories
-            </h2>
+            <h2 className="section-header text-3xl md:text-4xl mb-4">Browse Categories</h2>
             <p className="section-subheader mx-auto">
-              Start with printers, more categories coming soon!
+              {categories && categories.length > 0 
+                ? 'Explore our rental categories' 
+                : 'Start with printers, more categories coming soon!'}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {/* Printers - Active */}
-            <Link 
-              to="/products" 
-              className="group relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground transition-transform hover:-translate-y-1"
-            >
-              <div className="absolute top-4 right-4">
-                <Badge variant="accent">Available</Badge>
-              </div>
-              <div className="w-16 h-16 rounded-2xl bg-primary-foreground/10 flex items-center justify-center mb-4">
-                <Printer className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Printers</h3>
-              <p className="text-primary-foreground/80 text-sm mb-4">
-                Laser, Inkjet & Multifunction
-              </p>
-              <span className="text-sm font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
-                Explore <ArrowRight className="w-4 h-4" />
-              </span>
-            </Link>
-
-            {/* Electronics - Coming Soon */}
-            <div className="relative overflow-hidden rounded-2xl bg-muted p-6 opacity-75">
-              <div className="absolute top-4 right-4">
-                <Badge variant="muted">Coming Soon</Badge>
-              </div>
-              <div className="w-16 h-16 rounded-2xl bg-muted-foreground/10 flex items-center justify-center mb-4">
-                <Laptop className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-xl font-bold text-muted-foreground mb-2">Electronics</h3>
-              <p className="text-muted-foreground/80 text-sm">
-                Laptops, Monitors & More
-              </p>
-            </div>
-
-            {/* Furniture - Coming Soon */}
-            <div className="relative overflow-hidden rounded-2xl bg-muted p-6 opacity-75">
-              <div className="absolute top-4 right-4">
-                <Badge variant="muted">Coming Soon</Badge>
-              </div>
-              <div className="w-16 h-16 rounded-2xl bg-muted-foreground/10 flex items-center justify-center mb-4">
-                <Sofa className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-xl font-bold text-muted-foreground mb-2">Furniture</h3>
-              <p className="text-muted-foreground/80 text-sm">
-                Desks, Chairs & Storage
-              </p>
-            </div>
+            {categories && categories.length > 0 ? (
+              categories.slice(0, 3).map((cat) => (
+                <Link
+                  key={cat.id}
+                  to={`/products?category=${cat.slug}`}
+                  className="group relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground transition-transform hover:-translate-y-1"
+                >
+                  <div className="absolute top-4 right-4">
+                    <Badge variant="accent">Available</Badge>
+                  </div>
+                  <div className="w-16 h-16 rounded-2xl bg-primary-foreground/10 flex items-center justify-center mb-4">
+                    {cat.image_url ? (
+                      <img src={cat.image_url} alt={cat.name} className="w-8 h-8 object-cover rounded" />
+                    ) : (
+                      getCategoryIcon(cat.name)
+                    )}
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">{cat.name}</h3>
+                  <p className="text-primary-foreground/80 text-sm mb-4">
+                    {cat.description || 'Browse products'}
+                  </p>
+                  <span className="text-sm font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
+                    Explore <ArrowRight className="w-4 h-4" />
+                  </span>
+                </Link>
+              ))
+            ) : (
+              // Fallback static categories
+              <Link 
+                to="/products" 
+                className="group relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground transition-transform hover:-translate-y-1"
+              >
+                <div className="absolute top-4 right-4">
+                  <Badge variant="accent">Available</Badge>
+                </div>
+                <div className="w-16 h-16 rounded-2xl bg-primary-foreground/10 flex items-center justify-center mb-4">
+                  <Printer className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Printers</h3>
+                <p className="text-primary-foreground/80 text-sm mb-4">Laser, Inkjet & Multifunction</p>
+                <span className="text-sm font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
+                  Explore <ArrowRight className="w-4 h-4" />
+                </span>
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -154,12 +197,8 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div>
-              <h2 className="section-header text-2xl md:text-3xl">
-                Featured Printers
-              </h2>
-              <p className="text-muted-foreground mt-2">
-                Top-rated printers for home and office
-              </p>
+              <h2 className="section-header text-2xl md:text-3xl">Featured Products</h2>
+              <p className="text-muted-foreground mt-2">Top-rated products for home and office</p>
             </div>
             <Link to="/products">
               <Button variant="outline" className="gap-2">
@@ -170,9 +209,44 @@ const Index = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {printerProducts.slice(0, 4).map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+            {displayProducts ? (
+              displayProducts.map((product) => {
+                const lowestRent = product.rental_plans?.length > 0
+                  ? Math.min(...product.rental_plans.map((rp: any) => rp.monthly_rent))
+                  : null;
+                
+                return (
+                  <Link key={product.id} to={`/product/${product.slug}`} className="block">
+                    <div className="group overflow-hidden rounded-xl border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg bg-card">
+                      <div className="aspect-[4/3] relative overflow-hidden bg-muted">
+                        {product.images?.[0] ? (
+                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">No Image</div>
+                        )}
+                        {product.tags?.[0] && (
+                          <Badge className="absolute top-3 left-3" variant="accent">{product.tags[0]}</Badge>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{product.brand}</p>
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">{product.name}</h3>
+                        {lowestRent && (
+                          <div className="flex items-baseline gap-1 mt-2">
+                            <span className="text-lg font-bold text-primary">₹{lowestRent.toLocaleString()}</span>
+                            <span className="text-sm text-muted-foreground">/month</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })
+            ) : (
+              printerProducts.slice(0, 4).map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -181,12 +255,8 @@ const Index = () => {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="section-header text-3xl md:text-4xl mb-4">
-              How Renting Works
-            </h2>
-            <p className="section-subheader mx-auto">
-              Simple 4-step process to get started
-            </p>
+            <h2 className="section-header text-3xl md:text-4xl mb-4">How Renting Works</h2>
+            <p className="section-subheader mx-auto">Simple 4-step process to get started</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-5xl mx-auto">

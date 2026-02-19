@@ -42,6 +42,7 @@ import AdminPayouts from "./pages/admin/AdminPayouts";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminMonthlyRent from "./pages/admin/AdminMonthlyRent";
 
 const queryClient = new QueryClient();
 
@@ -249,6 +250,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRoles={['admin']}>
                     <AdminSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/monthly-rent"
+                element={
+                  <ProtectedRoute requiredRoles={['admin']}>
+                    <AdminMonthlyRent />
                   </ProtectedRoute>
                 }
               />
