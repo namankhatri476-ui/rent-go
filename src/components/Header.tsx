@@ -153,6 +153,12 @@ const Header = () => {
                         </Link>
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuItem asChild>
+                      <Link to="/my-orders" className="flex items-center gap-2 cursor-pointer">
+                        <ShoppingCart className="w-4 h-4" />
+                        My Orders
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={signOut}

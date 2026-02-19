@@ -1,49 +1,94 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useAdminStats } from '@/hooks/useAdminStats';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Users, Package, ShoppingCart } from 'lucide-react';
+import { TrendingUp, DollarSign, Users, ShoppingCart, Loader2 } from 'lucide-react';
 
 const AdminReports = () => {
   const { data: stats } = useAdminStats();
 
-  // Mock data for charts - in production, this would come from API
-  const monthlyRevenue = [
-    { month: 'Jan', revenue: 45000, orders: 12 },
-    { month: 'Feb', revenue: 52000, orders: 15 },
-    { month: 'Mar', revenue: 48000, orders: 14 },
-    { month: 'Apr', revenue: 61000, orders: 18 },
-    { month: 'May', revenue: 55000, orders: 16 },
-    { month: 'Jun', revenue: 67000, orders: 20 },
-  ];
+  // Fetch real revenue data by month
+  const { data: revenueData } = useQuery({
+    queryKey: ['admin-revenue-trend'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('created_at, monthly_rent, monthly_total')
+        .in('status', ['confirmed', 'processing', 'shipped', 'delivered'])
+        .order('created_at', { ascending: true });
+      if (error) throw error;
 
-  const categoryData = [
-    { name: 'Printers', value: 45 },
-    { name: 'Electronics', value: 25 },
-    { name: 'Furniture', value: 20 },
-    { name: 'Appliances', value: 10 },
-  ];
+      // Group by month
+      const monthMap: Record<string, { revenue: number; orders: number }> = {};
+      data?.forEach(order => {
+        const date = new Date(order.created_at);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const label = date.toLocaleString('default', { month: 'short', year: '2-digit' });
+        if (!monthMap[key]) monthMap[key] = { revenue: 0, orders: 0 };
+        monthMap[key].revenue += Number(order.monthly_total) || 0;
+        monthMap[key].orders += 1;
+      });
 
-  const vendorPerformance = [
-    { name: 'Vendor A', revenue: 125000, orders: 35 },
-    { name: 'Vendor B', revenue: 98000, orders: 28 },
-    { name: 'Vendor C', revenue: 76000, orders: 22 },
-    { name: 'Vendor D', revenue: 54000, orders: 15 },
-    { name: 'Vendor E', revenue: 43000, orders: 12 },
-  ];
+      return Object.entries(monthMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, val]) => {
+          const [y, m] = key.split('-');
+          const d = new Date(Number(y), Number(m) - 1);
+          return { month: d.toLocaleString('default', { month: 'short' }), ...val };
+        });
+    },
+  });
+
+  // Fetch real category distribution
+  const { data: categoryData } = useQuery({
+    queryKey: ['admin-category-distribution'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('product_id, products (category_id, categories (name))')
+        .in('status', ['pending', 'confirmed', 'processing', 'shipped', 'delivered']);
+      if (error) throw error;
+
+      const catMap: Record<string, number> = {};
+      data?.forEach(order => {
+        const catName = (order.products as any)?.categories?.name || 'Uncategorized';
+        catMap[catName] = (catMap[catName] || 0) + 1;
+      });
+
+      return Object.entries(catMap).map(([name, value]) => ({ name, value }));
+    },
+  });
+
+  // Fetch top vendors
+  const { data: vendorPerformance } = useQuery({
+    queryKey: ['admin-top-vendors'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('vendor_id, vendor_payout, vendors (business_name)')
+        .in('status', ['confirmed', 'processing', 'shipped', 'delivered']);
+      if (error) throw error;
+
+      const vendorMap: Record<string, { name: string; revenue: number; orders: number }> = {};
+      data?.forEach(order => {
+        const vid = order.vendor_id;
+        if (!vendorMap[vid]) {
+          vendorMap[vid] = { name: (order.vendors as any)?.business_name || 'Unknown', revenue: 0, orders: 0 };
+        }
+        vendorMap[vid].revenue += Number(order.vendor_payout) || 0;
+        vendorMap[vid].orders += 1;
+      });
+
+      return Object.values(vendorMap)
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5);
+    },
+  });
 
   const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))'];
 
@@ -68,11 +113,10 @@ const AdminReports = () => {
               <div className="text-2xl font-bold">₹{stats?.totalRevenue?.toLocaleString() || 0}</div>
               <div className="flex items-center text-xs text-green-600">
                 <TrendingUp className="h-3 w-3 mr-1" />
-                <span>+12% from last month</span>
+                <span>From completed payments</span>
               </div>
             </CardContent>
           </Card>
-          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Platform Commission</CardTitle>
@@ -86,7 +130,6 @@ const AdminReports = () => {
               </div>
             </CardContent>
           </Card>
-          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Vendors</CardTitle>
@@ -99,7 +142,6 @@ const AdminReports = () => {
               </div>
             </CardContent>
           </Card>
-          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
@@ -116,78 +158,71 @@ const AdminReports = () => {
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Revenue Trend */}
           <Card>
-            <CardHeader>
-              <CardTitle>Revenue Trend</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Revenue Trend</CardTitle></CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyRevenue}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip 
-                    formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="hsl(var(--primary))" 
-                    strokeWidth={2}
-                    dot={{ fill: 'hsl(var(--primary))' }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {!revenueData || revenueData.length === 0 ? (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">No revenue data yet</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={revenueData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']} />
+                    <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))' }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
 
-          {/* Category Distribution */}
           <Card>
-            <CardHeader>
-              <CardTitle>Orders by Category</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Orders by Category</CardTitle></CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              {!categoryData || categoryData.length === 0 ? (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">No category data yet</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%" cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {categoryData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </div>
 
         {/* Top Vendors */}
         <Card>
-          <CardHeader>
-            <CardTitle>Top Performing Vendors</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Top Performing Vendors</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={vendorPerformance} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={80} />
-                <Tooltip 
-                  formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']}
-                />
-                <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {!vendorPerformance || vendorPerformance.length === 0 ? (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">No vendor data yet</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={vendorPerformance} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis dataKey="name" type="category" width={120} />
+                  <Tooltip formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']} />
+                  <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>

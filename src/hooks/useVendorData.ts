@@ -142,7 +142,8 @@ export const useVendorOrders = () => {
         .select(`
           *,
           products (name, images),
-          rental_plans!orders_rental_plan_id_fkey (label, duration_months, monthly_rent)
+          rental_plans!orders_rental_plan_id_fkey (label, duration_months, monthly_rent),
+          addresses (full_name, phone, address_line1, address_line2, city, state, pincode)
         `)
         .eq('vendor_id', vendorId)
         .order('created_at', { ascending: false });

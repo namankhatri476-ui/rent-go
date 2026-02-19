@@ -10,7 +10,8 @@ import {
   Settings,
   FolderTree,
   BarChart3,
-  Users
+  Users,
+  CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/admin/categories', label: 'Categories', icon: FolderTree },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
   { href: '/admin/payouts', label: 'Payouts', icon: CreditCard },
+  { href: '/admin/monthly-rent', label: 'Monthly Rent', icon: CalendarDays },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/reports', label: 'Reports', icon: BarChart3 },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
