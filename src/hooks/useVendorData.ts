@@ -168,7 +168,10 @@ export const useVendorPayouts = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendor_payouts')
-        .select('*')
+        .select(`
+          *,
+          orders (order_number)
+        `)
         .eq('vendor_id', vendorProfile!.id)
         .order('created_at', { ascending: false });
 

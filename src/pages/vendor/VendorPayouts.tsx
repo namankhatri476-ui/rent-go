@@ -122,20 +122,22 @@ const VendorPayouts = () => {
               </div>
             ) : (
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Transaction Ref</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Processed</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payouts?.map((payout) => (
-                    <TableRow key={payout.id}>
-                      <TableCell className="capitalize">{payout.payout_type}</TableCell>
+                 <TableHeader>
+                   <TableRow>
+                     <TableHead>Order #</TableHead>
+                     <TableHead>Type</TableHead>
+                     <TableHead>Amount</TableHead>
+                     <TableHead>Status</TableHead>
+                     <TableHead>Transaction Ref</TableHead>
+                     <TableHead>Created</TableHead>
+                     <TableHead>Processed</TableHead>
+                   </TableRow>
+                 </TableHeader>
+                 <TableBody>
+                   {payouts?.map((payout) => (
+                     <TableRow key={payout.id}>
+                       <TableCell className="font-mono text-sm">{(payout as any).orders?.order_number || '-'}</TableCell>
+                       <TableCell className="capitalize">{payout.payout_type}</TableCell>
                       <TableCell className="font-medium">₹{Number(payout.amount).toLocaleString()}</TableCell>
                       <TableCell>{getStatusBadge(payout.status)}</TableCell>
                       <TableCell className="font-mono text-sm">

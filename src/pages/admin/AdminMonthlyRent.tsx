@@ -10,9 +10,10 @@ import {
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { CreditCard, CheckCircle, DollarSign, Percent } from 'lucide-react';
-import { format } from 'date-fns';
+import { CreditCard, CheckCircle, DollarSign, Percent, Calendar, Zap } from 'lucide-react';
+import { format, differenceInMonths, addMonths, isAfter } from 'date-fns';
 
 const AdminMonthlyRent = () => {
   const queryClient = useQueryClient();
@@ -50,8 +51,19 @@ const AdminMonthlyRent = () => {
     },
   });
 
+  // Compute per-order collection progress
+  const getOrderProgress = (order: any) => {
+    const totalMonths = order.rental_duration_months || 1;
+    const collected = monthlyPayments?.filter(p => p.order_id === order.id && p.status === 'completed').length || 0;
+    const startDate = order.rental_start_date ? new Date(order.rental_start_date) : new Date(order.confirmed_at || order.created_at);
+    const now = new Date();
+    const elapsedMonths = Math.min(differenceInMonths(now, startDate) + 1, totalMonths);
+    const pendingMonths = Math.max(elapsedMonths - collected, 0);
+    return { totalMonths, collected, elapsedMonths, pendingMonths, startDate };
+  };
+
   const collectRentMutation = useMutation({
-    mutationFn: async (order: any) => {
+    mutationFn: async ({ order, monthNumber }: { order: any; monthNumber: number }) => {
       const commissionRate = Number(order.vendors?.commission_rate || 30) / 100;
       const monthlyRent = Number(order.monthly_rent);
       const gst = Number(order.monthly_gst);
@@ -60,7 +72,9 @@ const AdminMonthlyRent = () => {
       const platformCommission = Math.round(monthlyRent * commissionRate);
       const vendorAmount = monthlyRent - platformCommission;
 
-      const billingMonth = new Date().toISOString().slice(0, 10);
+      const startDate = order.rental_start_date ? new Date(order.rental_start_date) : new Date(order.confirmed_at || order.created_at);
+      const billingDate = addMonths(startDate, monthNumber - 1);
+      const billingMonth = format(billingDate, 'yyyy-MM-dd');
 
       // Create monthly payment record
       const { error: paymentError } = await supabase
@@ -92,6 +106,7 @@ const AdminMonthlyRent = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-monthly-payments'] });
       queryClient.invalidateQueries({ queryKey: ['admin-payouts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-active-orders-rent'] });
       toast.success('Monthly rent collected and vendor payout created');
       setCollectDialog(null);
     },
@@ -101,9 +116,42 @@ const AdminMonthlyRent = () => {
     },
   });
 
+  // Auto-collect all due rents
+  const autoCollectMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeOrders) return;
+      let collectedCount = 0;
+      for (const order of activeOrders) {
+        const progress = getOrderProgress(order);
+        if (progress.pendingMonths > 0) {
+          for (let m = progress.collected + 1; m <= progress.elapsedMonths; m++) {
+            await collectRentMutation.mutateAsync({ order, monthNumber: m });
+            collectedCount++;
+          }
+        }
+      }
+      return collectedCount;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-monthly-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-payouts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-active-orders-rent'] });
+      toast.success(`Auto-collected ${count || 0} pending rent(s)`);
+    },
+    onError: (error) => {
+      toast.error('Auto-collection failed');
+      console.error(error);
+    },
+  });
+
   const totalMonthlyRevenue = activeOrders?.reduce((sum, o) => sum + Number(o.monthly_total), 0) || 0;
   const totalCommission = activeOrders?.reduce((sum, o) => sum + Number(o.platform_commission), 0) || 0;
   const totalVendorPayout = activeOrders?.reduce((sum, o) => sum + Number(o.vendor_payout), 0) || 0;
+
+  const totalPendingCollections = activeOrders?.reduce((sum, o) => {
+    const p = getOrderProgress(o);
+    return sum + p.pendingMonths;
+  }, 0) || 0;
 
   return (
     <AdminLayout>
@@ -111,12 +159,20 @@ const AdminMonthlyRent = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">Monthly Rent Collection</h1>
-            <p className="text-muted-foreground">Collect monthly rent and manage commission deductions</p>
+            <p className="text-muted-foreground">Collect monthly rent, track cycles, and manage commission deductions</p>
           </div>
+          <Button
+            onClick={() => autoCollectMutation.mutate()}
+            disabled={autoCollectMutation.isPending || totalPendingCollections === 0}
+            className="gap-2"
+          >
+            <Zap className="h-4 w-4" />
+            {autoCollectMutation.isPending ? 'Auto-Collecting...' : `Auto-Collect (${totalPendingCollections} pending)`}
+          </Button>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Monthly Revenue</CardTitle>
@@ -147,11 +203,21 @@ const AdminMonthlyRent = () => {
               <p className="text-xs text-muted-foreground">After commission deduction</p>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Collections</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-600">{totalPendingCollections}</div>
+              <p className="text-xs text-muted-foreground">Month(s) due for collection</p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Active Orders for Rent Collection */}
+        {/* Active Orders with Cycle Progress */}
         <Card className="mb-8">
-          <CardHeader><CardTitle>Active Orders - Collect Rent</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Active Orders - Rent Collection Progress</CardTitle></CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="text-center py-8">Loading...</div>
@@ -164,28 +230,46 @@ const AdminMonthlyRent = () => {
                     <TableHead>Order #</TableHead>
                     <TableHead>Product</TableHead>
                     <TableHead>Vendor</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Collection Progress</TableHead>
                     <TableHead>Monthly Rent</TableHead>
-                    <TableHead>Commission (30%)</TableHead>
-                    <TableHead>Vendor Payout</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {activeOrders?.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
-                      <TableCell>{order.products?.name}</TableCell>
-                      <TableCell>{order.vendors?.business_name}</TableCell>
-                      <TableCell>₹{Number(order.monthly_rent).toLocaleString()}</TableCell>
-                      <TableCell className="text-primary">₹{Number(order.platform_commission).toLocaleString()}</TableCell>
-                      <TableCell className="text-green-600">₹{Number(order.vendor_payout).toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Button size="sm" onClick={() => setCollectDialog(order)} disabled={collectRentMutation.isPending}>
-                          Collect Rent
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {activeOrders?.map((order) => {
+                    const progress = getOrderProgress(order);
+                    const progressPercent = (progress.collected / progress.totalMonths) * 100;
+                    return (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
+                        <TableCell>{order.products?.name}</TableCell>
+                        <TableCell>{order.vendors?.business_name}</TableCell>
+                        <TableCell>{order.rental_duration_months} months</TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <Progress value={progressPercent} className="h-2" />
+                            <p className="text-xs text-muted-foreground">
+                              {progress.collected}/{progress.totalMonths} collected
+                              {progress.pendingMonths > 0 && (
+                                <span className="text-amber-600 ml-1">({progress.pendingMonths} due)</span>
+                              )}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>₹{Number(order.monthly_rent).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            onClick={() => setCollectDialog(order)}
+                            disabled={collectRentMutation.isPending || progress.pendingMonths === 0}
+                          >
+                            {progress.pendingMonths === 0 ? 'All Collected' : `Collect Month ${progress.collected + 1}`}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
@@ -204,6 +288,7 @@ const AdminMonthlyRent = () => {
                   <TableRow>
                     <TableHead>Order #</TableHead>
                     <TableHead>Vendor</TableHead>
+                    <TableHead>Billing Month</TableHead>
                     <TableHead>Rent</TableHead>
                     <TableHead>GST</TableHead>
                     <TableHead>Total</TableHead>
@@ -216,6 +301,7 @@ const AdminMonthlyRent = () => {
                     <TableRow key={payment.id}>
                       <TableCell className="font-mono text-sm">{(payment.orders as any)?.order_number}</TableCell>
                       <TableCell>{(payment.orders as any)?.vendors?.business_name}</TableCell>
+                      <TableCell>{format(new Date(payment.billing_month), 'MMM yyyy')}</TableCell>
                       <TableCell>₹{Number(payment.monthly_rent).toLocaleString()}</TableCell>
                       <TableCell>₹{Number(payment.gst).toLocaleString()}</TableCell>
                       <TableCell className="font-medium">₹{Number(payment.total_amount).toLocaleString()}</TableCell>
@@ -239,57 +325,74 @@ const AdminMonthlyRent = () => {
             <DialogHeader>
               <DialogTitle>Confirm Monthly Rent Collection</DialogTitle>
             </DialogHeader>
-            {collectDialog && (
-              <div className="space-y-4 py-4">
-                <div className="p-4 bg-muted rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Order</span>
-                    <span className="font-mono">{collectDialog.order_number}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Product</span>
-                    <span>{collectDialog.products?.name}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Vendor</span>
-                    <span>{collectDialog.vendors?.business_name}</span>
-                  </div>
-                  <div className="border-t pt-2 mt-2 space-y-1">
+            {collectDialog && (() => {
+              const progress = getOrderProgress(collectDialog);
+              const monthNumber = progress.collected + 1;
+              const commissionRate = Number(collectDialog.vendors?.commission_rate || 30) / 100;
+              const monthlyRent = Number(collectDialog.monthly_rent);
+              const vendorAmount = monthlyRent - Math.round(monthlyRent * commissionRate);
+              return (
+                <div className="space-y-4 py-4">
+                  <div className="p-4 bg-muted rounded-lg space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>Monthly Rent</span>
-                      <span>₹{Number(collectDialog.monthly_rent).toLocaleString()}</span>
+                      <span>Order</span>
+                      <span className="font-mono">{collectDialog.order_number}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>GST (18%)</span>
-                      <span>₹{Number(collectDialog.monthly_gst).toLocaleString()}</span>
+                      <span>Product</span>
+                      <span>{collectDialog.products?.name}</span>
                     </div>
-                    {Number(collectDialog.protection_plan_fee) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>Vendor</span>
+                      <span>{collectDialog.vendors?.business_name}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-medium text-primary">
+                      <span>Collecting For</span>
+                      <span>Month {monthNumber} of {progress.totalMonths}</span>
+                    </div>
+                    <div className="border-t pt-2 mt-2 space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span>Protection Plan</span>
-                        <span>₹{Number(collectDialog.protection_plan_fee).toLocaleString()}</span>
+                        <span>Monthly Rent</span>
+                        <span>₹{Number(collectDialog.monthly_rent).toLocaleString()}</span>
                       </div>
-                    )}
-                    <div className="flex justify-between font-medium pt-1 border-t">
-                      <span>Total Collected</span>
-                      <span>₹{Number(collectDialog.monthly_total).toLocaleString()}</span>
+                      <div className="flex justify-between text-sm">
+                        <span>GST (18%)</span>
+                        <span>₹{Number(collectDialog.monthly_gst).toLocaleString()}</span>
+                      </div>
+                      {Number(collectDialog.protection_plan_fee) > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>Protection Plan</span>
+                          <span>₹{Number(collectDialog.protection_plan_fee).toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-medium pt-1 border-t">
+                        <span>Total Collected</span>
+                        <span>₹{Number(collectDialog.monthly_total).toLocaleString()}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="border-t pt-2 mt-2 space-y-1">
-                    <div className="flex justify-between text-sm text-primary">
-                      <span>Platform Commission (30%)</span>
-                      <span>-₹{Number(collectDialog.platform_commission).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between font-medium text-green-600">
-                      <span>Vendor Payout</span>
-                      <span>₹{Number(collectDialog.vendor_payout).toLocaleString()}</span>
+                    <div className="border-t pt-2 mt-2 space-y-1">
+                      <div className="flex justify-between text-sm text-primary">
+                        <span>Platform Commission ({Math.round(commissionRate * 100)}%)</span>
+                        <span>-₹{Math.round(monthlyRent * commissionRate).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between font-medium text-green-600">
+                        <span>Vendor Payout</span>
+                        <span>₹{vendorAmount.toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             <DialogFooter>
               <Button variant="outline" onClick={() => setCollectDialog(null)}>Cancel</Button>
-              <Button onClick={() => collectRentMutation.mutate(collectDialog)} disabled={collectRentMutation.isPending}>
+              <Button
+                onClick={() => {
+                  const progress = getOrderProgress(collectDialog);
+                  collectRentMutation.mutate({ order: collectDialog, monthNumber: progress.collected + 1 });
+                }}
+                disabled={collectRentMutation.isPending}
+              >
                 {collectRentMutation.isPending ? 'Processing...' : 'Collect & Create Payout'}
               </Button>
             </DialogFooter>
