@@ -11,9 +11,11 @@ import ProductCard from "@/components/ProductCard";
 import TrustBadges from "@/components/TrustBadges";
 import { printerProducts } from "@/data/products";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "@/contexts/LocationContext";
 
 const Index = () => {
   const { user, isVendor, isAdmin } = useAuth();
+  const { selectedLocation } = useLocation();
 
   useEffect(() => {
     document.title = "RentEase | Home";
@@ -34,11 +36,11 @@ const Index = () => {
     },
   });
 
-  // Fetch featured products from DB (first 4 approved products)
+  // Fetch featured products from DB filtered by selected location
   const { data: featuredProducts } = useQuery({
-    queryKey: ['featured-products'],
+    queryKey: ['featured-products', selectedLocation?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
         .select(`
           *,
@@ -46,7 +48,14 @@ const Index = () => {
           rental_plans (*)
         `)
         .eq('status', 'approved')
-        .eq('in_stock', true)
+        .eq('in_stock', true);
+
+      // Filter by location if one is selected
+      if (selectedLocation?.id) {
+        query = query.eq('location_id', selectedLocation.id);
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(4);
       if (error) throw error;
