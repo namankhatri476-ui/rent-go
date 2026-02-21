@@ -68,18 +68,36 @@ const AdminOrders = () => {
 
       // Auto-create vendor payout when order is confirmed
       if (status === 'confirmed') {
-        const order = orders?.find(o => o.id === orderId);
-        if (order) {
-          const { error: payoutError } = await supabase
+        // Re-fetch the specific order to ensure we have correct data
+        const { data: freshOrder } = await supabase
+          .from('orders')
+          .select('id, vendor_id, vendor_payout, order_number')
+          .eq('id', orderId)
+          .single();
+        
+        if (freshOrder) {
+          // Check if payout already exists for this order+type to prevent duplicates
+          const { data: existingPayout } = await supabase
             .from('vendor_payouts')
-            .insert({
-              vendor_id: order.vendor_id,
-              order_id: orderId,
-              amount: order.vendor_payout,
-              payout_type: 'order_confirmation',
-              status: 'pending',
-            });
-          if (payoutError) console.error('Payout creation error:', payoutError);
+            .select('id')
+            .eq('order_id', orderId)
+            .eq('payout_type', 'order_confirmation')
+            .maybeSingle();
+          
+          if (!existingPayout) {
+            const { error: payoutError } = await supabase
+              .from('vendor_payouts')
+              .insert({
+                vendor_id: freshOrder.vendor_id,
+                order_id: freshOrder.id,
+                amount: freshOrder.vendor_payout,
+                payout_type: 'order_confirmation',
+                status: 'pending',
+              });
+            if (payoutError) console.error('Payout creation error:', payoutError);
+          } else {
+            console.log('Payout already exists for order:', orderId);
+          }
         }
       }
     },

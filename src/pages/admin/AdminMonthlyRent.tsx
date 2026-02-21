@@ -76,6 +76,19 @@ const AdminMonthlyRent = () => {
       const billingDate = addMonths(startDate, monthNumber - 1);
       const billingMonth = format(billingDate, 'yyyy-MM-dd');
 
+      // Check if this monthly payment already exists to prevent duplicates
+      const { data: existingPayment } = await supabase
+        .from('monthly_payments')
+        .select('id')
+        .eq('order_id', order.id)
+        .eq('billing_month', billingMonth)
+        .maybeSingle();
+
+      if (existingPayment) {
+        console.log('Monthly payment already exists for order:', order.id, 'month:', billingMonth);
+        return;
+      }
+
       // Create monthly payment record
       const { error: paymentError } = await supabase
         .from('monthly_payments')
@@ -91,12 +104,21 @@ const AdminMonthlyRent = () => {
         });
       if (paymentError) throw paymentError;
 
+      // Re-fetch order to ensure correct vendor_id and order_id linkage
+      const { data: freshOrder } = await supabase
+        .from('orders')
+        .select('id, vendor_id')
+        .eq('id', order.id)
+        .single();
+
+      if (!freshOrder) throw new Error('Order not found');
+
       // Create vendor payout (after commission deduction)
       const { error: payoutError } = await supabase
         .from('vendor_payouts')
         .insert({
-          vendor_id: order.vendor_id,
-          order_id: order.id,
+          vendor_id: freshOrder.vendor_id,
+          order_id: freshOrder.id,
           amount: vendorAmount,
           payout_type: 'monthly_rent',
           status: 'pending',

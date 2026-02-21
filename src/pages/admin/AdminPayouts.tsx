@@ -71,9 +71,11 @@ const AdminPayouts = () => {
   });
 
   const filteredPayouts = payouts?.filter((payout) => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch = 
-      payout.vendors?.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payout.transaction_reference?.toLowerCase().includes(searchTerm.toLowerCase());
+      payout.vendors?.business_name?.toLowerCase().includes(searchLower) ||
+      payout.transaction_reference?.toLowerCase().includes(searchLower) ||
+      payout.orders?.order_number?.toLowerCase().includes(searchLower);
     const matchesStatus = statusFilter === 'all' || payout.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
