@@ -217,28 +217,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      // Create vendor profile
-      const { error: vendorError } = await supabase
+      // Check if vendor profile already exists
+      const { data: existingVendor } = await supabase
         .from('vendors')
-        .insert({
-          user_id: user.id,
-          ...businessData,
-        });
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      if (vendorError) {
-        return { error: vendorError as Error };
+      if (!existingVendor) {
+        const { error: vendorError } = await supabase
+          .from('vendors')
+          .insert({
+            user_id: user.id,
+            ...businessData,
+          });
+
+        if (vendorError) {
+          return { error: vendorError as Error };
+        }
       }
 
-      // Add vendor role
-      const { error: roleError } = await supabase
+      // Check if vendor role already exists
+      const { data: existingRole } = await supabase
         .from('user_roles')
-        .insert({
-          user_id: user.id,
-          role: 'vendor',
-        });
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('role', 'vendor')
+        .maybeSingle();
 
-      if (roleError) {
-        return { error: roleError as Error };
+      if (!existingRole) {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: user.id,
+            role: 'vendor',
+          });
+
+        if (roleError) {
+          return { error: roleError as Error };
+        }
       }
 
       // Refresh user data
