@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "@/contexts/LocationContext";
@@ -14,10 +14,28 @@ import { printerProducts } from "@/data/products";
 const Products = () => {
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const { selectedLocation } = useLocation();
+  const [searchParams] = useSearchParams();
+  const categorySlug = searchParams.get('category');
+
+  // Fetch the category ID from slug if present
+  const { data: selectedCategory } = useQuery({
+    queryKey: ['category-by-slug', categorySlug],
+    queryFn: async () => {
+      if (!categorySlug) return null;
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, slug')
+        .eq('slug', categorySlug)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!categorySlug,
+  });
 
   // Fetch approved products from Supabase
   const { data: dbProducts, isLoading } = useQuery({
-    queryKey: ['approved-products', selectedLocation?.id],
+    queryKey: ['approved-products', selectedLocation?.id, selectedCategory?.id],
     queryFn: async () => {
       let query = supabase
         .from('products')
@@ -34,6 +52,10 @@ const Products = () => {
         query = query.eq('location_id', selectedLocation.id);
       }
 
+      if (selectedCategory?.id) {
+        query = query.eq('category_id', selectedCategory.id);
+      }
+
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -44,8 +66,10 @@ const Products = () => {
   const products = useMemo(() => {
     const dbProductsList = dbProducts || [];
     
-    // Convert static products to match DB structure
-    const staticProducts = printerProducts.map(p => ({
+    // Convert static products to match DB structure, filter by category if needed
+    const staticProducts = printerProducts
+      .filter(p => !categorySlug || p.category.toLowerCase() === (selectedCategory?.name?.toLowerCase() || categorySlug.toLowerCase()))
+      .map(p => ({
       id: p.id,
       name: p.name,
       brand: p.brand,
@@ -64,11 +88,10 @@ const Products = () => {
       })),
       categories: { name: p.category },
       locations: null,
-      isStatic: true, // Mark as static for identification
+      isStatic: true,
     }));
     
     // Combine both: DB products first, then static products
-    // Filter out static products that might have same slug as DB products
     const dbSlugs = new Set(dbProductsList.map(p => p.slug));
     const uniqueStaticProducts = staticProducts.filter(p => !dbSlugs.has(p.slug));
     
@@ -80,7 +103,7 @@ const Products = () => {
       : allProducts;
     
     return filteredProducts;
-  }, [dbProducts, selectedBrand]);
+  }, [dbProducts, selectedBrand, categorySlug, selectedCategory]);
 
   // Get unique brands from both sources
   const brands = useMemo(() => {
@@ -109,10 +132,11 @@ const Products = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-                Products on Rent {selectedLocation ? `in ${selectedLocation.name}` : ''}
+                {selectedCategory?.name || 'Products'} on Rent {selectedLocation ? `in ${selectedLocation.name}` : ''}
               </h1>
               <p className="text-muted-foreground mt-1">
                 {products?.length || 0} products available
+                {selectedCategory?.name && ` in ${selectedCategory.name}`}
                 {selectedLocation && ` in ${selectedLocation.name}`}
               </p>
             </div>
