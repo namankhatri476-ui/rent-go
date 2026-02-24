@@ -2,13 +2,16 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, Printer, CheckCircle, Building2 } from "lucide-react";
+import { ArrowRight, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import TrustBadges from "@/components/TrustBadges";
+import HeroSlider from "@/components/HeroSlider";
+import WhyRentSection from "@/components/WhyRentSection";
+import StatsSection from "@/components/StatsSection";
 import { printerProducts } from "@/data/products";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "@/contexts/LocationContext";
@@ -77,60 +80,8 @@ const Index = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
-      {/* Hero Section */}
-      <section className="hero-gradient py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <Badge variant="success" className="mb-4">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Multi-Vendor Rental Marketplace
-            </Badge>
-            
-            <h1 className="section-header text-4xl md:text-5xl lg:text-6xl">
-              Rent Quality Products,{" "}
-              <span className="text-gradient-primary">From Verified Vendors</span>
-            </h1>
-            
-            <p className="section-subheader mx-auto text-lg md:text-xl">
-              India's trusted marketplace connecting you with verified vendors offering printers, electronics, furniture, and more on flexible rental plans.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Link to="/products">
-                <Button variant="hero" size="xl" className="gap-2 w-full sm:w-auto">
-                  Browse Products
-                  <ArrowRight className="w-5 h-5" />
-                </Button>
-              </Link>
-              <Link to={user ? (isVendor ? "/vendor" : "/vendor/register") : "/auth"}>
-                <Button variant="hero-outline" size="xl" className="w-full sm:w-auto gap-2">
-                  <Building2 className="w-5 h-5" />
-                  Become a Vendor
-                </Button>
-              </Link>
-            </div>
-            
-            {user && (isVendor || isAdmin) && (
-              <div className="flex justify-center gap-4 pt-4">
-                {isAdmin && (
-                  <Link to="/admin">
-                    <Badge variant="outline" className="cursor-pointer hover:bg-primary/10">
-                      Go to Admin Dashboard →
-                    </Badge>
-                  </Link>
-                )}
-                {isVendor && (
-                  <Link to="/vendor">
-                    <Badge variant="outline" className="cursor-pointer hover:bg-primary/10">
-                      Go to Vendor Dashboard →
-                    </Badge>
-                  </Link>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+      {/* Hero Slider */}
+      <HeroSlider />
 
       {/* Trust Badges */}
       <section className="py-12 border-b border-border">
@@ -299,43 +250,11 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Vendor CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-primary to-primary/80">
-        <div className="container mx-auto px-4 text-center">
-          <Building2 className="w-16 h-16 text-primary-foreground mx-auto mb-6" />
-          <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-            Start Selling on RentEase
-          </h2>
-          <p className="text-primary-foreground/80 max-w-xl mx-auto mb-8">
-            Join our growing community of verified vendors. List your products, reach more customers, and grow your rental business.
-          </p>
-          <Link to={user ? (isVendor ? "/vendor" : "/vendor/register") : "/auth"}>
-            <Button variant="accent" size="xl" className="gap-2">
-              Register as Vendor
-              <ArrowRight className="w-5 h-5" />
-            </Button>
-          </Link>
-        </div>
-      </section>
+      {/* Why Rent Section */}
+      <WhyRentSection />
 
-      {/* Customer CTA Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Ready to Start Renting?
-          </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto mb-8">
-            Join thousands of happy customers. No long-term commitments, 
-            flexible plans, and hassle-free experience.
-          </p>
-          <Link to="/products">
-            <Button variant="hero" size="xl" className="gap-2">
-              Get Started Today
-              <ArrowRight className="w-5 h-5" />
-            </Button>
-          </Link>
-        </div>
-      </section>
+      {/* Stats Section */}
+      <StatsSection />
 
       <Footer />
     </div>
