@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { LocationProvider } from "@/contexts/LocationContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import LocationPopupWrapper from "@/components/LocationPopupWrapper";
 
 // Public pages
 import Index from "./pages/Index";
@@ -54,7 +55,8 @@ const App = () => (
           <LocationProvider>
             <CartProvider>
               <Toaster />
-            <Sonner />
+              <Sonner />
+              <LocationPopupWrapper />
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Index />} />

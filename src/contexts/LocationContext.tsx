@@ -16,12 +16,16 @@ interface LocationContextType {
   popularLocations: Location[];
   otherLocations: Location[];
   isLoading: boolean;
+  showLocationPopup: boolean;
+  setShowLocationPopup: (show: boolean) => void;
+  requireLocation: () => boolean;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
 
 export const LocationProvider = ({ children }: { children: ReactNode }) => {
   const [selectedLocation, setSelectedLocationState] = useState<Location | null>(null);
+  const [showLocationPopup, setShowLocationPopup] = useState(false);
 
   const { data: locations = [], isLoading } = useQuery({
     queryKey: ['locations'],
@@ -39,16 +43,20 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
   const popularLocations = locations.filter(l => l.is_popular);
   const otherLocations = locations.filter(l => !l.is_popular);
 
-  // Load saved location from localStorage
+  // Load saved location from localStorage, or show popup on first visit
   useEffect(() => {
     const savedLocationSlug = localStorage.getItem('selectedLocation');
     if (savedLocationSlug && locations.length > 0) {
       const location = locations.find(l => l.slug === savedLocationSlug);
       if (location) {
         setSelectedLocationState(location);
+      } else {
+        setShowLocationPopup(true);
       }
+    } else if (!isLoading && locations.length > 0 && !savedLocationSlug) {
+      setShowLocationPopup(true);
     }
-  }, [locations]);
+  }, [locations, isLoading]);
 
   const setSelectedLocation = (location: Location | null) => {
     setSelectedLocationState(location);
@@ -59,6 +67,13 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Returns true if location is already selected, false if popup was shown
+  const requireLocation = () => {
+    if (selectedLocation) return true;
+    setShowLocationPopup(true);
+    return false;
+  };
+
   return (
     <LocationContext.Provider value={{
       selectedLocation,
@@ -67,6 +82,9 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
       popularLocations,
       otherLocations,
       isLoading,
+      showLocationPopup,
+      setShowLocationPopup,
+      requireLocation,
     }}>
       {children}
     </LocationContext.Provider>

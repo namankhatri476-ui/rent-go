@@ -9,6 +9,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
+import { useLocation } from "@/contexts/LocationContext";
 
 interface RentalPlan {
   id: string;
@@ -24,6 +25,7 @@ const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { requireLocation } = useLocation();
 
   const [selectedPlanIndex, setSelectedPlanIndex] = useState(1); // Default to middle plan
   const [selectedImage, setSelectedImage] = useState(0);
@@ -84,6 +86,10 @@ const ProductDetail = () => {
   }
 
   const handleAddToCart = () => {
+    if (!requireLocation()) {
+      toast.info("Please select your city first");
+      return;
+    }
     if (selectedPlan) {
       // Convert DB rental plan to cart format
       const cartPlan = {
