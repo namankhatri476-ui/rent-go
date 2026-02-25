@@ -53,8 +53,7 @@ const VendorProductForm = () => {
   });
 
   const [rentalPlans, setRentalPlans] = useState<RentalPlan[]>([
-    { label: '3 Months', duration_months: 3, monthly_rent: 0, security_deposit: 0, delivery_fee: 500, installation_fee: 0 },
-    { label: '6 Months', duration_months: 6, monthly_rent: 0, security_deposit: 0, delivery_fee: 500, installation_fee: 0 },
+    { label: '1 Month', duration_months: 1, monthly_rent: 0, security_deposit: 0, delivery_fee: 500, installation_fee: 0 },
     { label: '12 Months', duration_months: 12, monthly_rent: 0, security_deposit: 0, delivery_fee: 0, installation_fee: 0 },
   ]);
 
@@ -537,14 +536,69 @@ const VendorProductForm = () => {
           {/* Rental Plans */}
           <Card>
             <CardHeader>
-              <CardTitle>Rental Plans *</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Pricing Tiers *</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const maxExisting = rentalPlans.length > 0
+                      ? Math.max(...rentalPlans.map(p => p.duration_months))
+                      : 0;
+                    const nextDuration = Math.min(maxExisting + 6, 36);
+                    setRentalPlans([...rentalPlans, {
+                      label: `${nextDuration} Months`,
+                      duration_months: nextDuration,
+                      monthly_rent: 0,
+                      security_deposit: 0,
+                      delivery_fee: 500,
+                      installation_fee: 0,
+                    }]);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Tier
+                </Button>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Define price tiers at different durations. The system will interpolate prices for months in between.
+                For example: set ₹899/mo at 1 month and ₹599/mo at 12 months — users selecting 6 months will see an interpolated rate.
+              </p>
             </CardHeader>
             <CardContent className="space-y-6">
               {rentalPlans.map((plan, index) => (
                 <div key={index} className="p-4 border rounded-lg space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium">{plan.label}</h4>
-                    <span className="text-sm text-muted-foreground">{plan.duration_months} months</span>
+                    <div className="flex items-center gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Duration (months)</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="60"
+                          value={plan.duration_months}
+                          onChange={(e) => {
+                            const newPlans = [...rentalPlans];
+                            const val = Number(e.target.value);
+                            newPlans[index].duration_months = val;
+                            newPlans[index].label = `${val} ${val === 1 ? 'Month' : 'Months'}`;
+                            setRentalPlans(newPlans);
+                          }}
+                          className="w-24"
+                        />
+                      </div>
+                    </div>
+                    {rentalPlans.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setRentalPlans(rentalPlans.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
