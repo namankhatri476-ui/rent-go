@@ -61,51 +61,33 @@ const ProductDetail = () => {
   
   const currentDuration = selectedDuration ?? Math.min(6, maxDuration);
   
-  // Interpolate monthly rent between vendor-defined tiers
-  const getInterpolatedPrice = (duration: number): { monthlyRent: number; securityDeposit: number; deliveryFee: number; installationFee: number } => {
+  // Calculate price using base price + discount % per additional month
+  const getDiscountedPrice = (duration: number): { monthlyRent: number; securityDeposit: number; deliveryFee: number; installationFee: number } => {
     if (rentalPlans.length === 0) return { monthlyRent: 0, securityDeposit: 0, deliveryFee: 0, installationFee: 0 };
-    if (rentalPlans.length === 1) {
-      const p = rentalPlans[0];
-      return { monthlyRent: p.monthly_rent, securityDeposit: p.security_deposit, deliveryFee: p.delivery_fee || 0, installationFee: p.installation_fee || 0 };
+    
+    const basePlan = rentalPlans[0]; // 1-month plan (lowest duration)
+    const baseRent = basePlan.monthly_rent;
+    const securityDeposit = basePlan.security_deposit;
+    const deliveryFee = basePlan.delivery_fee || 0;
+    const installationFee = basePlan.installation_fee || 0;
+    
+    if (rentalPlans.length === 1 || duration <= 1) {
+      return { monthlyRent: baseRent, securityDeposit, deliveryFee, installationFee };
     }
     
-    // Find surrounding tiers
-    let lower = rentalPlans[0];
-    let upper = rentalPlans[rentalPlans.length - 1];
+    // Derive discount % per month from the two stored tiers
+    const lastPlan = rentalPlans[rentalPlans.length - 1];
+    const discountPerMonth = baseRent > 0 && lastPlan.duration_months > 1
+      ? ((baseRent - lastPlan.monthly_rent) / baseRent * 100) / (lastPlan.duration_months - 1)
+      : 0;
     
-    for (let i = 0; i < rentalPlans.length; i++) {
-      if (rentalPlans[i].duration_months <= duration) lower = rentalPlans[i];
-      if (rentalPlans[i].duration_months >= duration && rentalPlans[i].duration_months < upper.duration_months) {
-        upper = rentalPlans[i];
-      }
-    }
+    const totalDiscount = Math.min(discountPerMonth * (duration - 1), 80); // Cap at 80%
+    const monthlyRent = Math.round(baseRent * (1 - totalDiscount / 100));
     
-    // Find the first tier >= duration
-    for (let i = 0; i < rentalPlans.length; i++) {
-      if (rentalPlans[i].duration_months >= duration) {
-        upper = rentalPlans[i];
-        break;
-      }
-    }
-    
-    if (lower.duration_months === upper.duration_months || duration <= lower.duration_months) {
-      return { monthlyRent: lower.monthly_rent, securityDeposit: lower.security_deposit, deliveryFee: lower.delivery_fee || 0, installationFee: lower.installation_fee || 0 };
-    }
-    if (duration >= upper.duration_months) {
-      return { monthlyRent: upper.monthly_rent, securityDeposit: upper.security_deposit, deliveryFee: upper.delivery_fee || 0, installationFee: upper.installation_fee || 0 };
-    }
-    
-    // Linear interpolation
-    const ratio = (duration - lower.duration_months) / (upper.duration_months - lower.duration_months);
-    return {
-      monthlyRent: Math.round(lower.monthly_rent + (upper.monthly_rent - lower.monthly_rent) * ratio),
-      securityDeposit: Math.round(lower.security_deposit + (upper.security_deposit - lower.security_deposit) * ratio),
-      deliveryFee: Math.round((lower.delivery_fee || 0) + ((upper.delivery_fee || 0) - (lower.delivery_fee || 0)) * ratio),
-      installationFee: Math.round((lower.installation_fee || 0) + ((upper.installation_fee || 0) - (lower.installation_fee || 0)) * ratio),
-    };
+    return { monthlyRent, securityDeposit, deliveryFee, installationFee };
   };
 
-  const interpolatedPrice = useMemo(() => getInterpolatedPrice(currentDuration), [currentDuration, rentalPlans]);
+  const interpolatedPrice = useMemo(() => getDiscountedPrice(currentDuration), [currentDuration, rentalPlans]);
   
   // Find the base plan for the cart (closest tier <= duration)
   const selectedPlan = rentalPlans.length > 0 
