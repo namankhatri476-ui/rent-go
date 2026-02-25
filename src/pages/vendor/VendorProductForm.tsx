@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,17 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
-
-interface RentalPlan {
-  id?: string;
-  label: string;
-  duration_months: number;
-  monthly_rent: number;
-  security_deposit: number;
-  delivery_fee: number;
-  installation_fee: number;
-}
+import { Plus, Trash2, ArrowLeft, Loader2, Info } from 'lucide-react';
 
 const VendorProductForm = () => {
   const navigate = useNavigate();
@@ -52,13 +42,34 @@ const VendorProductForm = () => {
     stock_quantity: 10,
   });
 
-  const [rentalPlans, setRentalPlans] = useState<RentalPlan[]>([
-    { label: '1 Month', duration_months: 1, monthly_rent: 0, security_deposit: 0, delivery_fee: 500, installation_fee: 0 },
-    { label: '12 Months', duration_months: 12, monthly_rent: 0, security_deposit: 0, delivery_fee: 0, installation_fee: 0 },
-  ]);
+  // New simplified pricing model
+  const [pricing, setPricing] = useState({
+    baseMonthlyRent: 0,
+    securityDeposit: 0,
+    deliveryFee: 500,
+    installationFee: 0,
+    maxDuration: 12,
+    discountPerMonth: 2, // % discount per additional month
+  });
 
   const [specKey, setSpecKey] = useState('');
   const [specValue, setSpecValue] = useState('');
+
+  // Calculate price for any month
+  const getPriceForMonth = (month: number) => {
+    const discount = pricing.discountPerMonth * (month - 1);
+    const cappedDiscount = Math.min(discount, 80); // Cap at 80% max discount
+    return Math.round(pricing.baseMonthlyRent * (1 - cappedDiscount / 100));
+  };
+
+  // Preview pricing table
+  const pricingPreview = useMemo(() => {
+    if (pricing.baseMonthlyRent <= 0) return [];
+    const months = [1, 2, 3, 6, 12, pricing.maxDuration].filter(
+      (m, i, arr) => m <= pricing.maxDuration && arr.indexOf(m) === i
+    ).sort((a, b) => a - b);
+    return months.map(m => ({ month: m, price: getPriceForMonth(m) }));
+  }, [pricing.baseMonthlyRent, pricing.maxDuration, pricing.discountPerMonth]);
 
   // Fetch product data for edit mode
   const { data: existingProduct, isLoading: isLoadingProduct } = useQuery({
@@ -67,10 +78,7 @@ const VendorProductForm = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select(`
-          *,
-          rental_plans (*)
-        `)
+        .select(`*, rental_plans (*)`)
         .eq('id', productId)
         .single();
       if (error) throw error;
@@ -96,16 +104,32 @@ const VendorProductForm = () => {
         stock_quantity: existingProduct.stock_quantity ?? 10,
       });
 
+      // Reverse-engineer pricing from existing rental plans
       if (existingProduct.rental_plans?.length) {
-        setRentalPlans(existingProduct.rental_plans.map((plan: any) => ({
-          id: plan.id,
-          label: plan.label,
-          duration_months: plan.duration_months,
-          monthly_rent: plan.monthly_rent,
-          security_deposit: plan.security_deposit,
-          delivery_fee: plan.delivery_fee || 0,
-          installation_fee: plan.installation_fee || 0,
-        })));
+        const plans = [...existingProduct.rental_plans].sort(
+          (a: any, b: any) => a.duration_months - b.duration_months
+        );
+        const firstPlan = plans[0];
+        const lastPlan = plans[plans.length - 1];
+
+        const baseRent = firstPlan.monthly_rent;
+        const maxDur = lastPlan.duration_months;
+        
+        // Calculate discount % per month from first and last plan
+        let discountPerMonth = 2;
+        if (plans.length > 1 && baseRent > 0 && maxDur > 1) {
+          const totalDiscountPercent = ((baseRent - lastPlan.monthly_rent) / baseRent) * 100;
+          discountPerMonth = Math.round((totalDiscountPercent / (maxDur - 1)) * 10) / 10;
+        }
+
+        setPricing({
+          baseMonthlyRent: baseRent,
+          securityDeposit: firstPlan.security_deposit,
+          deliveryFee: firstPlan.delivery_fee || 500,
+          installationFee: firstPlan.installation_fee || 0,
+          maxDuration: maxDur,
+          discountPerMonth: Math.max(0, discountPerMonth),
+        });
       }
     }
   }, [existingProduct]);
@@ -113,11 +137,7 @@ const VendorProductForm = () => {
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
+      const { data, error } = await supabase.from('categories').select('*').eq('is_active', true).order('name');
       if (error) throw error;
       return data;
     },
@@ -126,15 +146,39 @@ const VendorProductForm = () => {
   const { data: locations } = useQuery({
     queryKey: ['locations'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order');
+      const { data, error } = await supabase.from('locations').select('*').eq('is_active', true).order('display_order');
       if (error) throw error;
       return data;
     },
   });
+
+  // Generate rental plan rows from pricing config
+  const generateRentalPlans = (productIdForPlans: string) => {
+    const plans = [];
+    // Create plan for month 1
+    plans.push({
+      product_id: productIdForPlans,
+      label: '1 Month',
+      duration_months: 1,
+      monthly_rent: pricing.baseMonthlyRent,
+      security_deposit: pricing.securityDeposit,
+      delivery_fee: pricing.deliveryFee,
+      installation_fee: pricing.installationFee,
+    });
+    // Create plan for max duration
+    if (pricing.maxDuration > 1) {
+      plans.push({
+        product_id: productIdForPlans,
+        label: `${pricing.maxDuration} Months`,
+        duration_months: pricing.maxDuration,
+        monthly_rent: getPriceForMonth(pricing.maxDuration),
+        security_deposit: pricing.securityDeposit,
+        delivery_fee: pricing.deliveryFee,
+        installation_fee: pricing.installationFee,
+      });
+    }
+    return plans;
+  };
 
   const createProductMutation = useMutation({
     mutationFn: async () => {
@@ -164,24 +208,9 @@ const VendorProductForm = () => {
 
       if (productError) throw productError;
 
-      const plansToInsert = rentalPlans
-        .filter(p => p.monthly_rent > 0)
-        .map(plan => ({
-          product_id: product.id,
-          label: plan.label,
-          duration_months: plan.duration_months,
-          monthly_rent: plan.monthly_rent,
-          security_deposit: plan.security_deposit,
-          delivery_fee: plan.delivery_fee,
-          installation_fee: plan.installation_fee,
-        }));
-
-      if (plansToInsert.length > 0) {
-        const { error: plansError } = await supabase
-          .from('rental_plans')
-          .insert(plansToInsert);
-        if (plansError) throw plansError;
-      }
+      const plans = generateRentalPlans(product.id);
+      const { error: plansError } = await supabase.from('rental_plans').insert(plans);
+      if (plansError) throw plansError;
 
       return product;
     },
@@ -201,24 +230,29 @@ const VendorProductForm = () => {
       if (!vendorProfile?.id || !productId) throw new Error('Missing required data');
 
       const slug = formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-');
+      
+      // Don't reset status to pending - keep current status
+      // Admin re-approval only needed for new products
+      const updatePayload: Record<string, any> = {
+        name: formData.name,
+        slug,
+        brand: formData.brand || null,
+        description: formData.description || null,
+        category_id: formData.category_id || null,
+        location_id: formData.location_id || null,
+        features: formData.features.filter(f => f.trim()),
+        images: formData.images.filter(i => i.trim()),
+        specifications: formData.specifications,
+        tags: formData.tags.filter(t => t.trim()),
+        in_stock: formData.in_stock,
+        stock_quantity: formData.stock_quantity,
+      };
+
       const { error: productError } = await supabase
         .from('products')
-        .update({
-          name: formData.name,
-          slug,
-          brand: formData.brand || null,
-          description: formData.description || null,
-          category_id: formData.category_id || null,
-          location_id: formData.location_id || null,
-          features: formData.features.filter(f => f.trim()),
-          images: formData.images.filter(i => i.trim()),
-          specifications: formData.specifications,
-          tags: formData.tags.filter(t => t.trim()),
-          in_stock: formData.in_stock,
-          stock_quantity: formData.stock_quantity,
-          status: 'pending', // Reset to pending for re-approval
-        })
-        .eq('id', productId);
+        .update(updatePayload)
+        .eq('id', productId)
+        .eq('vendor_id', vendorProfile.id);
 
       if (productError) throw productError;
 
@@ -229,29 +263,14 @@ const VendorProductForm = () => {
         .eq('product_id', productId);
       if (deleteError) throw deleteError;
 
-      const plansToInsert = rentalPlans
-        .filter(p => p.monthly_rent > 0)
-        .map(plan => ({
-          product_id: productId,
-          label: plan.label,
-          duration_months: plan.duration_months,
-          monthly_rent: plan.monthly_rent,
-          security_deposit: plan.security_deposit,
-          delivery_fee: plan.delivery_fee,
-          installation_fee: plan.installation_fee,
-        }));
-
-      if (plansToInsert.length > 0) {
-        const { error: plansError } = await supabase
-          .from('rental_plans')
-          .insert(plansToInsert);
-        if (plansError) throw plansError;
-      }
+      const plans = generateRentalPlans(productId);
+      const { error: plansError } = await supabase.from('rental_plans').insert(plans);
+      if (plansError) throw plansError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendor-products'] });
       queryClient.invalidateQueries({ queryKey: ['vendor-product', productId] });
-      toast.success('Product updated successfully! It will be reviewed by admin.');
+      toast.success('Product updated successfully!');
       navigate('/vendor/products');
     },
     onError: (error) => {
@@ -268,8 +287,8 @@ const VendorProductForm = () => {
       return;
     }
 
-    if (!rentalPlans.some(p => p.monthly_rent > 0)) {
-      toast.error('At least one rental plan with monthly rent is required');
+    if (pricing.baseMonthlyRent <= 0) {
+      toast.error('Base monthly rent is required');
       return;
     }
 
@@ -443,12 +462,7 @@ const VendorProductForm = () => {
                     }}
                     placeholder="Image URL"
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeImage(index)}
-                  >
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeImage(index)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -477,12 +491,7 @@ const VendorProductForm = () => {
                     }}
                     placeholder="e.g., High-speed printing up to 40ppm"
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeFeature(index)}
-                  >
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeFeature(index)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -504,28 +513,14 @@ const VendorProductForm = () => {
                 <div key={key} className="flex items-center gap-2 p-2 bg-muted rounded">
                   <span className="font-medium">{key}:</span>
                   <span>{value}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="ml-auto"
-                    onClick={() => removeSpec(key)}
-                  >
+                  <Button type="button" variant="ghost" size="icon" className="ml-auto" onClick={() => removeSpec(key)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
               <div className="flex gap-2">
-                <Input
-                  value={specKey}
-                  onChange={(e) => setSpecKey(e.target.value)}
-                  placeholder="Spec name (e.g., Print Speed)"
-                />
-                <Input
-                  value={specValue}
-                  onChange={(e) => setSpecValue(e.target.value)}
-                  placeholder="Value (e.g., 40 ppm)"
-                />
+                <Input value={specKey} onChange={(e) => setSpecKey(e.target.value)} placeholder="Spec name (e.g., Print Speed)" />
+                <Input value={specValue} onChange={(e) => setSpecValue(e.target.value)} placeholder="Value (e.g., 40 ppm)" />
                 <Button type="button" variant="outline" onClick={addSpec}>
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -533,133 +528,117 @@ const VendorProductForm = () => {
             </CardContent>
           </Card>
 
-          {/* Rental Plans */}
+          {/* Dynamic Pricing */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Pricing Tiers *</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const maxExisting = rentalPlans.length > 0
-                      ? Math.max(...rentalPlans.map(p => p.duration_months))
-                      : 0;
-                    const nextDuration = Math.min(maxExisting + 6, 36);
-                    setRentalPlans([...rentalPlans, {
-                      label: `${nextDuration} Months`,
-                      duration_months: nextDuration,
-                      monthly_rent: 0,
-                      security_deposit: 0,
-                      delivery_fee: 500,
-                      installation_fee: 0,
-                    }]);
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Tier
-                </Button>
-              </CardTitle>
+              <CardTitle>Rental Pricing *</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Define price tiers at different durations. The system will interpolate prices for months in between.
-                For example: set ₹899/mo at 1 month and ₹599/mo at 12 months — users selecting 6 months will see an interpolated rate.
+                Set a base monthly rent and a discount percentage. The system will automatically calculate lower prices for longer rental durations.
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
-              {rentalPlans.map((plan, index) => (
-                <div key={index} className="p-4 border rounded-lg space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Duration (months)</Label>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="60"
-                          value={plan.duration_months}
-                          onChange={(e) => {
-                            const newPlans = [...rentalPlans];
-                            const val = Number(e.target.value);
-                            newPlans[index].duration_months = val;
-                            newPlans[index].label = `${val} ${val === 1 ? 'Month' : 'Months'}`;
-                            setRentalPlans(newPlans);
-                          }}
-                          className="w-24"
-                        />
-                      </div>
-                    </div>
-                    {rentalPlans.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setRentalPlans(rentalPlans.filter((_, i) => i !== index))}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Base Monthly Rent (₹) *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={pricing.baseMonthlyRent || ''}
+                    onChange={(e) => setPricing({ ...pricing, baseMonthlyRent: Number(e.target.value) })}
+                    placeholder="e.g., 900"
+                  />
+                  <p className="text-xs text-muted-foreground">Price for 1 month rental</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Discount % per Month</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.5"
+                    value={pricing.discountPerMonth}
+                    onChange={(e) => setPricing({ ...pricing, discountPerMonth: Number(e.target.value) })}
+                    placeholder="e.g., 2"
+                  />
+                  <p className="text-xs text-muted-foreground">Each extra month reduces price by this %</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Max Rental Duration</Label>
+                  <Select 
+                    value={String(pricing.maxDuration)} 
+                    onValueChange={(v) => setPricing({ ...pricing, maxDuration: Number(v) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[3, 6, 12, 18, 24, 36].map(m => (
+                        <SelectItem key={m} value={String(m)}>{m} Months</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Security Deposit (₹)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={pricing.securityDeposit || ''}
+                    onChange={(e) => setPricing({ ...pricing, securityDeposit: Number(e.target.value) })}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Delivery Fee (₹)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={pricing.deliveryFee || ''}
+                    onChange={(e) => setPricing({ ...pricing, deliveryFee: Number(e.target.value) })}
+                    placeholder="500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Installation Fee (₹)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={pricing.installationFee || ''}
+                    onChange={(e) => setPricing({ ...pricing, installationFee: Number(e.target.value) })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              {/* Pricing Preview */}
+              {pricingPreview.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="p-3 bg-muted flex items-center gap-2">
+                    <Info className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Pricing Preview</span>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <Label>Monthly Rent (₹) *</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={plan.monthly_rent}
-                        onChange={(e) => {
-                          const newPlans = [...rentalPlans];
-                          newPlans[index].monthly_rent = Number(e.target.value);
-                          setRentalPlans(newPlans);
-                        }}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Security Deposit (₹)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={plan.security_deposit}
-                        onChange={(e) => {
-                          const newPlans = [...rentalPlans];
-                          newPlans[index].security_deposit = Number(e.target.value);
-                          setRentalPlans(newPlans);
-                        }}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Delivery Fee (₹)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={plan.delivery_fee}
-                        onChange={(e) => {
-                          const newPlans = [...rentalPlans];
-                          newPlans[index].delivery_fee = Number(e.target.value);
-                          setRentalPlans(newPlans);
-                        }}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Installation Fee (₹)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={plan.installation_fee}
-                        onChange={(e) => {
-                          const newPlans = [...rentalPlans];
-                          newPlans[index].installation_fee = Number(e.target.value);
-                          setRentalPlans(newPlans);
-                        }}
-                        placeholder="0"
-                      />
-                    </div>
+                  <div className="divide-y">
+                    {pricingPreview.map(({ month, price }) => (
+                      <div key={month} className="flex justify-between p-3 text-sm">
+                        <span className="text-muted-foreground">
+                          {month} {month === 1 ? 'Month' : 'Months'}
+                        </span>
+                        <div className="text-right">
+                          <span className="font-semibold">₹{price.toLocaleString()}/mo</span>
+                          {month > 1 && (
+                            <span className="text-xs text-primary ml-2">
+                              ({Math.round(((pricing.baseMonthlyRent - price) / pricing.baseMonthlyRent) * 100)}% off)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              )}
             </CardContent>
           </Card>
 
@@ -713,12 +692,7 @@ const VendorProductForm = () => {
                       placeholder="Tag"
                       className="w-32"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeTag(index)}
-                    >
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeTag(index)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -733,20 +707,11 @@ const VendorProductForm = () => {
 
           {/* Submit */}
           <div className="flex gap-4">
-            <Button 
-              type="submit" 
-              size="lg" 
-              disabled={isSubmitting}
-            >
+            <Button type="submit" size="lg" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {isEditMode ? 'Update Product' : 'Create Product'}
             </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="lg"
-              onClick={() => navigate('/vendor/products')}
-            >
+            <Button type="button" variant="outline" size="lg" onClick={() => navigate('/vendor/products')}>
               Cancel
             </Button>
           </div>
