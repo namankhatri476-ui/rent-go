@@ -61,8 +61,53 @@ const ProductDetail = () => {
   
   const currentDuration = selectedDuration ?? Math.min(6, maxDuration);
   
-  // Find the best matching plan for the selected duration
-  // Use the plan with the highest duration <= selected, or the first plan
+  // Interpolate monthly rent between vendor-defined tiers
+  const getInterpolatedPrice = (duration: number): { monthlyRent: number; securityDeposit: number; deliveryFee: number; installationFee: number } => {
+    if (rentalPlans.length === 0) return { monthlyRent: 0, securityDeposit: 0, deliveryFee: 0, installationFee: 0 };
+    if (rentalPlans.length === 1) {
+      const p = rentalPlans[0];
+      return { monthlyRent: p.monthly_rent, securityDeposit: p.security_deposit, deliveryFee: p.delivery_fee || 0, installationFee: p.installation_fee || 0 };
+    }
+    
+    // Find surrounding tiers
+    let lower = rentalPlans[0];
+    let upper = rentalPlans[rentalPlans.length - 1];
+    
+    for (let i = 0; i < rentalPlans.length; i++) {
+      if (rentalPlans[i].duration_months <= duration) lower = rentalPlans[i];
+      if (rentalPlans[i].duration_months >= duration && rentalPlans[i].duration_months < upper.duration_months) {
+        upper = rentalPlans[i];
+      }
+    }
+    
+    // Find the first tier >= duration
+    for (let i = 0; i < rentalPlans.length; i++) {
+      if (rentalPlans[i].duration_months >= duration) {
+        upper = rentalPlans[i];
+        break;
+      }
+    }
+    
+    if (lower.duration_months === upper.duration_months || duration <= lower.duration_months) {
+      return { monthlyRent: lower.monthly_rent, securityDeposit: lower.security_deposit, deliveryFee: lower.delivery_fee || 0, installationFee: lower.installation_fee || 0 };
+    }
+    if (duration >= upper.duration_months) {
+      return { monthlyRent: upper.monthly_rent, securityDeposit: upper.security_deposit, deliveryFee: upper.delivery_fee || 0, installationFee: upper.installation_fee || 0 };
+    }
+    
+    // Linear interpolation
+    const ratio = (duration - lower.duration_months) / (upper.duration_months - lower.duration_months);
+    return {
+      monthlyRent: Math.round(lower.monthly_rent + (upper.monthly_rent - lower.monthly_rent) * ratio),
+      securityDeposit: Math.round(lower.security_deposit + (upper.security_deposit - lower.security_deposit) * ratio),
+      deliveryFee: Math.round((lower.delivery_fee || 0) + ((upper.delivery_fee || 0) - (lower.delivery_fee || 0)) * ratio),
+      installationFee: Math.round((lower.installation_fee || 0) + ((upper.installation_fee || 0) - (lower.installation_fee || 0)) * ratio),
+    };
+  };
+
+  const interpolatedPrice = useMemo(() => getInterpolatedPrice(currentDuration), [currentDuration, rentalPlans]);
+  
+  // Find the base plan for the cart (closest tier <= duration)
   const selectedPlan = rentalPlans.length > 0 
     ? rentalPlans.reduce((best: RentalPlan, plan: RentalPlan) => {
         if (plan.duration_months <= currentDuration && plan.duration_months > best.duration_months) return plan;
@@ -110,8 +155,8 @@ const ProductDetail = () => {
         id: selectedPlan.id,
         duration: currentDuration,
         label: `${currentDuration} ${currentDuration === 1 ? 'Month' : 'Months'}`,
-        monthlyRent: selectedPlan.monthly_rent,
-        securityDeposit: selectedPlan.security_deposit,
+        monthlyRent: interpolatedPrice.monthlyRent,
+        securityDeposit: interpolatedPrice.securityDeposit,
       };
       
       const cartProduct = {
@@ -131,8 +176,8 @@ const ProductDetail = () => {
           monthlyRent: p.monthly_rent,
           securityDeposit: p.security_deposit,
         })),
-        deliveryFee: selectedPlan.delivery_fee || 0,
-        installationFee: selectedPlan.installation_fee || 0,
+        deliveryFee: interpolatedPrice.deliveryFee,
+        installationFee: interpolatedPrice.installationFee,
         rating: product.rating || 0,
         reviewCount: product.review_count || 0,
         inStock: product.in_stock,
@@ -245,14 +290,19 @@ const ProductDetail = () => {
                 <div className="p-4 bg-secondary rounded-xl">
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-bold text-foreground">
-                      ₹{selectedPlan.monthly_rent?.toLocaleString()}
+                      ₹{interpolatedPrice.monthlyRent.toLocaleString()}
                     </span>
                     <span className="text-muted-foreground">/month</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
-                    + ₹{selectedPlan.security_deposit?.toLocaleString()} refundable deposit
+                    + ₹{interpolatedPrice.securityDeposit.toLocaleString()} refundable deposit
                     {" · "}{currentDuration} {currentDuration === 1 ? 'month' : 'months'} tenure
                   </p>
+                  {rentalPlans.length > 1 && currentDuration > rentalPlans[0].duration_months && (
+                    <p className="text-xs text-primary mt-1 font-medium">
+                      💰 Longer tenure = lower monthly rent
+                    </p>
+                  )}
                 </div>
               )}
 
