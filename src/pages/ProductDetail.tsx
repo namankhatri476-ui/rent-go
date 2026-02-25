@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Star, Shield, Truck, RotateCcw, Check, ShoppingCart, Loader2 } from "lucide-react";
+import { ArrowLeft, Star, Shield, Truck, RotateCcw, Check, ShoppingCart, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
@@ -27,7 +28,7 @@ const ProductDetail = () => {
   const { addToCart } = useCart();
   const { requireLocation } = useLocation();
 
-  const [selectedPlanIndex, setSelectedPlanIndex] = useState(1); // Default to middle plan
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
 
   // Fetch product from Supabase
@@ -54,7 +55,20 @@ const ProductDetail = () => {
     a.duration_months - b.duration_months
   ) || [];
   
-  const selectedPlan = rentalPlans[selectedPlanIndex] || rentalPlans[0];
+  const maxDuration = rentalPlans.length > 0 
+    ? Math.max(...rentalPlans.map((p: RentalPlan) => p.duration_months)) 
+    : 12;
+  
+  const currentDuration = selectedDuration ?? Math.min(6, maxDuration);
+  
+  // Find the best matching plan for the selected duration
+  // Use the plan with the highest duration <= selected, or the first plan
+  const selectedPlan = rentalPlans.length > 0 
+    ? rentalPlans.reduce((best: RentalPlan, plan: RentalPlan) => {
+        if (plan.duration_months <= currentDuration && plan.duration_months > best.duration_months) return plan;
+        return best;
+      }, rentalPlans[0])
+    : null;
 
   if (isLoading) {
     return (
@@ -94,8 +108,8 @@ const ProductDetail = () => {
       // Convert DB rental plan to cart format
       const cartPlan = {
         id: selectedPlan.id,
-        duration: selectedPlan.duration_months,
-        label: selectedPlan.label,
+        duration: currentDuration,
+        label: `${currentDuration} ${currentDuration === 1 ? 'Month' : 'Months'}`,
         monthlyRent: selectedPlan.monthly_rent,
         securityDeposit: selectedPlan.security_deposit,
       };
@@ -237,31 +251,37 @@ const ProductDetail = () => {
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     + ₹{selectedPlan.security_deposit?.toLocaleString()} refundable deposit
+                    {" · "}{currentDuration} {currentDuration === 1 ? 'month' : 'months'} tenure
                   </p>
                 </div>
               )}
 
-              {/* Rental Plan Selector */}
+              {/* Rental Duration Slider */}
               {rentalPlans.length > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <p className="font-medium text-foreground">Select Rental Duration</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    {rentalPlans.map((plan: RentalPlan, index: number) => (
-                      <button
-                        key={plan.id}
-                        onClick={() => setSelectedPlanIndex(index)}
-                        className={`p-4 rounded-xl border-2 transition-all ${
-                          selectedPlanIndex === index
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <p className="font-semibold text-foreground">{plan.label}</p>
-                        <p className="text-sm text-muted-foreground">
-                          ₹{plan.monthly_rent?.toLocaleString()}/mo
-                        </p>
-                      </button>
-                    ))}
+                  <div className="p-5 bg-muted rounded-xl space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-primary" />
+                        <span className="text-sm text-muted-foreground">Duration</span>
+                      </div>
+                      <span className="text-lg font-bold text-foreground">
+                        {currentDuration} {currentDuration === 1 ? 'Month' : 'Months'}
+                      </span>
+                    </div>
+                    <Slider
+                      value={[currentDuration]}
+                      onValueChange={(val) => setSelectedDuration(val[0])}
+                      min={1}
+                      max={maxDuration}
+                      step={1}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>1 Month</span>
+                      <span>{maxDuration} Months</span>
+                    </div>
                   </div>
                 </div>
               )}
