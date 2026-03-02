@@ -21,6 +21,7 @@ interface AdminLayoutProps {
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/slider', label: 'Slider', icon: LayoutDashboard },
   { href: '/admin/vendors', label: 'Vendors', icon: Building2 },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/categories', label: 'Categories', icon: FolderTree },

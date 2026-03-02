@@ -5,10 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Star, Shield, Truck, RotateCcw, Check, ShoppingCart, Loader2, Clock, CreditCard, Package, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import RentalDurationTimeline from "@/components/RentalDurationTimeline";
+import ProductVariations from "@/components/ProductVariations";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { useLocation } from "@/contexts/LocationContext";
@@ -33,6 +34,7 @@ const ProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [mode, setMode] = useState<'rent' | 'buy'>('rent');
   const [payAdvance, setPayAdvance] = useState(false);
+  const [selectedVariation, setSelectedVariation] = useState<string | null>(null);
 
   const { data: product, isLoading, error } = useQuery({
     queryKey: ['product-detail', slug],
@@ -40,7 +42,7 @@ const ProductDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select(`*, categories (name), rental_plans (*)`)
+        .select(`*, categories (name), rental_plans (*), product_variations (*)`)
         .eq('slug', slug)
         .eq('status', 'approved')
         .single();
@@ -59,6 +61,10 @@ const ProductDetail = () => {
   
   const currentDuration = selectedDuration ?? Math.min(6, maxDuration);
 
+  const variations = ((product as any)?.product_variations || []).filter((v: any) => v.is_active !== false);
+  const selectedVar = variations.find((v: any) => v.id === selectedVariation);
+  const variationAdjustment = selectedVar?.price_adjustment || 0;
+
   const buyPrice = (product as any)?.buy_price || null;
   const advanceDiscountPercent = (product as any)?.advance_discount_percent || 0;
   const hasBuyOption = buyPrice && buyPrice > 0;
@@ -66,20 +72,20 @@ const ProductDetail = () => {
   const getDiscountedPrice = (duration: number) => {
     if (rentalPlans.length === 0) return { monthlyRent: 0, securityDeposit: 0, deliveryFee: 0, installationFee: 0 };
     const basePlan = rentalPlans[0];
-    const baseRent = basePlan.monthly_rent;
+    const baseRent = basePlan.monthly_rent + variationAdjustment;
     const securityDeposit = basePlan.security_deposit;
     const deliveryFee = basePlan.delivery_fee || 0;
     const installationFee = basePlan.installation_fee || 0;
     if (rentalPlans.length === 1 || duration <= 1) return { monthlyRent: baseRent, securityDeposit, deliveryFee, installationFee };
     const lastPlan = rentalPlans[rentalPlans.length - 1];
-    const discountPerMonth = baseRent > 0 && lastPlan.duration_months > 1
-      ? ((baseRent - lastPlan.monthly_rent) / baseRent * 100) / (lastPlan.duration_months - 1) : 0;
+    const discountPerMonth = basePlan.monthly_rent > 0 && lastPlan.duration_months > 1
+      ? ((basePlan.monthly_rent - lastPlan.monthly_rent) / basePlan.monthly_rent * 100) / (lastPlan.duration_months - 1) : 0;
     const totalDiscount = Math.min(discountPerMonth * (duration - 1), 80);
-    const monthlyRent = Math.round(baseRent * (1 - totalDiscount / 100));
+    const monthlyRent = Math.round((basePlan.monthly_rent * (1 - totalDiscount / 100)) + variationAdjustment);
     return { monthlyRent, securityDeposit, deliveryFee, installationFee };
   };
 
-  const interpolatedPrice = useMemo(() => getDiscountedPrice(currentDuration), [currentDuration, rentalPlans]);
+  const interpolatedPrice = useMemo(() => getDiscountedPrice(currentDuration), [currentDuration, rentalPlans, variationAdjustment]);
 
   const totalRentWithoutDiscount = interpolatedPrice.monthlyRent * currentDuration;
   const advanceDiscount = payAdvance ? Math.round(totalRentWithoutDiscount * advanceDiscountPercent / 100) : 0;
@@ -232,6 +238,15 @@ const ProductDetail = () => {
                 <span className="text-xs text-muted-foreground">({product.review_count || 0} reviews)</span>
               </div>
 
+              {/* Product Variations */}
+              {variations.length > 0 && (
+                <ProductVariations
+                  variations={variations}
+                  selectedVariation={selectedVariation}
+                  onSelect={setSelectedVariation}
+                />
+              )}
+
               {/* Buy / Rent Toggle */}
               {hasBuyOption && (
                 <div className="flex rounded-xl overflow-hidden border border-border/60 bg-muted/50">
@@ -304,24 +319,18 @@ const ProductDetail = () => {
                     )}
                   </div>
 
-                  {/* Duration Slider */}
+                  {/* Duration Timeline */}
                   {rentalPlans.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-foreground">Rental Duration</span>
-                        <span className="text-sm font-bold text-primary">{currentDuration} {currentDuration === 1 ? 'Month' : 'Months'}</span>
-                      </div>
-                      <div className="p-4 bg-muted/40 rounded-xl space-y-3">
-                        <Slider
-                          value={[currentDuration]}
-                          onValueChange={(val) => setSelectedDuration(val[0])}
-                          min={1} max={maxDuration} step={1} className="w-full"
-                        />
-                        <div className="flex justify-between text-[10px] text-muted-foreground">
-                          <span>1 Month</span>
-                          <span>{maxDuration} Months</span>
-                        </div>
-                      </div>
+                    <div className="p-4 bg-muted/40 rounded-xl">
+                      <RentalDurationTimeline
+                        maxDuration={maxDuration}
+                        currentDuration={currentDuration}
+                        onDurationChange={setSelectedDuration}
+                        rentalPlans={rentalPlans.map((p: RentalPlan) => ({
+                          duration_months: p.duration_months,
+                          monthly_rent: p.monthly_rent,
+                        }))}
+                      />
                     </div>
                   )}
 
