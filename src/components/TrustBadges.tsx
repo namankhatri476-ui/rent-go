@@ -2,50 +2,31 @@ import { Shield, Truck, RotateCcw, Headphones, Clock, CreditCard } from "lucide-
 
 const TrustBadges = () => {
   const badges = [
-    {
-      icon: Shield,
-      title: "100% Refundable",
-      description: "Security deposit fully refundable"
-    },
-    {
-      icon: Truck,
-      title: "Free Delivery",
-      description: "Doorstep delivery & installation"
-    },
-    {
-      icon: RotateCcw,
-      title: "Easy Returns",
-      description: "Hassle-free return process"
-    },
-    {
-      icon: Headphones,
-      title: "24/7 Support",
-      description: "Round-the-clock assistance"
-    },
-    {
-      icon: Clock,
-      title: "Flexible Tenure",
-      description: "3, 6, or 12 month plans"
-    },
-    {
-      icon: CreditCard,
-      title: "Auto-Pay Setup",
-      description: "Convenient monthly billing"
-    }
+    { icon: Truck, title: "Free Delivery", description: "Doorstep delivery & setup" },
+    { icon: Shield, title: "100% Refundable", description: "Full deposit returned" },
+    { icon: RotateCcw, title: "Easy Returns", description: "Hassle-free process" },
+    { icon: Headphones, title: "24/7 Support", description: "Always here for you" },
+    { icon: Clock, title: "Flexible Plans", description: "3, 6, or 12 months" },
+    { icon: CreditCard, title: "Auto-Pay", description: "Easy monthly billing" },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-      {badges.map((badge) => (
+    <div className="flex items-center justify-between gap-3 overflow-x-auto py-1 scrollbar-hide">
+      {badges.map((badge, i) => (
         <div
           key={badge.title}
-          className="flex flex-col items-center text-center p-4 rounded-xl bg-card border border-border hover:border-primary/20 transition-colors"
+          className="flex items-center gap-2.5 min-w-fit px-1"
         >
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-            <badge.icon className="w-6 h-6 text-primary" />
+          <div className="w-9 h-9 rounded-full bg-primary/8 flex items-center justify-center shrink-0">
+            <badge.icon className="w-[18px] h-[18px] text-primary" />
           </div>
-          <h4 className="font-semibold text-sm text-foreground">{badge.title}</h4>
-          <p className="text-xs text-muted-foreground mt-1">{badge.description}</p>
+          <div>
+            <p className="text-xs font-semibold text-foreground whitespace-nowrap">{badge.title}</p>
+            <p className="text-[11px] text-muted-foreground whitespace-nowrap">{badge.description}</p>
+          </div>
+          {i < badges.length - 1 && (
+            <div className="hidden lg:block w-px h-8 bg-border/60 ml-3" />
+          )}
         </div>
       ))}
     </div>
