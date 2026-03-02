@@ -2,10 +2,11 @@ import { useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Star, Shield, Truck, RotateCcw, Check, ShoppingCart, Loader2, Clock } from "lucide-react";
+import { ArrowLeft, Star, Shield, Truck, RotateCcw, Check, ShoppingCart, Loader2, Clock, CreditCard, Package, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
@@ -30,6 +31,8 @@ const ProductDetail = () => {
 
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [mode, setMode] = useState<'rent' | 'buy'>('rent');
+  const [payAdvance, setPayAdvance] = useState(false);
 
   // Fetch product from Supabase
   const { data: product, isLoading, error } = useQuery({
@@ -60,12 +63,16 @@ const ProductDetail = () => {
     : 12;
   
   const currentDuration = selectedDuration ?? Math.min(6, maxDuration);
+
+  const buyPrice = (product as any)?.buy_price || null;
+  const advanceDiscountPercent = (product as any)?.advance_discount_percent || 0;
+  const hasBuyOption = buyPrice && buyPrice > 0;
   
   // Calculate price using base price + discount % per additional month
   const getDiscountedPrice = (duration: number): { monthlyRent: number; securityDeposit: number; deliveryFee: number; installationFee: number } => {
     if (rentalPlans.length === 0) return { monthlyRent: 0, securityDeposit: 0, deliveryFee: 0, installationFee: 0 };
     
-    const basePlan = rentalPlans[0]; // 1-month plan (lowest duration)
+    const basePlan = rentalPlans[0];
     const baseRent = basePlan.monthly_rent;
     const securityDeposit = basePlan.security_deposit;
     const deliveryFee = basePlan.delivery_fee || 0;
@@ -75,21 +82,24 @@ const ProductDetail = () => {
       return { monthlyRent: baseRent, securityDeposit, deliveryFee, installationFee };
     }
     
-    // Derive discount % per month from the two stored tiers
     const lastPlan = rentalPlans[rentalPlans.length - 1];
     const discountPerMonth = baseRent > 0 && lastPlan.duration_months > 1
       ? ((baseRent - lastPlan.monthly_rent) / baseRent * 100) / (lastPlan.duration_months - 1)
       : 0;
     
-    const totalDiscount = Math.min(discountPerMonth * (duration - 1), 80); // Cap at 80%
+    const totalDiscount = Math.min(discountPerMonth * (duration - 1), 80);
     const monthlyRent = Math.round(baseRent * (1 - totalDiscount / 100));
     
     return { monthlyRent, securityDeposit, deliveryFee, installationFee };
   };
 
   const interpolatedPrice = useMemo(() => getDiscountedPrice(currentDuration), [currentDuration, rentalPlans]);
+
+  // Advance payment calculations
+  const totalRentWithoutDiscount = interpolatedPrice.monthlyRent * currentDuration;
+  const advanceDiscount = payAdvance ? Math.round(totalRentWithoutDiscount * advanceDiscountPercent / 100) : 0;
+  const totalAdvancePayment = totalRentWithoutDiscount - advanceDiscount;
   
-  // Find the base plan for the cart (closest tier <= duration)
   const selectedPlan = rentalPlans.length > 0 
     ? rentalPlans.reduce((best: RentalPlan, plan: RentalPlan) => {
         if (plan.duration_months <= currentDuration && plan.duration_months > best.duration_months) return plan;
@@ -132,7 +142,6 @@ const ProductDetail = () => {
       return;
     }
     if (selectedPlan) {
-      // Convert DB rental plan to cart format
       const cartPlan = {
         id: selectedPlan.id,
         duration: currentDuration,
@@ -168,13 +177,25 @@ const ProductDetail = () => {
 
       addToCart(cartProduct, cartPlan);
       toast.success("Added to cart!", {
-        description: `${product.name} with ${selectedPlan.label} plan`,
+        description: `${product.name} with ${currentDuration} month plan`,
       });
     }
   };
 
   const handleRentNow = () => {
     handleAddToCart();
+    navigate("/checkout");
+  };
+
+  const handleBuyNow = () => {
+    if (!requireLocation()) {
+      toast.info("Please select your city first");
+      return;
+    }
+    toast.success("Proceeding to buy!", {
+      description: `${product.name} — ₹${buyPrice.toLocaleString()}`,
+    });
+    // TODO: Implement buy checkout flow
     navigate("/checkout");
   };
 
@@ -267,96 +288,248 @@ const ProductDetail = () => {
                 </span>
               </div>
 
-              {/* Price Display */}
-              {selectedPlan && (
-                <div className="p-4 bg-secondary rounded-xl">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-foreground">
-                      ₹{interpolatedPrice.monthlyRent.toLocaleString()}
-                    </span>
-                    <span className="text-muted-foreground">/month</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    + ₹{interpolatedPrice.securityDeposit.toLocaleString()} refundable deposit
-                    {" · "}{currentDuration} {currentDuration === 1 ? 'month' : 'months'} tenure
-                  </p>
-                  {rentalPlans.length > 1 && currentDuration > rentalPlans[0].duration_months && (
-                    <p className="text-xs text-primary mt-1 font-medium">
-                      💰 Longer tenure = lower monthly rent
-                    </p>
-                  )}
+              {/* Buy / Rent Toggle */}
+              {hasBuyOption && (
+                <div className="flex rounded-xl border border-border overflow-hidden">
+                  <button
+                    onClick={() => setMode('rent')}
+                    className={`flex-1 py-3 px-4 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+                      mode === 'rent' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" />
+                    Rent
+                  </button>
+                  <button
+                    onClick={() => setMode('buy')}
+                    className={`flex-1 py-3 px-4 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+                      mode === 'buy' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Buy
+                  </button>
                 </div>
               )}
 
-              {/* Rental Duration Slider */}
-              {rentalPlans.length > 0 && (
-                <div className="space-y-4">
-                  <p className="font-medium text-foreground">Select Rental Duration</p>
-                  <div className="p-5 bg-muted rounded-xl space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-primary" />
-                        <span className="text-sm text-muted-foreground">Duration</span>
-                      </div>
-                      <span className="text-lg font-bold text-foreground">
-                        {currentDuration} {currentDuration === 1 ? 'Month' : 'Months'}
+              {/* ===== BUY MODE ===== */}
+              {mode === 'buy' && hasBuyOption && (
+                <div className="space-y-5">
+                  <div className="p-5 bg-secondary rounded-xl">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-bold text-foreground">
+                        ₹{buyPrice.toLocaleString()}
                       </span>
+                      <span className="text-muted-foreground">one-time</span>
                     </div>
-                    <Slider
-                      value={[currentDuration]}
-                      onValueChange={(val) => setSelectedDuration(val[0])}
-                      min={1}
-                      max={maxDuration}
-                      step={1}
-                      className="w-full"
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>1 Month</span>
-                      <span>{maxDuration} Months</span>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Full ownership · No monthly payments
+                    </p>
+                  </div>
+
+                  {/* Buy Action */}
+                  <Button 
+                    variant="hero" 
+                    size="xl" 
+                    className="w-full gap-2"
+                    onClick={handleBuyNow}
+                  >
+                    <CreditCard className="w-5 h-5" />
+                    Buy Now — ₹{buyPrice.toLocaleString()}
+                  </Button>
+
+                  {/* Buy details */}
+                  <div className="space-y-3 p-4 bg-muted rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <Truck className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="font-medium text-sm text-foreground">Delivery in 1-2 days</p>
+                        <p className="text-xs text-muted-foreground">Free delivery & installation</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Shield className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="font-medium text-sm text-foreground">1 Year Warranty</p>
+                        <p className="text-xs text-muted-foreground">Manufacturer warranty included</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Package className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="font-medium text-sm text-foreground">Brand New Product</p>
+                        <p className="text-xs text-muted-foreground">Sealed pack with all accessories</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button 
-                  variant="hero" 
-                  size="xl" 
-                  className="flex-1 gap-2"
-                  onClick={handleRentNow}
-                  disabled={!selectedPlan}
-                >
-                  Rent Now
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="xl" 
-                  className="flex-1 gap-2"
-                  onClick={handleAddToCart}
-                  disabled={!selectedPlan}
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                  Add to Cart
-                </Button>
-              </div>
+              {/* ===== RENT MODE ===== */}
+              {mode === 'rent' && selectedPlan && (
+                <>
+                  {/* Price Display */}
+                  <div className="p-4 bg-secondary rounded-xl">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-bold text-foreground">
+                        ₹{interpolatedPrice.monthlyRent.toLocaleString()}
+                      </span>
+                      <span className="text-muted-foreground">/month</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      + ₹{interpolatedPrice.securityDeposit.toLocaleString()} refundable deposit
+                      {" · "}{currentDuration} {currentDuration === 1 ? 'month' : 'months'} tenure
+                    </p>
+                    {rentalPlans.length > 1 && currentDuration > rentalPlans[0].duration_months && (
+                      <p className="text-xs text-primary mt-1 font-medium">
+                        💰 Longer tenure = lower monthly rent
+                      </p>
+                    )}
+                  </div>
 
-              {/* Trust Points */}
+                  {/* Rental Duration Slider */}
+                  {rentalPlans.length > 0 && (
+                    <div className="space-y-4">
+                      <p className="font-medium text-foreground">Select Rental Duration</p>
+                      <div className="p-5 bg-muted rounded-xl space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-primary" />
+                            <span className="text-sm text-muted-foreground">Duration</span>
+                          </div>
+                          <span className="text-lg font-bold text-foreground">
+                            {currentDuration} {currentDuration === 1 ? 'Month' : 'Months'}
+                          </span>
+                        </div>
+                        <Slider
+                          value={[currentDuration]}
+                          onValueChange={(val) => setSelectedDuration(val[0])}
+                          min={1}
+                          max={maxDuration}
+                          step={1}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>1 Month</span>
+                          <span>{maxDuration} Months</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Advance Payment Option */}
+                  {currentDuration > 1 && advanceDiscountPercent > 0 && (
+                    <div className="p-4 bg-accent/5 border border-accent/20 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Percent className="w-4 h-4 text-accent" />
+                          <span className="font-medium text-sm text-foreground">
+                            Pay all {currentDuration} months upfront
+                          </span>
+                        </div>
+                        <Switch checked={payAdvance} onCheckedChange={setPayAdvance} />
+                      </div>
+                      {payAdvance && (
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>Total Rent ({currentDuration} × ₹{interpolatedPrice.monthlyRent.toLocaleString()})</span>
+                            <span>₹{totalRentWithoutDiscount.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between text-green-600 font-medium">
+                            <span>Advance Discount ({advanceDiscountPercent}%)</span>
+                            <span>- ₹{advanceDiscount.toLocaleString()}</span>
+                          </div>
+                          <div className="border-t border-border pt-2 flex justify-between font-bold text-foreground">
+                            <span>Pay Now</span>
+                            <span>₹{totalAdvancePayment.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      )}
+                      {!payAdvance && (
+                        <p className="text-xs text-accent font-medium">
+                          Save {advanceDiscountPercent}% — pay ₹{(totalRentWithoutDiscount - Math.round(totalRentWithoutDiscount * advanceDiscountPercent / 100)).toLocaleString()} instead of ₹{totalRentWithoutDiscount.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button 
+                      variant="hero" 
+                      size="xl" 
+                      className="flex-1 gap-2"
+                      onClick={handleRentNow}
+                      disabled={!selectedPlan}
+                    >
+                      Rent Now
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="xl" 
+                      className="flex-1 gap-2"
+                      onClick={handleAddToCart}
+                      disabled={!selectedPlan}
+                    >
+                      <ShoppingCart className="w-5 h-5" />
+                      Add to Cart
+                    </Button>
+                  </div>
+
+                  {/* Rental Plan Details */}
+                  <div className="space-y-3 p-4 bg-muted rounded-xl">
+                    <p className="font-medium text-sm text-foreground mb-2">Rental Plan Details</p>
+                    <div className="flex items-center gap-3">
+                      <Truck className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="font-medium text-sm text-foreground">Delivery in 1-2 days</p>
+                        <p className="text-xs text-muted-foreground">
+                          Delivery fee: ₹{interpolatedPrice.deliveryFee.toLocaleString()}
+                          {interpolatedPrice.installationFee > 0 && ` · Installation: ₹${interpolatedPrice.installationFee.toLocaleString()}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Shield className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="font-medium text-sm text-foreground">Protection Plan Available</p>
+                        <p className="text-xs text-muted-foreground">Optional ₹99/mo damage cover</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="font-medium text-sm text-foreground">
+                          Advance: ₹{interpolatedPrice.securityDeposit.toLocaleString()} (refundable)
+                        </p>
+                        <p className="text-xs text-muted-foreground">Monthly: ₹{interpolatedPrice.monthlyRent.toLocaleString()}/mo + 18% GST</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <RotateCcw className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="font-medium text-sm text-foreground">Easy Returns</p>
+                        <p className="text-xs text-muted-foreground">Cancel anytime with full deposit refund</p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Trust Points (shown in both modes) */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                   <Truck className="w-5 h-5 text-primary" />
                   <div>
                     <p className="font-medium text-sm text-foreground">Free Delivery</p>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedPlan?.installation_fee ? `₹${selectedPlan.installation_fee} installation` : 'Free setup'}
-                    </p>
+                    <p className="text-xs text-muted-foreground">1-2 business days</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                   <Shield className="w-5 h-5 text-green-600" />
                   <div>
-                    <p className="font-medium text-sm text-foreground">Protection Plan</p>
-                    <p className="text-xs text-muted-foreground">Optional ₹99/mo</p>
+                    <p className="font-medium text-sm text-foreground">Warranty</p>
+                    <p className="text-xs text-muted-foreground">Full product coverage</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
@@ -379,7 +552,6 @@ const ProductDetail = () => {
 
           {/* Description & Specs */}
           <div className="mt-12 grid lg:grid-cols-2 gap-10">
-            {/* Description */}
             <div className="space-y-4">
               <h2 className="text-xl font-bold text-foreground">About This Product</h2>
               <p className="text-muted-foreground leading-relaxed">{product.description}</p>
@@ -399,7 +571,6 @@ const ProductDetail = () => {
               )}
             </div>
 
-            {/* Specifications */}
             {product.specifications && Object.keys(product.specifications).length > 0 && (
               <div className="space-y-4">
                 <h2 className="text-xl font-bold text-foreground">Specifications</h2>
