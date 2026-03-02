@@ -44,6 +44,7 @@ import AdminReports from "./pages/admin/AdminReports";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminMonthlyRent from "./pages/admin/AdminMonthlyRent";
+import AdminSlider from "./pages/admin/AdminSlider";
 
 const queryClient = new QueryClient();
 
@@ -252,6 +253,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRoles={['admin']}>
                     <AdminSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/slider"
+                element={
+                  <ProtectedRoute requiredRoles={['admin']}>
+                    <AdminSlider />
                   </ProtectedRoute>
                 }
               />

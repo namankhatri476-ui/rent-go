@@ -383,6 +383,50 @@ export type Database = {
         }
         Relationships: []
       }
+      product_variations: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          price_adjustment: number | null
+          product_id: string
+          updated_at: string
+          variation_type: string
+          variation_value: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          price_adjustment?: number | null
+          product_id: string
+          updated_at?: string
+          variation_type: string
+          variation_value: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          price_adjustment?: number | null
+          product_id?: string
+          updated_at?: string
+          variation_type?: string
+          variation_value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           advance_discount_percent: number | null
@@ -568,6 +612,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      slider_images: {
+        Row: {
+          created_at: string
+          cta_link: string | null
+          cta_text: string | null
+          display_order: number
+          id: string
+          image_url: string
+          is_active: boolean
+          subtitle: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cta_link?: string | null
+          cta_text?: string | null
+          display_order?: number
+          id?: string
+          image_url: string
+          is_active?: boolean
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cta_link?: string | null
+          cta_text?: string | null
+          display_order?: number
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

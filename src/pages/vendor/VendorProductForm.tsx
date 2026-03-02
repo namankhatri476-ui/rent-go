@@ -44,6 +44,9 @@ const VendorProductForm = () => {
     advance_discount_percent: '' as string | number,
   });
 
+  // Variations state
+  const [variations, setVariations] = useState<{ variation_type: string; variation_value: string; price_adjustment: number }[]>([]);
+
   // New simplified pricing model
   const [pricing, setPricing] = useState({
     baseMonthlyRent: 0,
@@ -80,7 +83,7 @@ const VendorProductForm = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select(`*, rental_plans (*)`)
+        .select(`*, rental_plans (*), product_variations (*)`)
         .eq('id', productId)
         .single();
       if (error) throw error;
@@ -137,6 +140,16 @@ const VendorProductForm = () => {
           maxDuration: maxDur,
           discountPerMonth: Math.max(0, discountPerMonth),
         });
+
+        // Load variations
+        const existingVariations = ((existingProduct as any).product_variations || [])
+          .filter((v: any) => v.is_active !== false)
+          .map((v: any) => ({
+            variation_type: v.variation_type,
+            variation_value: v.variation_value,
+            price_adjustment: v.price_adjustment || 0,
+          }));
+        if (existingVariations.length > 0) setVariations(existingVariations);
       }
     }
   }, [existingProduct]);
@@ -221,6 +234,21 @@ const VendorProductForm = () => {
       const { error: plansError } = await supabase.from('rental_plans').insert(plans);
       if (plansError) throw plansError;
 
+      // Save variations
+      if (variations.length > 0) {
+        const varRows = variations.filter(v => v.variation_type && v.variation_value).map((v, i) => ({
+          product_id: product.id,
+          variation_type: v.variation_type,
+          variation_value: v.variation_value,
+          price_adjustment: v.price_adjustment || 0,
+          display_order: i,
+        }));
+        if (varRows.length > 0) {
+          const { error: varError } = await supabase.from('product_variations').insert(varRows);
+          if (varError) throw varError;
+        }
+      }
+
       return product;
     },
     onSuccess: () => {
@@ -277,6 +305,22 @@ const VendorProductForm = () => {
       const plans = generateRentalPlans(productId);
       const { error: plansError } = await supabase.from('rental_plans').insert(plans);
       if (plansError) throw plansError;
+
+      // Deactivate old variations and insert new ones
+      await supabase.from('product_variations').update({ is_active: false } as any).eq('product_id', productId);
+      if (variations.length > 0) {
+        const varRows = variations.filter(v => v.variation_type && v.variation_value).map((v, i) => ({
+          product_id: productId,
+          variation_type: v.variation_type,
+          variation_value: v.variation_value,
+          price_adjustment: v.price_adjustment || 0,
+          display_order: i,
+        }));
+        if (varRows.length > 0) {
+          const { error: varError } = await supabase.from('product_variations').insert(varRows);
+          if (varError) throw varError;
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendor-products'] });
@@ -740,6 +784,67 @@ const VendorProductForm = () => {
               <Button type="button" variant="outline" size="sm" onClick={addTag}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Tag
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Product Variations */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Product Variations (Optional)</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Add options like different models, sizes, or capacities (e.g., 1 Ton, 2 Ton for AC).
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {variations.map((v, index) => (
+                <div key={index} className="flex gap-2 items-end">
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs">Type</Label>
+                    <Input
+                      value={v.variation_type}
+                      onChange={(e) => {
+                        const newVars = [...variations];
+                        newVars[index] = { ...newVars[index], variation_type: e.target.value };
+                        setVariations(newVars);
+                      }}
+                      placeholder="e.g., Model, Size, Capacity"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs">Value</Label>
+                    <Input
+                      value={v.variation_value}
+                      onChange={(e) => {
+                        const newVars = [...variations];
+                        newVars[index] = { ...newVars[index], variation_value: e.target.value };
+                        setVariations(newVars);
+                      }}
+                      placeholder="e.g., 1 Ton, 2 Ton"
+                    />
+                  </div>
+                  <div className="w-32 space-y-1">
+                    <Label className="text-xs">+₹/mo</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={v.price_adjustment || ''}
+                      onChange={(e) => {
+                        const newVars = [...variations];
+                        newVars[index] = { ...newVars[index], price_adjustment: Number(e.target.value) || 0 };
+                        setVariations(newVars);
+                      }}
+                      placeholder="0"
+                    />
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => setVariations(variations.filter((_, i) => i !== index))}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={() => setVariations([...variations, { variation_type: '', variation_value: '', price_adjustment: 0 }])}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Variation
               </Button>
             </CardContent>
           </Card>
