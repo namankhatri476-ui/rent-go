@@ -1,9 +1,16 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { CartItem, Product, RentalPlan, CheckoutBreakdown, GST_RATE, PROTECTION_PLAN_MONTHLY } from "@/types/product";
 
+interface AddToCartOptions {
+  mode?: 'rent' | 'buy';
+  buyPrice?: number;
+  payAdvance?: boolean;
+  advanceDiscountPercent?: number;
+}
+
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product, plan: RentalPlan) => void;
+  addToCart: (product: Product, plan: RentalPlan, options?: AddToCartOptions) => void;
   removeFromCart: (productId: string) => void;
   updateProtectionPlan: (productId: string, add: boolean) => void;
   clearCart: () => void;
@@ -16,15 +23,25 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const addToCart = (product: Product, plan: RentalPlan) => {
+  const addToCart = (product: Product, plan: RentalPlan, options?: AddToCartOptions) => {
     setItems(prev => {
       const existingIndex = prev.findIndex(item => item.product.id === product.id);
+      const newItem: CartItem = {
+        product,
+        selectedPlan: plan,
+        quantity: 1,
+        addProtectionPlan: false,
+        mode: options?.mode || 'rent',
+        buyPrice: options?.buyPrice,
+        payAdvance: options?.payAdvance,
+        advanceDiscountPercent: options?.advanceDiscountPercent,
+      };
       if (existingIndex >= 0) {
         const updated = [...prev];
-        updated[existingIndex] = { ...updated[existingIndex], selectedPlan: plan };
+        updated[existingIndex] = { ...updated[existingIndex], ...newItem };
         return updated;
       }
-      return [...prev, { product, selectedPlan: plan, quantity: 1, addProtectionPlan: false }];
+      return [...prev, newItem];
     });
   };
 
@@ -43,14 +60,32 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const clearCart = () => setItems([]);
 
   const getBreakdown = (): CheckoutBreakdown => {
-    const securityDeposit = items.reduce((sum, item) => sum + item.selectedPlan.securityDeposit, 0);
+    const rentItems = items.filter(i => i.mode === 'rent');
+    const buyItems = items.filter(i => i.mode === 'buy');
+
+    const securityDeposit = rentItems.reduce((sum, item) => sum + item.selectedPlan.securityDeposit, 0);
     const deliveryFee = items.reduce((sum, item) => sum + item.product.deliveryFee, 0);
     const installationFee = items.reduce((sum, item) => sum + item.product.installationFee, 0);
-    const monthlyRent = items.reduce((sum, item) => sum + item.selectedPlan.monthlyRent, 0);
-    const protectionPlan = items.reduce((sum, item) => item.addProtectionPlan ? sum + PROTECTION_PLAN_MONTHLY : sum, 0);
+    const buyTotal = buyItems.reduce((sum, item) => sum + (item.buyPrice || 0), 0);
+
+    // Advance payment calculations for rent items
+    let advanceRent = 0;
+    let advanceDiscount = 0;
+    const monthlyRentItems = rentItems.filter(i => !i.payAdvance);
+    const advanceItems = rentItems.filter(i => i.payAdvance);
+
+    for (const item of advanceItems) {
+      const totalRent = item.selectedPlan.monthlyRent * item.selectedPlan.duration;
+      const discount = Math.round(totalRent * (item.advanceDiscountPercent || 0) / 100);
+      advanceRent += totalRent - discount;
+      advanceDiscount += discount;
+    }
+
+    const monthlyRent = monthlyRentItems.reduce((sum, item) => sum + item.selectedPlan.monthlyRent, 0);
+    const protectionPlan = rentItems.reduce((sum, item) => item.addProtectionPlan ? sum + PROTECTION_PLAN_MONTHLY : sum, 0);
     
     const gst = Math.round((monthlyRent + protectionPlan) * GST_RATE);
-    const payableNow = securityDeposit + deliveryFee + installationFee;
+    const payableNow = securityDeposit + deliveryFee + installationFee + buyTotal + advanceRent;
     const monthlyTotal = monthlyRent + gst + protectionPlan;
 
     return {
@@ -61,7 +96,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       monthlyRent,
       gst,
       protectionPlan,
-      monthlyTotal
+      monthlyTotal,
+      hasBuyItems: buyItems.length > 0,
+      buyTotal,
+      advanceRent,
+      advanceDiscount,
     };
   };
 

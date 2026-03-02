@@ -114,7 +114,9 @@ const Products = () => {
 
   const getLowestRent = (rentalPlans: any[]) => {
     if (!rentalPlans || rentalPlans.length === 0) return null;
-    return Math.min(...rentalPlans.map(p => p.monthly_rent));
+    const activePlans = rentalPlans.filter(p => p.is_active !== false);
+    if (activePlans.length === 0) return null;
+    return Math.min(...activePlans.map(p => p.monthly_rent));
   };
 
   return (

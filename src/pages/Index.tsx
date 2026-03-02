@@ -171,8 +171,9 @@ const Index = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {displayProducts ? (
               displayProducts.map((product) => {
-                const lowestRent = product.rental_plans?.length > 0
-                  ? Math.min(...product.rental_plans.map((rp: any) => rp.monthly_rent))
+                const activePlans = (product.rental_plans || []).filter((rp: any) => rp.is_active !== false);
+                const lowestRent = activePlans.length > 0
+                  ? Math.min(...activePlans.map((rp: any) => rp.monthly_rent))
                   : null;
                 
                 return (

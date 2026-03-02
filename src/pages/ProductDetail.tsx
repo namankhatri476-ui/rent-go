@@ -136,9 +136,38 @@ const ProductDetail = () => {
     );
   }
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (options?: { mode?: 'rent' | 'buy'; buyPrice?: number; payAdvance?: boolean; advanceDiscountPercent?: number }) => {
     if (!requireLocation()) {
       toast.info("Please select your city first");
+      return;
+    }
+    if (options?.mode === 'buy' && options.buyPrice) {
+      const cartPlan = {
+        id: 'buy-' + product.id,
+        duration: 0,
+        label: 'Buy',
+        monthlyRent: 0,
+        securityDeposit: 0,
+      };
+      const cartProduct = {
+        id: product.id,
+        name: product.name,
+        brand: product.brand || '',
+        category: product.categories?.name || '',
+        slug: product.slug,
+        description: product.description || '',
+        features: product.features || [],
+        specifications: (product.specifications as Record<string, string>) || {},
+        images: product.images || [],
+        rentalPlans: [],
+        deliveryFee: 0,
+        installationFee: 0,
+        rating: product.rating || 0,
+        reviewCount: product.review_count || 0,
+        inStock: product.in_stock,
+        tags: product.tags || [],
+      };
+      addToCart(cartProduct, cartPlan, { mode: 'buy', buyPrice: options.buyPrice });
       return;
     }
     if (selectedPlan) {
@@ -175,9 +204,13 @@ const ProductDetail = () => {
         tags: product.tags || [],
       };
 
-      addToCart(cartProduct, cartPlan);
+      addToCart(cartProduct, cartPlan, {
+        mode: 'rent',
+        payAdvance,
+        advanceDiscountPercent: payAdvance ? advanceDiscountPercent : 0,
+      });
       toast.success("Added to cart!", {
-        description: `${product.name} with ${currentDuration} month plan`,
+        description: `${product.name} with ${currentDuration} month plan${payAdvance ? ' (advance payment)' : ''}`,
       });
     }
   };
@@ -192,10 +225,10 @@ const ProductDetail = () => {
       toast.info("Please select your city first");
       return;
     }
+    handleAddToCart({ mode: 'buy', buyPrice });
     toast.success("Proceeding to buy!", {
       description: `${product.name} — ₹${buyPrice.toLocaleString()}`,
     });
-    // TODO: Implement buy checkout flow
     navigate("/checkout");
   };
 
@@ -468,7 +501,7 @@ const ProductDetail = () => {
                       variant="outline" 
                       size="xl" 
                       className="flex-1 gap-2"
-                      onClick={handleAddToCart}
+                      onClick={() => handleAddToCart()}
                       disabled={!selectedPlan}
                     >
                       <ShoppingCart className="w-5 h-5" />
