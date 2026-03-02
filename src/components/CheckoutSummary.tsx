@@ -1,4 +1,4 @@
-import { Shield, Check, Info } from "lucide-react";
+import { Shield, Check, Info, CreditCard, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import { PROTECTION_PLAN_MONTHLY } from "@/types/product";
@@ -6,6 +6,11 @@ import { PROTECTION_PLAN_MONTHLY } from "@/types/product";
 const CheckoutSummary = () => {
   const { items, getBreakdown, updateProtectionPlan } = useCart();
   const breakdown = getBreakdown();
+
+  const buyItems = items.filter(i => i.mode === 'buy');
+  const rentItems = items.filter(i => i.mode === 'rent');
+  const advanceItems = rentItems.filter(i => i.payAdvance);
+  const monthlyItems = rentItems.filter(i => !i.payAdvance);
 
   if (items.length === 0) return null;
 
@@ -21,18 +26,64 @@ const CheckoutSummary = () => {
         </div>
 
         <div className="space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Refundable Deposit</span>
-            <span className="checkout-amount">₹{breakdown.securityDeposit.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Delivery + Packaging</span>
-            <span className="checkout-amount">₹{breakdown.deliveryFee.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Installation Charges</span>
-            <span className="checkout-amount">₹{breakdown.installationFee.toLocaleString()}</span>
-          </div>
+          {/* Buy items */}
+          {buyItems.map(item => (
+            <div key={item.product.id} className="flex justify-between text-sm">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Package className="w-3.5 h-3.5" />
+                Buy: {item.product.name}
+              </span>
+              <span className="checkout-amount">₹{(item.buyPrice || 0).toLocaleString()}</span>
+            </div>
+          ))}
+
+          {/* Security deposit for rent items */}
+          {rentItems.length > 0 && breakdown.securityDeposit > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Refundable Deposit</span>
+              <span className="checkout-amount">₹{breakdown.securityDeposit.toLocaleString()}</span>
+            </div>
+          )}
+
+          {/* Advance rent payment */}
+          {advanceItems.length > 0 && (
+            <>
+              {advanceItems.map(item => {
+                const totalRent = item.selectedPlan.monthlyRent * item.selectedPlan.duration;
+                const discount = Math.round(totalRent * (item.advanceDiscountPercent || 0) / 100);
+                const advanceAmount = totalRent - discount;
+                return (
+                  <div key={`advance-${item.product.id}`} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Advance Rent: {item.product.name} ({item.selectedPlan.duration} mo)
+                      </span>
+                      <span className="checkout-amount">₹{totalRent.toLocaleString()}</span>
+                    </div>
+                    {discount > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Advance Discount ({item.advanceDiscountPercent}%)</span>
+                        <span>- ₹{discount.toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          )}
+
+          {breakdown.deliveryFee > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Delivery + Packaging</span>
+              <span className="checkout-amount">₹{breakdown.deliveryFee.toLocaleString()}</span>
+            </div>
+          )}
+          {breakdown.installationFee > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Installation Charges</span>
+              <span className="checkout-amount">₹{breakdown.installationFee.toLocaleString()}</span>
+            </div>
+          )}
           
           <div className="border-t border-border pt-3 mt-3">
             <div className="flex justify-between">
@@ -59,77 +110,89 @@ const CheckoutSummary = () => {
         </div>
       </div>
 
-      {/* Monthly Payable Section */}
-      <div className="checkout-section border-accent/30 bg-accent/5">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
-            <Info className="w-4 h-4 text-accent" />
-          </div>
-          <h3 className="font-bold text-lg text-foreground">Monthly Payable</h3>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Monthly Rent</span>
-            <span className="checkout-amount">₹{breakdown.monthlyRent.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">GST (18%)</span>
-            <span className="checkout-amount">₹{breakdown.gst.toLocaleString()}</span>
-          </div>
-
-          {/* Protection Plan Option */}
-          {items.map((item) => (
-            <div key={item.product.id} className="flex items-start gap-3 p-3 bg-card rounded-lg border border-border">
-              <input
-                type="checkbox"
-                id={`protection-${item.product.id}`}
-                checked={item.addProtectionPlan}
-                onChange={(e) => updateProtectionPlan(item.product.id, e.target.checked)}
-                className="mt-1 accent-accent"
-              />
-              <label htmlFor={`protection-${item.product.id}`} className="flex-1 cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-success" />
-                  <span className="font-medium text-sm text-foreground">
-                    Damage Protection
-                  </span>
-                  <span className="text-sm text-success font-semibold">
-                    +₹{PROTECTION_PLAN_MONTHLY}/mo
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Cover accidental damages. No repair costs during rental.
-                </p>
-              </label>
+      {/* Monthly Payable Section — only show if there are monthly rent items */}
+      {monthlyItems.length > 0 && (
+        <div className="checkout-section border-accent/30 bg-accent/5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
+              <Info className="w-4 h-4 text-accent" />
             </div>
-          ))}
+            <h3 className="font-bold text-lg text-foreground">Monthly Payable</h3>
+          </div>
 
-          {breakdown.protectionPlan > 0 && (
+          <div className="space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Protection Plan</span>
-              <span className="checkout-amount">₹{breakdown.protectionPlan.toLocaleString()}</span>
+              <span className="text-muted-foreground">Monthly Rent</span>
+              <span className="checkout-amount">₹{breakdown.monthlyRent.toLocaleString()}</span>
             </div>
-          )}
-          
-          <div className="border-t border-border pt-3 mt-3">
-            <div className="flex justify-between">
-              <span className="font-semibold text-foreground">Monthly Total</span>
-              <span className="font-bold text-xl text-accent">
-                ₹{breakdown.monthlyTotal.toLocaleString()}/mo
-              </span>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">GST (18%)</span>
+              <span className="checkout-amount">₹{breakdown.gst.toLocaleString()}</span>
+            </div>
+
+            {/* Protection Plan Option */}
+            {monthlyItems.map((item) => (
+              <div key={item.product.id} className="flex items-start gap-3 p-3 bg-card rounded-lg border border-border">
+                <input
+                  type="checkbox"
+                  id={`protection-${item.product.id}`}
+                  checked={item.addProtectionPlan}
+                  onChange={(e) => updateProtectionPlan(item.product.id, e.target.checked)}
+                  className="mt-1 accent-accent"
+                />
+                <label htmlFor={`protection-${item.product.id}`} className="flex-1 cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-green-600" />
+                    <span className="font-medium text-sm text-foreground">
+                      Damage Protection
+                    </span>
+                    <span className="text-sm text-green-600 font-semibold">
+                      +₹{PROTECTION_PLAN_MONTHLY}/mo
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Cover accidental damages. No repair costs during rental.
+                  </p>
+                </label>
+              </div>
+            ))}
+
+            {breakdown.protectionPlan > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Protection Plan</span>
+                <span className="checkout-amount">₹{breakdown.protectionPlan.toLocaleString()}</span>
+              </div>
+            )}
+            
+            <div className="border-t border-border pt-3 mt-3">
+              <div className="flex justify-between">
+                <span className="font-semibold text-foreground">Monthly Total</span>
+                <span className="font-bold text-xl text-accent">
+                  ₹{breakdown.monthlyTotal.toLocaleString()}/mo
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Note about monthly billing */}
-        <div className="mt-4 p-3 bg-success/10 rounded-lg border border-success/20">
-          <p className="text-xs text-success font-medium flex items-start gap-2">
+          {/* Note about monthly billing */}
+          <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <p className="text-xs text-green-700 dark:text-green-400 font-medium flex items-start gap-2">
+              <Check className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              Monthly rent will start from next billing cycle. No rent charged today.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Advance payment savings note */}
+      {breakdown.advanceDiscount > 0 && (
+        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+          <p className="text-xs text-green-700 dark:text-green-400 font-medium flex items-start gap-2">
             <Check className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            Monthly rent will start from next billing cycle. No rent charged today.
+            You're saving ₹{breakdown.advanceDiscount.toLocaleString()} with advance payment!
           </p>
         </div>
-      </div>
+      )}
     </div>
   );
 };

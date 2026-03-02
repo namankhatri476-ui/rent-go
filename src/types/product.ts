@@ -31,6 +31,10 @@ export interface CartItem {
   selectedPlan: RentalPlan;
   quantity: number;
   addProtectionPlan: boolean;
+  mode: 'rent' | 'buy';
+  buyPrice?: number;
+  payAdvance?: boolean;
+  advanceDiscountPercent?: number;
 }
 
 export interface CheckoutBreakdown {
@@ -42,6 +46,10 @@ export interface CheckoutBreakdown {
   gst: number;
   protectionPlan: number;
   monthlyTotal: number;
+  hasBuyItems: boolean;
+  buyTotal: number;
+  advanceRent: number;
+  advanceDiscount: number;
 }
 
 export const PROTECTION_PLAN_MONTHLY = 99; // ₹99/month for damage waiver
