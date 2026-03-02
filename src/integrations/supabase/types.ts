@@ -385,9 +385,11 @@ export type Database = {
       }
       products: {
         Row: {
+          advance_discount_percent: number | null
           approved_at: string | null
           approved_by: string | null
           brand: string | null
+          buy_price: number | null
           category_id: string | null
           created_at: string
           description: string | null
@@ -409,9 +411,11 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          advance_discount_percent?: number | null
           approved_at?: string | null
           approved_by?: string | null
           brand?: string | null
+          buy_price?: number | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -433,9 +437,11 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          advance_discount_percent?: number | null
           approved_at?: string | null
           approved_by?: string | null
           brand?: string | null
+          buy_price?: number | null
           category_id?: string | null
           created_at?: string
           description?: string | null

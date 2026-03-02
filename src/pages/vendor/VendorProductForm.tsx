@@ -40,6 +40,8 @@ const VendorProductForm = () => {
     tags: [''],
     in_stock: true,
     stock_quantity: 10,
+    buy_price: '' as string | number,
+    advance_discount_percent: '' as string | number,
   });
 
   // New simplified pricing model
@@ -102,11 +104,16 @@ const VendorProductForm = () => {
         tags: existingProduct.tags?.length ? existingProduct.tags : [''],
         in_stock: existingProduct.in_stock ?? true,
         stock_quantity: existingProduct.stock_quantity ?? 10,
+        buy_price: (existingProduct as any).buy_price ?? '',
+        advance_discount_percent: (existingProduct as any).advance_discount_percent ?? '',
       });
 
-      // Reverse-engineer pricing from existing rental plans
-      if (existingProduct.rental_plans?.length) {
-        const plans = [...existingProduct.rental_plans].sort(
+      // Reverse-engineer pricing from ACTIVE rental plans only
+      const activePlans = (existingProduct.rental_plans || []).filter(
+        (p: any) => p.is_active !== false
+      );
+      if (activePlans.length) {
+        const plans = [...activePlans].sort(
           (a: any, b: any) => a.duration_months - b.duration_months
         );
         const firstPlan = plans[0];
@@ -116,7 +123,7 @@ const VendorProductForm = () => {
         const maxDur = lastPlan.duration_months;
         
         // Calculate discount % per month from first and last plan
-        let discountPerMonth = 2;
+        let discountPerMonth = 0;
         if (plans.length > 1 && baseRent > 0 && maxDur > 1) {
           const totalDiscountPercent = ((baseRent - lastPlan.monthly_rent) / baseRent) * 100;
           discountPerMonth = Math.round((totalDiscountPercent / (maxDur - 1)) * 10) / 10;
@@ -202,7 +209,9 @@ const VendorProductForm = () => {
           in_stock: formData.in_stock,
           stock_quantity: formData.stock_quantity,
           status: 'pending',
-        })
+          buy_price: formData.buy_price ? Number(formData.buy_price) : null,
+          advance_discount_percent: formData.advance_discount_percent ? Number(formData.advance_discount_percent) : 0,
+        } as any)
         .select()
         .single();
 
@@ -246,6 +255,8 @@ const VendorProductForm = () => {
         tags: formData.tags.filter(t => t.trim()),
         in_stock: formData.in_stock,
         stock_quantity: formData.stock_quantity,
+        buy_price: formData.buy_price ? Number(formData.buy_price) : null,
+        advance_discount_percent: formData.advance_discount_percent ? Number(formData.advance_discount_percent) : 0,
       };
 
       const { error: productError } = await supabase
@@ -611,9 +622,36 @@ const VendorProductForm = () => {
                     onChange={(e) => setPricing({ ...pricing, installationFee: Number(e.target.value) })}
                     placeholder="0"
                   />
+                 </div>
+               </div>
+
+              {/* Buy Price & Advance Discount */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Buy Price (₹)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={formData.buy_price}
+                    onChange={(e) => setFormData({ ...formData, buy_price: e.target.value ? Number(e.target.value) : '' })}
+                    placeholder="Leave empty if not for sale"
+                  />
+                  <p className="text-xs text-muted-foreground">Set if customers can also buy outright</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Advance Payment Discount (%)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="50"
+                    step="0.5"
+                    value={formData.advance_discount_percent}
+                    onChange={(e) => setFormData({ ...formData, advance_discount_percent: e.target.value ? Number(e.target.value) : '' })}
+                    placeholder="e.g., 10"
+                  />
+                  <p className="text-xs text-muted-foreground">Discount when customer pays all months upfront</p>
                 </div>
               </div>
-
               {/* Pricing Preview */}
               {pricingPreview.length > 0 && (
                 <div className="border rounded-lg overflow-hidden">
