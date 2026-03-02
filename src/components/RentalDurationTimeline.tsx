@@ -15,32 +15,38 @@ const RentalDurationTimeline = ({
 }: RentalDurationTimelineProps) => {
   const milestones = useMemo(() => {
     const points = new Set<number>();
-    points.add(1);
-    rentalPlans.forEach(p => points.add(p.duration_months));
-    // Add common milestones
-    [3, 6, 12].forEach(m => { if (m <= maxDuration) points.add(m); });
+    rentalPlans.forEach((p) => points.add(p.duration_months));
+    [3, 6, 12].forEach((m) => {
+      if (m <= maxDuration) points.add(m);
+    });
+    if (!points.has(1)) points.add(1);
     points.add(maxDuration);
     return Array.from(points).sort((a, b) => a - b);
   }, [maxDuration, rentalPlans]);
 
-  const getPosition = (month: number) => ((month - 1) / (maxDuration - 1)) * 100;
+  const getPosition = (month: number) =>
+    ((month - milestones[0]) / (milestones[milestones.length - 1] - milestones[0])) * 100;
+
+  const filledWidth = getPosition(currentDuration);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">Rental Duration</span>
-        <span className="text-sm font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
-          {currentDuration} {currentDuration === 1 ? 'Month' : 'Months'}
+        <span className="text-sm font-semibold text-foreground">Choose tenure</span>
+        <span className="text-sm font-bold text-foreground">
+          {currentDuration} {currentDuration === 1 ? "month" : "months"}
         </span>
       </div>
 
-      <div className="relative pt-4 pb-8 px-2">
-        {/* Track */}
-        <div className="relative h-1.5 bg-muted rounded-full">
+      {/* Timeline Track */}
+      <div className="relative pt-3 pb-8 px-1">
+        {/* Background track */}
+        <div className="relative h-2 bg-muted rounded-full">
           {/* Filled track */}
           <div
-            className="absolute h-full bg-primary rounded-full transition-all duration-300"
-            style={{ width: `${getPosition(currentDuration)}%` }}
+            className="absolute h-full bg-destructive rounded-full transition-all duration-300 ease-out"
+            style={{ width: `${Math.max(0, Math.min(filledWidth, 100))}%` }}
           />
         </div>
 
@@ -49,7 +55,6 @@ const RentalDurationTimeline = ({
           const pos = getPosition(month);
           const isActive = month <= currentDuration;
           const isCurrent = month === currentDuration;
-          const hasPlan = rentalPlans.some(p => p.duration_months === month);
 
           return (
             <button
@@ -57,45 +62,50 @@ const RentalDurationTimeline = ({
               type="button"
               onClick={() => onDurationChange(month)}
               className="absolute -translate-x-1/2 group"
-              style={{ left: `${pos}%`, top: '6px' }}
+              style={{ left: `${pos}%`, top: "4px" }}
             >
-              {/* Dot */}
+              {/* Circle dot - white with border when inactive, white filled on active track */}
               <div
                 className={`
-                  w-4 h-4 rounded-full border-2 transition-all duration-200
-                  ${isCurrent
-                    ? 'bg-primary border-primary scale-125 shadow-md shadow-primary/30'
-                    : isActive
-                      ? 'bg-primary border-primary'
-                      : hasPlan
-                        ? 'bg-background border-primary/50 hover:border-primary hover:scale-110'
-                        : 'bg-background border-border hover:border-muted-foreground hover:scale-110'
+                  w-5 h-5 rounded-full border-[3px] transition-all duration-200
+                  ${
+                    isCurrent
+                      ? "bg-card border-destructive scale-110 shadow-md"
+                      : isActive
+                      ? "bg-card border-destructive"
+                      : "bg-card border-muted-foreground/30 hover:border-muted-foreground/50 hover:scale-105"
                   }
                 `}
               />
               {/* Label */}
               <span
                 className={`
-                  absolute top-6 left-1/2 -translate-x-1/2 text-[10px] whitespace-nowrap transition-colors
-                  ${isCurrent ? 'text-primary font-bold' : isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}
+                  absolute top-7 left-1/2 -translate-x-1/2 text-xs whitespace-nowrap transition-colors font-medium
+                  ${
+                    isCurrent
+                      ? "text-destructive font-bold"
+                      : isActive
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                  }
                 `}
               >
-                {month}m
+                {month}+
               </span>
             </button>
           );
         })}
 
-        {/* Draggable slider (invisible, over the timeline for smooth dragging) */}
+        {/* Invisible range slider for smooth dragging */}
         <input
           type="range"
-          min={1}
-          max={maxDuration}
+          min={milestones[0]}
+          max={milestones[milestones.length - 1]}
           step={1}
           value={currentDuration}
           onChange={(e) => onDurationChange(Number(e.target.value))}
           className="absolute inset-0 w-full opacity-0 cursor-pointer"
-          style={{ top: '6px', height: '20px' }}
+          style={{ top: "4px", height: "24px" }}
         />
       </div>
     </div>

@@ -10,10 +10,11 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import RentalDurationTimeline from "@/components/RentalDurationTimeline";
 import ProductVariations from "@/components/ProductVariations";
+import ProductImageGallery from "@/components/ProductImageGallery";
+import InteractiveRating from "@/components/InteractiveRating";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { useLocation } from "@/contexts/LocationContext";
-
 interface RentalPlan {
   id: string;
   label: string;
@@ -31,7 +32,7 @@ const ProductDetail = () => {
   const { requireLocation } = useLocation();
 
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
-  const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedImage, setSelectedImage] = useState(0); // kept for compatibility
   const [mode, setMode] = useState<'rent' | 'buy'>('rent');
   const [payAdvance, setPayAdvance] = useState(false);
   const [selectedVariation, setSelectedVariation] = useState<string | null>(null);
@@ -184,30 +185,10 @@ const ProductDetail = () => {
           <div className="grid lg:grid-cols-2 gap-10">
             {/* LEFT - Sticky Image Gallery */}
             <div className="lg:self-start lg:sticky lg:top-[100px]">
-              <div className="space-y-3">
-                <div className="aspect-square rounded-2xl overflow-hidden bg-muted border border-border/60">
-                  {product.images?.[selectedImage] ? (
-                    <img src={product.images[selectedImage]} alt={product.name} className="w-full h-full object-contain p-4" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">No Image</div>
-                  )}
-                </div>
-                {product.images?.length > 1 && (
-                  <div className="flex gap-2">
-                    {product.images.map((img: string, index: number) => (
-                      <button
-                        key={index}
-                        onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
-                          selectedImage === index ? "border-primary shadow-sm" : "border-border/60 hover:border-border"
-                        }`}
-                      >
-                        <img src={img} alt="" className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <ProductImageGallery
+                images={product.images || []}
+                productName={product.name}
+              />
             </div>
 
             {/* RIGHT - Product Info (scrollable) */}
@@ -228,15 +209,11 @@ const ProductDetail = () => {
               </div>
 
               {/* Rating */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className={`w-4 h-4 ${i < Math.floor(product.rating || 0) ? "fill-accent text-accent" : "text-muted"}`} />
-                  ))}
-                </div>
-                <span className="text-sm font-medium">{product.rating || 0}</span>
-                <span className="text-xs text-muted-foreground">({product.review_count || 0} reviews)</span>
-              </div>
+              <InteractiveRating
+                currentRating={product.rating || 0}
+                reviewCount={product.review_count || 0}
+                productId={product.id}
+              />
 
               {/* Product Variations */}
               {variations.length > 0 && (
