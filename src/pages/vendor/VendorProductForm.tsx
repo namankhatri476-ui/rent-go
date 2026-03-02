@@ -256,12 +256,12 @@ const VendorProductForm = () => {
 
       if (productError) throw productError;
 
-      // Delete existing rental plans and insert new ones
-      const { error: deleteError } = await supabase
+      // Soft-delete existing rental plans (deactivate) to preserve order references
+      const { error: deactivateError } = await supabase
         .from('rental_plans')
-        .delete()
+        .update({ is_active: false })
         .eq('product_id', productId);
-      if (deleteError) throw deleteError;
+      if (deactivateError) throw deactivateError;
 
       const plans = generateRentalPlans(productId);
       const { error: plansError } = await supabase.from('rental_plans').insert(plans);
