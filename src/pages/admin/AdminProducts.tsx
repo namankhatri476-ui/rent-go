@@ -219,7 +219,7 @@ const AdminProducts = () => {
                       <TableCell>{product.vendors?.business_name}</TableCell>
                       <TableCell>{product.categories?.name || '-'}</TableCell>
                       <TableCell>{getStatusBadge(product.status)}</TableCell>
-                      <TableCell>{product.rental_plans?.length || 0} plans</TableCell>
+                      <TableCell>{product.rental_plans?.filter((p: any) => p.is_active !== false).length || 0} plans</TableCell>
                       <TableCell>
                         {format(new Date(product.created_at), 'MMM dd, yyyy')}
                       </TableCell>
@@ -367,11 +367,11 @@ const AdminProducts = () => {
                   </div>
                 )}
 
-                {selectedProduct.rental_plans?.length > 0 && (
+                {selectedProduct.rental_plans?.filter((p: any) => p.is_active !== false).length > 0 && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Rental Plans</label>
                     <div className="grid grid-cols-3 gap-4 mt-2">
-                      {selectedProduct.rental_plans.map((plan: any) => (
+                      {selectedProduct.rental_plans.filter((p: any) => p.is_active !== false).map((plan: any) => (
                         <Card key={plan.id}>
                           <CardContent className="pt-4">
                             <p className="font-medium">{plan.label}</p>
