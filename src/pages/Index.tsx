@@ -2,17 +2,17 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, Printer } from "lucide-react";
+import { ArrowRight, Printer, Truck, Shield, RotateCcw, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import ProductCard from "@/components/ProductCard";
 import TrustBadges from "@/components/TrustBadges";
 import HeroSlider from "@/components/HeroSlider";
 import WhyRentSection from "@/components/WhyRentSection";
 import StatsSection from "@/components/StatsSection";
 import { printerProducts } from "@/data/products";
+import ProductCard from "@/components/ProductCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "@/contexts/LocationContext";
 
@@ -24,7 +24,6 @@ const Index = () => {
     document.title = "RentEase | Home";
   }, []);
 
-  // Fetch dynamic categories from DB
   const { data: categories } = useQuery({
     queryKey: ['homepage-categories'],
     queryFn: async () => {
@@ -39,42 +38,24 @@ const Index = () => {
     },
   });
 
-  // Fetch featured products from DB filtered by selected location
   const { data: featuredProducts } = useQuery({
     queryKey: ['featured-products', selectedLocation?.id],
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select(`
-          *,
-          categories (name),
-          rental_plans (*)
-        `)
+        .select(`*, categories (name), rental_plans (*)`)
         .eq('status', 'approved')
         .eq('in_stock', true);
-
-      // Filter by location if one is selected
       if (selectedLocation?.id) {
         query = query.eq('location_id', selectedLocation.id);
       }
-
-      const { data, error } = await query
-        .order('created_at', { ascending: false })
-        .limit(4);
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(4);
       if (error) throw error;
       return data;
     },
   });
 
-  // Use DB products if available, otherwise fall back to static
-  const displayProducts = featuredProducts && featuredProducts.length > 0
-    ? featuredProducts
-    : null;
-
-  // Category icon mapping
-  const getCategoryIcon = (name: string) => {
-    return <Printer className="w-8 h-8" />;
-  };
+  const displayProducts = featuredProducts && featuredProducts.length > 0 ? featuredProducts : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -83,66 +64,60 @@ const Index = () => {
       {/* Hero Slider */}
       <HeroSlider />
 
-      {/* Trust Badges */}
-      <section className="py-12 border-b border-border">
+      {/* Trust Badges - Horizontal strip */}
+      <section className="py-4 border-b border-border/50 bg-card">
         <div className="container mx-auto px-4">
           <TrustBadges />
         </div>
       </section>
 
-      {/* Dynamic Categories */}
-      <section className="py-16">
+      {/* Categories */}
+      <section className="py-14 md:py-16">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="section-header text-3xl md:text-4xl mb-4">Browse Categories</h2>
-            <p className="section-subheader mx-auto">
-              {categories && categories.length > 0 
-                ? 'Explore our rental categories' 
-                : 'Start with printers, more categories coming soon!'}
-            </p>
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Categories</span>
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground mt-1">
+                {categories && categories.length > 0 ? 'Explore Our Range' : 'Start with Printers'}
+              </h2>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl">
             {categories && categories.length > 0 ? (
               categories.slice(0, 3).map((cat) => (
                 <Link
                   key={cat.id}
                   to={`/products?category=${cat.slug}`}
-                  className="group relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground transition-transform hover:-translate-y-1"
+                  className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-6 text-white transition-all hover:shadow-lg hover:-translate-y-0.5"
                 >
-                  <div className="absolute top-4 right-4">
-                    <Badge variant="accent">Available</Badge>
+                  <div className="absolute top-3 right-3">
+                    <Badge className="bg-white/20 text-white border-0 text-[10px]">Available</Badge>
                   </div>
-                  <div className="w-16 h-16 rounded-2xl bg-primary-foreground/10 flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
                     {cat.image_url ? (
-                      <img src={cat.image_url} alt={cat.name} className="w-8 h-8 object-cover rounded" />
+                      <img src={cat.image_url} alt={cat.name} className="w-6 h-6 object-cover rounded" />
                     ) : (
-                      getCategoryIcon(cat.name)
+                      <Printer className="w-6 h-6" />
                     )}
                   </div>
-                  <h3 className="text-xl font-bold mb-2">{cat.name}</h3>
-                  <p className="text-primary-foreground/80 text-sm mb-4">
-                    {cat.description || 'Browse products'}
-                  </p>
+                  <h3 className="text-lg font-bold mb-1">{cat.name}</h3>
+                  <p className="text-white/70 text-sm mb-4">{cat.description || 'Browse products'}</p>
                   <span className="text-sm font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
                     Explore <ArrowRight className="w-4 h-4" />
                   </span>
                 </Link>
               ))
             ) : (
-              // Fallback static categories
               <Link 
                 to="/products" 
-                className="group relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground transition-transform hover:-translate-y-1"
+                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-6 text-white transition-all hover:shadow-lg hover:-translate-y-0.5"
               >
-                <div className="absolute top-4 right-4">
-                  <Badge variant="accent">Available</Badge>
+                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
+                  <Printer className="w-6 h-6" />
                 </div>
-                <div className="w-16 h-16 rounded-2xl bg-primary-foreground/10 flex items-center justify-center mb-4">
-                  <Printer className="w-8 h-8" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Printers</h3>
-                <p className="text-primary-foreground/80 text-sm mb-4">Laser, Inkjet & Multifunction</p>
+                <h3 className="text-lg font-bold mb-1">Printers</h3>
+                <p className="text-white/70 text-sm mb-4">Laser, Inkjet & Multifunction</p>
                 <span className="text-sm font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
                   Explore <ArrowRight className="w-4 h-4" />
                 </span>
@@ -153,22 +128,21 @@ const Index = () => {
       </section>
 
       {/* Featured Products */}
-      <section className="py-16 bg-muted/30">
+      <section className="py-14 md:py-16 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div className="flex items-end justify-between mb-8">
             <div>
-              <h2 className="section-header text-2xl md:text-3xl">Featured Products</h2>
-              <p className="text-muted-foreground mt-2">Top-rated products for home and office</p>
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Featured</span>
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground mt-1">Popular Products</h2>
             </div>
             <Link to="/products">
-              <Button variant="outline" className="gap-2">
-                View All
-                <ArrowRight className="w-4 h-4" />
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-full">
+                View All <ArrowRight className="w-3.5 h-3.5" />
               </Button>
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {displayProducts ? (
               displayProducts.map((product) => {
                 const activePlans = (product.rental_plans || []).filter((rp: any) => rp.is_active !== false);
@@ -177,8 +151,8 @@ const Index = () => {
                   : null;
                 
                 return (
-                  <Link key={product.id} to={`/product/${product.slug}`} className="block">
-                    <div className="group overflow-hidden rounded-xl border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg bg-card">
+                  <Link key={product.id} to={`/product/${product.slug}`} className="block group">
+                    <div className="bg-card rounded-2xl border border-border/60 overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all duration-300">
                       <div className="aspect-[4/3] relative overflow-hidden bg-muted">
                         {product.images?.[0] ? (
                           <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -186,18 +160,22 @@ const Index = () => {
                           <div className="w-full h-full flex items-center justify-center text-muted-foreground">No Image</div>
                         )}
                         {product.tags?.[0] && (
-                          <Badge className="absolute top-3 left-3" variant="accent">{product.tags[0]}</Badge>
+                          <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground border-0 text-[10px]">{product.tags[0]}</Badge>
                         )}
                       </div>
                       <div className="p-4">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{product.brand}</p>
-                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">{product.name}</h3>
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{product.brand}</p>
+                        <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors line-clamp-2 mt-0.5">{product.name}</h3>
                         {lowestRent && (
-                          <div className="flex items-baseline gap-1 mt-2">
+                          <div className="flex items-baseline gap-1 mt-2.5">
                             <span className="text-lg font-bold text-primary">₹{lowestRent.toLocaleString()}</span>
-                            <span className="text-sm text-muted-foreground">/month</span>
+                            <span className="text-xs text-muted-foreground">/month</span>
                           </div>
                         )}
+                        <div className="flex items-center gap-3 mt-2.5 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> Free Delivery</span>
+                          <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> Protection</span>
+                        </div>
                       </div>
                     </div>
                   </Link>
@@ -212,29 +190,30 @@ const Index = () => {
         </div>
       </section>
 
-      {/* How It Works Preview */}
-      <section className="py-16">
+      {/* How It Works */}
+      <section className="py-14 md:py-16">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="section-header text-3xl md:text-4xl mb-4">How Renting Works</h2>
-            <p className="section-subheader mx-auto">Simple 4-step process to get started</p>
+          <div className="text-center mb-10">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Simple Process</span>
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mt-2">How Renting Works</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             {[
-              { step: "1", title: "Choose Product", desc: "Browse & select from verified vendors" },
-              { step: "2", title: "Select Plan", desc: "Pick 3, 6, or 12 month rental duration" },
-              { step: "3", title: "Pay Deposit", desc: "One-time deposit + delivery charges only" },
-              { step: "4", title: "Get Delivered", desc: "Free doorstep delivery & installation" }
+              { step: "01", title: "Choose Product", desc: "Browse & select from verified vendors", icon: Printer },
+              { step: "02", title: "Select Plan", desc: "Pick 3, 6, or 12 month duration", icon: Clock },
+              { step: "03", title: "Pay Deposit", desc: "One-time refundable deposit only", icon: Shield },
+              { step: "04", title: "Get Delivered", desc: "Free doorstep delivery & setup", icon: Truck },
             ].map((item, index) => (
-              <div key={index} className="relative text-center">
-                <div className="w-14 h-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                  {item.step}
+              <div key={index} className="relative text-center group">
+                <div className="w-14 h-14 rounded-2xl bg-primary/8 flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/15 transition-colors">
+                  <item.icon className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="font-semibold text-foreground mb-2">{item.title}</h3>
-                <p className="text-sm text-muted-foreground">{item.desc}</p>
+                <span className="text-[10px] font-bold text-primary/50 uppercase tracking-widest">Step {item.step}</span>
+                <h3 className="font-bold text-foreground text-sm mt-1 mb-1">{item.title}</h3>
+                <p className="text-xs text-muted-foreground">{item.desc}</p>
                 {index < 3 && (
-                  <div className="hidden md:block absolute top-7 left-[60%] w-[80%] border-t-2 border-dashed border-border" />
+                  <div className="hidden md:block absolute top-7 left-[60%] w-[80%] border-t border-dashed border-border" />
                 )}
               </div>
             ))}
@@ -242,19 +221,18 @@ const Index = () => {
 
           <div className="text-center mt-10">
             <Link to="/how-it-works">
-              <Button variant="default" size="lg" className="gap-2">
-                Learn More
-                <ArrowRight className="w-4 h-4" />
+              <Button variant="outline" size="lg" className="gap-2 rounded-full">
+                Learn More <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Why Rent Section */}
+      {/* Why Rent */}
       <WhyRentSection />
 
-      {/* Stats Section */}
+      {/* Stats */}
       <StatsSection />
 
       <Footer />

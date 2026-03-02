@@ -34,18 +34,13 @@ const ProductDetail = () => {
   const [mode, setMode] = useState<'rent' | 'buy'>('rent');
   const [payAdvance, setPayAdvance] = useState(false);
 
-  // Fetch product from Supabase
   const { data: product, isLoading, error } = useQuery({
     queryKey: ['product-detail', slug],
     enabled: !!slug,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select(`
-          *,
-          categories (name),
-          rental_plans (*)
-        `)
+        .select(`*, categories (name), rental_plans (*)`)
         .eq('slug', slug)
         .eq('status', 'approved')
         .single();
@@ -68,34 +63,24 @@ const ProductDetail = () => {
   const advanceDiscountPercent = (product as any)?.advance_discount_percent || 0;
   const hasBuyOption = buyPrice && buyPrice > 0;
   
-  // Calculate price using base price + discount % per additional month
-  const getDiscountedPrice = (duration: number): { monthlyRent: number; securityDeposit: number; deliveryFee: number; installationFee: number } => {
+  const getDiscountedPrice = (duration: number) => {
     if (rentalPlans.length === 0) return { monthlyRent: 0, securityDeposit: 0, deliveryFee: 0, installationFee: 0 };
-    
     const basePlan = rentalPlans[0];
     const baseRent = basePlan.monthly_rent;
     const securityDeposit = basePlan.security_deposit;
     const deliveryFee = basePlan.delivery_fee || 0;
     const installationFee = basePlan.installation_fee || 0;
-    
-    if (rentalPlans.length === 1 || duration <= 1) {
-      return { monthlyRent: baseRent, securityDeposit, deliveryFee, installationFee };
-    }
-    
+    if (rentalPlans.length === 1 || duration <= 1) return { monthlyRent: baseRent, securityDeposit, deliveryFee, installationFee };
     const lastPlan = rentalPlans[rentalPlans.length - 1];
     const discountPerMonth = baseRent > 0 && lastPlan.duration_months > 1
-      ? ((baseRent - lastPlan.monthly_rent) / baseRent * 100) / (lastPlan.duration_months - 1)
-      : 0;
-    
+      ? ((baseRent - lastPlan.monthly_rent) / baseRent * 100) / (lastPlan.duration_months - 1) : 0;
     const totalDiscount = Math.min(discountPerMonth * (duration - 1), 80);
     const monthlyRent = Math.round(baseRent * (1 - totalDiscount / 100));
-    
     return { monthlyRent, securityDeposit, deliveryFee, installationFee };
   };
 
   const interpolatedPrice = useMemo(() => getDiscountedPrice(currentDuration), [currentDuration, rentalPlans]);
 
-  // Advance payment calculations
   const totalRentWithoutDiscount = interpolatedPrice.monthlyRent * currentDuration;
   const advanceDiscount = payAdvance ? Math.round(totalRentWithoutDiscount * advanceDiscountPercent / 100) : 0;
   const totalAdvancePayment = totalRentWithoutDiscount - advanceDiscount;
@@ -126,9 +111,7 @@ const ProductDetail = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground mb-4">Product Not Found</h1>
-            <Link to="/products">
-              <Button>Back to Products</Button>
-            </Link>
+            <Link to="/products"><Button>Back to Products</Button></Link>
           </div>
         </div>
         <Footer />
@@ -137,98 +120,43 @@ const ProductDetail = () => {
   }
 
   const handleAddToCart = (options?: { mode?: 'rent' | 'buy'; buyPrice?: number; payAdvance?: boolean; advanceDiscountPercent?: number }) => {
-    if (!requireLocation()) {
-      toast.info("Please select your city first");
-      return;
-    }
+    if (!requireLocation()) { toast.info("Please select your city first"); return; }
     if (options?.mode === 'buy' && options.buyPrice) {
-      const cartPlan = {
-        id: 'buy-' + product.id,
-        duration: 0,
-        label: 'Buy',
-        monthlyRent: 0,
-        securityDeposit: 0,
-      };
+      const cartPlan = { id: 'buy-' + product.id, duration: 0, label: 'Buy', monthlyRent: 0, securityDeposit: 0 };
       const cartProduct = {
-        id: product.id,
-        name: product.name,
-        brand: product.brand || '',
-        category: product.categories?.name || '',
-        slug: product.slug,
-        description: product.description || '',
-        features: product.features || [],
-        specifications: (product.specifications as Record<string, string>) || {},
-        images: product.images || [],
-        rentalPlans: [],
-        deliveryFee: 0,
-        installationFee: 0,
-        rating: product.rating || 0,
-        reviewCount: product.review_count || 0,
-        inStock: product.in_stock,
-        tags: product.tags || [],
+        id: product.id, name: product.name, brand: product.brand || '', category: product.categories?.name || '',
+        slug: product.slug, description: product.description || '', features: product.features || [],
+        specifications: (product.specifications as Record<string, string>) || {}, images: product.images || [],
+        rentalPlans: [], deliveryFee: 0, installationFee: 0, rating: product.rating || 0,
+        reviewCount: product.review_count || 0, inStock: product.in_stock, tags: product.tags || [],
       };
       addToCart(cartProduct, cartPlan, { mode: 'buy', buyPrice: options.buyPrice });
       return;
     }
     if (selectedPlan) {
       const cartPlan = {
-        id: selectedPlan.id,
-        duration: currentDuration,
+        id: selectedPlan.id, duration: currentDuration,
         label: `${currentDuration} ${currentDuration === 1 ? 'Month' : 'Months'}`,
-        monthlyRent: interpolatedPrice.monthlyRent,
-        securityDeposit: interpolatedPrice.securityDeposit,
+        monthlyRent: interpolatedPrice.monthlyRent, securityDeposit: interpolatedPrice.securityDeposit,
       };
-      
       const cartProduct = {
-        id: product.id,
-        name: product.name,
-        brand: product.brand || '',
-        category: product.categories?.name || '',
-        slug: product.slug,
-        description: product.description || '',
-        features: product.features || [],
-        specifications: (product.specifications as Record<string, string>) || {},
-        images: product.images || [],
-        rentalPlans: rentalPlans.map((p: RentalPlan) => ({
-          id: p.id,
-          duration: p.duration_months,
-          label: p.label,
-          monthlyRent: p.monthly_rent,
-          securityDeposit: p.security_deposit,
-        })),
-        deliveryFee: interpolatedPrice.deliveryFee,
-        installationFee: interpolatedPrice.installationFee,
-        rating: product.rating || 0,
-        reviewCount: product.review_count || 0,
-        inStock: product.in_stock,
-        tags: product.tags || [],
+        id: product.id, name: product.name, brand: product.brand || '', category: product.categories?.name || '',
+        slug: product.slug, description: product.description || '', features: product.features || [],
+        specifications: (product.specifications as Record<string, string>) || {}, images: product.images || [],
+        rentalPlans: rentalPlans.map((p: RentalPlan) => ({ id: p.id, duration: p.duration_months, label: p.label, monthlyRent: p.monthly_rent, securityDeposit: p.security_deposit })),
+        deliveryFee: interpolatedPrice.deliveryFee, installationFee: interpolatedPrice.installationFee,
+        rating: product.rating || 0, reviewCount: product.review_count || 0, inStock: product.in_stock, tags: product.tags || [],
       };
-
-      addToCart(cartProduct, cartPlan, {
-        mode: 'rent',
-        payAdvance,
-        advanceDiscountPercent: payAdvance ? advanceDiscountPercent : 0,
-      });
-      toast.success("Added to cart!", {
-        description: `${product.name} with ${currentDuration} month plan${payAdvance ? ' (advance payment)' : ''}`,
-      });
+      addToCart(cartProduct, cartPlan, { mode: 'rent', payAdvance, advanceDiscountPercent: payAdvance ? advanceDiscountPercent : 0 });
+      toast.success("Added to cart!", { description: `${product.name} with ${currentDuration} month plan${payAdvance ? ' (advance payment)' : ''}` });
     }
   };
 
-  const handleRentNow = () => {
-    handleAddToCart();
-    navigate("/checkout");
-  };
-
+  const handleRentNow = () => { handleAddToCart(); navigate("/checkout"); };
   const handleBuyNow = () => {
-    if (!requireLocation()) {
-      toast.info("Please select your city first");
-      return;
-    }
+    if (!requireLocation()) { toast.info("Please select your city first"); return; }
     handleAddToCart({ mode: 'buy', buyPrice });
-    toast.success("Proceeding to buy!", {
-      description: `${product.name} — ₹${buyPrice.toLocaleString()}`,
-    });
+    toast.success("Proceeding to buy!", { description: `${product.name} — ₹${buyPrice.toLocaleString()}` });
     navigate("/checkout");
   };
 
@@ -236,164 +164,125 @@ const ProductDetail = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
 
-      <main className="flex-1 py-8">
+      <main className="flex-1 py-6">
         <div className="container mx-auto px-4">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+          <nav className="flex items-center gap-2 text-xs text-muted-foreground mb-6">
             <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
-            <span>/</span>
+            <span className="text-border">/</span>
             <Link to="/products" className="hover:text-foreground transition-colors">Products</Link>
-            <span>/</span>
-            <span className="text-foreground">{product.name}</span>
+            <span className="text-border">/</span>
+            <span className="text-foreground font-medium">{product.name}</span>
           </nav>
 
           <div className="grid lg:grid-cols-2 gap-10">
-            {/* Image Gallery */}
-            <div className="space-y-4">
-              <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
-                {product.images?.[selectedImage] ? (
-                  <img
-                    src={product.images[selectedImage]}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    No Image
+            {/* LEFT - Sticky Image Gallery */}
+            <div className="lg:self-start lg:sticky lg:top-[100px]">
+              <div className="space-y-3">
+                <div className="aspect-square rounded-2xl overflow-hidden bg-muted border border-border/60">
+                  {product.images?.[selectedImage] ? (
+                    <img src={product.images[selectedImage]} alt={product.name} className="w-full h-full object-contain p-4" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">No Image</div>
+                  )}
+                </div>
+                {product.images?.length > 1 && (
+                  <div className="flex gap-2">
+                    {product.images.map((img: string, index: number) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedImage(index)}
+                        className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
+                          selectedImage === index ? "border-primary shadow-sm" : "border-border/60 hover:border-border"
+                        }`}
+                      >
+                        <img src={img} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
-              {product.images?.length > 1 && (
-                <div className="flex gap-3">
-                  {product.images.map((img: string, index: number) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedImage(index)}
-                      className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                        selectedImage === index ? "border-primary" : "border-transparent"
-                      }`}
-                    >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* Product Info */}
-            <div className="space-y-6">
+            {/* RIGHT - Product Info (scrollable) */}
+            <div className="space-y-5">
               {/* Tags */}
               {product.tags?.length > 0 && (
                 <div className="flex gap-2">
                   {product.tags.map((tag: string) => (
-                    <Badge key={tag} variant="accent">{tag}</Badge>
+                    <Badge key={tag} className="bg-accent/10 text-accent border-0 text-[10px] font-semibold">{tag}</Badge>
                   ))}
                 </div>
               )}
 
               {/* Title & Brand */}
               <div>
-                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  {product.brand}
-                </p>
-                <h1 className="text-2xl md:text-3xl font-bold text-foreground mt-1">
-                  {product.name}
-                </h1>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{product.brand}</p>
+                <h1 className="text-xl md:text-2xl font-bold text-foreground mt-1 leading-tight">{product.name}</h1>
               </div>
 
               {/* Rating */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-0.5">
                   {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-5 h-5 ${
-                        i < Math.floor(product.rating || 0)
-                          ? "fill-accent text-accent"
-                          : "text-muted"
-                      }`}
-                    />
+                    <Star key={i} className={`w-4 h-4 ${i < Math.floor(product.rating || 0) ? "fill-accent text-accent" : "text-muted"}`} />
                   ))}
                 </div>
                 <span className="text-sm font-medium">{product.rating || 0}</span>
-                <span className="text-sm text-muted-foreground">
-                  ({product.review_count || 0} reviews)
-                </span>
+                <span className="text-xs text-muted-foreground">({product.review_count || 0} reviews)</span>
               </div>
 
               {/* Buy / Rent Toggle */}
               {hasBuyOption && (
-                <div className="flex rounded-xl border border-border overflow-hidden">
+                <div className="flex rounded-xl overflow-hidden border border-border/60 bg-muted/50">
                   <button
                     onClick={() => setMode('rent')}
-                    className={`flex-1 py-3 px-4 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
-                      mode === 'rent' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    className={`flex-1 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                      mode === 'rent' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <Clock className="w-4 h-4" />
-                    Rent
+                    <Clock className="w-3.5 h-3.5" /> Rent
                   </button>
                   <button
                     onClick={() => setMode('buy')}
-                    className={`flex-1 py-3 px-4 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
-                      mode === 'buy' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    className={`flex-1 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                      mode === 'buy' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <CreditCard className="w-4 h-4" />
-                    Buy
+                    <CreditCard className="w-3.5 h-3.5" /> Buy
                   </button>
                 </div>
               )}
 
               {/* ===== BUY MODE ===== */}
               {mode === 'buy' && hasBuyOption && (
-                <div className="space-y-5">
-                  <div className="p-5 bg-secondary rounded-xl">
+                <div className="space-y-4">
+                  <div className="p-5 bg-muted/50 rounded-2xl border border-border/60">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold text-foreground">
-                        ₹{buyPrice.toLocaleString()}
-                      </span>
-                      <span className="text-muted-foreground">one-time</span>
+                      <span className="text-3xl font-extrabold text-foreground">₹{buyPrice.toLocaleString()}</span>
+                      <span className="text-sm text-muted-foreground">one-time</span>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Full ownership · No monthly payments
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Full ownership · No monthly payments</p>
                   </div>
 
-                  {/* Buy Action */}
-                  <Button 
-                    variant="hero" 
-                    size="xl" 
-                    className="w-full gap-2"
-                    onClick={handleBuyNow}
-                  >
-                    <CreditCard className="w-5 h-5" />
-                    Buy Now — ₹{buyPrice.toLocaleString()}
+                  <Button size="lg" className="w-full gap-2 rounded-xl h-12 text-base" onClick={handleBuyNow}>
+                    <CreditCard className="w-5 h-5" /> Buy Now — ₹{buyPrice.toLocaleString()}
                   </Button>
 
-                  {/* Buy details */}
-                  <div className="space-y-3 p-4 bg-muted rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <Truck className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="font-medium text-sm text-foreground">Delivery in 1-2 days</p>
-                        <p className="text-xs text-muted-foreground">Free delivery & installation</p>
+                  <div className="space-y-2.5">
+                    {[
+                      { icon: Truck, title: "Delivery in 1-2 days", sub: "Free delivery & installation", color: "text-primary" },
+                      { icon: Shield, title: "1 Year Warranty", sub: "Manufacturer warranty included", color: "text-success" },
+                      { icon: Package, title: "Brand New Product", sub: "Sealed pack with all accessories", color: "text-primary" },
+                    ].map(item => (
+                      <div key={item.title} className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl">
+                        <item.icon className={`w-4 h-4 ${item.color} shrink-0`} />
+                        <div>
+                          <p className="font-medium text-xs text-foreground">{item.title}</p>
+                          <p className="text-[10px] text-muted-foreground">{item.sub}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Shield className="w-5 h-5 text-green-600" />
-                      <div>
-                        <p className="font-medium text-sm text-foreground">1 Year Warranty</p>
-                        <p className="text-xs text-muted-foreground">Manufacturer warranty included</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Package className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="font-medium text-sm text-foreground">Brand New Product</p>
-                        <p className="text-xs text-muted-foreground">Sealed pack with all accessories</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -401,48 +290,34 @@ const ProductDetail = () => {
               {/* ===== RENT MODE ===== */}
               {mode === 'rent' && selectedPlan && (
                 <>
-                  {/* Price Display */}
-                  <div className="p-4 bg-secondary rounded-xl">
+                  {/* Price */}
+                  <div className="p-5 bg-muted/50 rounded-2xl border border-border/60">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold text-foreground">
-                        ₹{interpolatedPrice.monthlyRent.toLocaleString()}
-                      </span>
-                      <span className="text-muted-foreground">/month</span>
+                      <span className="text-3xl font-extrabold text-foreground">₹{interpolatedPrice.monthlyRent.toLocaleString()}</span>
+                      <span className="text-sm text-muted-foreground">/month</span>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      + ₹{interpolatedPrice.securityDeposit.toLocaleString()} refundable deposit
-                      {" · "}{currentDuration} {currentDuration === 1 ? 'month' : 'months'} tenure
+                    <p className="text-xs text-muted-foreground mt-1">
+                      + ₹{interpolatedPrice.securityDeposit.toLocaleString()} refundable deposit · {currentDuration} {currentDuration === 1 ? 'month' : 'months'}
                     </p>
                     {rentalPlans.length > 1 && currentDuration > rentalPlans[0].duration_months && (
-                      <p className="text-xs text-primary mt-1 font-medium">
-                        💰 Longer tenure = lower monthly rent
-                      </p>
+                      <p className="text-[10px] text-primary mt-1 font-semibold">💰 Longer tenure = lower monthly rent</p>
                     )}
                   </div>
 
-                  {/* Rental Duration Slider */}
+                  {/* Duration Slider */}
                   {rentalPlans.length > 0 && (
-                    <div className="space-y-4">
-                      <p className="font-medium text-foreground">Select Rental Duration</p>
-                      <div className="p-5 bg-muted rounded-xl space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-primary" />
-                            <span className="text-sm text-muted-foreground">Duration</span>
-                          </div>
-                          <span className="text-lg font-bold text-foreground">
-                            {currentDuration} {currentDuration === 1 ? 'Month' : 'Months'}
-                          </span>
-                        </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-foreground">Rental Duration</span>
+                        <span className="text-sm font-bold text-primary">{currentDuration} {currentDuration === 1 ? 'Month' : 'Months'}</span>
+                      </div>
+                      <div className="p-4 bg-muted/40 rounded-xl space-y-3">
                         <Slider
                           value={[currentDuration]}
                           onValueChange={(val) => setSelectedDuration(val[0])}
-                          min={1}
-                          max={maxDuration}
-                          step={1}
-                          className="w-full"
+                          min={1} max={maxDuration} step={1} className="w-full"
                         />
-                        <div className="flex justify-between text-xs text-muted-foreground">
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
                           <span>1 Month</span>
                           <span>{maxDuration} Months</span>
                         </div>
@@ -450,178 +325,122 @@ const ProductDetail = () => {
                     </div>
                   )}
 
-                  {/* Advance Payment Option */}
+                  {/* Advance Payment */}
                   {currentDuration > 1 && advanceDiscountPercent > 0 && (
-                    <div className="p-4 bg-accent/5 border border-accent/20 rounded-xl space-y-3">
+                    <div className="p-4 bg-accent/5 border border-accent/15 rounded-xl space-y-2.5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Percent className="w-4 h-4 text-accent" />
-                          <span className="font-medium text-sm text-foreground">
-                            Pay all {currentDuration} months upfront
-                          </span>
+                          <span className="font-medium text-xs text-foreground">Pay all {currentDuration} months upfront</span>
                         </div>
                         <Switch checked={payAdvance} onCheckedChange={setPayAdvance} />
                       </div>
-                      {payAdvance && (
-                        <div className="space-y-2 text-sm">
+                      {payAdvance ? (
+                        <div className="space-y-1.5 text-xs">
                           <div className="flex justify-between text-muted-foreground">
-                            <span>Total Rent ({currentDuration} × ₹{interpolatedPrice.monthlyRent.toLocaleString()})</span>
+                            <span>Total ({currentDuration} × ₹{interpolatedPrice.monthlyRent.toLocaleString()})</span>
                             <span>₹{totalRentWithoutDiscount.toLocaleString()}</span>
                           </div>
-                          <div className="flex justify-between text-green-600 font-medium">
-                            <span>Advance Discount ({advanceDiscountPercent}%)</span>
+                          <div className="flex justify-between text-success font-medium">
+                            <span>Discount ({advanceDiscountPercent}%)</span>
                             <span>- ₹{advanceDiscount.toLocaleString()}</span>
                           </div>
-                          <div className="border-t border-border pt-2 flex justify-between font-bold text-foreground">
+                          <div className="border-t border-border pt-1.5 flex justify-between font-bold text-foreground">
                             <span>Pay Now</span>
                             <span>₹{totalAdvancePayment.toLocaleString()}</span>
                           </div>
                         </div>
-                      )}
-                      {!payAdvance && (
-                        <p className="text-xs text-accent font-medium">
+                      ) : (
+                        <p className="text-[10px] text-accent font-semibold">
                           Save {advanceDiscountPercent}% — pay ₹{(totalRentWithoutDiscount - Math.round(totalRentWithoutDiscount * advanceDiscountPercent / 100)).toLocaleString()} instead of ₹{totalRentWithoutDiscount.toLocaleString()}
                         </p>
                       )}
                     </div>
                   )}
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Button 
-                      variant="hero" 
-                      size="xl" 
-                      className="flex-1 gap-2"
-                      onClick={handleRentNow}
-                      disabled={!selectedPlan}
-                    >
+                  {/* Actions */}
+                  <div className="flex flex-col sm:flex-row gap-2.5">
+                    <Button size="lg" className="flex-1 gap-2 rounded-xl h-12 text-base" onClick={handleRentNow} disabled={!selectedPlan}>
                       Rent Now
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="xl" 
-                      className="flex-1 gap-2"
-                      onClick={() => handleAddToCart()}
-                      disabled={!selectedPlan}
-                    >
-                      <ShoppingCart className="w-5 h-5" />
-                      Add to Cart
+                    <Button variant="outline" size="lg" className="flex-1 gap-2 rounded-xl h-12" onClick={() => handleAddToCart()} disabled={!selectedPlan}>
+                      <ShoppingCart className="w-4 h-4" /> Add to Cart
                     </Button>
                   </div>
 
-                  {/* Rental Plan Details */}
-                  <div className="space-y-3 p-4 bg-muted rounded-xl">
-                    <p className="font-medium text-sm text-foreground mb-2">Rental Plan Details</p>
-                    <div className="flex items-center gap-3">
-                      <Truck className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="font-medium text-sm text-foreground">Delivery in 1-2 days</p>
-                        <p className="text-xs text-muted-foreground">
-                          Delivery fee: ₹{interpolatedPrice.deliveryFee.toLocaleString()}
-                          {interpolatedPrice.installationFee > 0 && ` · Installation: ₹${interpolatedPrice.installationFee.toLocaleString()}`}
-                        </p>
+                  {/* Plan Details */}
+                  <div className="space-y-2.5">
+                    {[
+                      { icon: Truck, title: "Delivery in 1-2 days", sub: `Delivery: ₹${interpolatedPrice.deliveryFee.toLocaleString()}${interpolatedPrice.installationFee > 0 ? ` · Install: ₹${interpolatedPrice.installationFee.toLocaleString()}` : ''}`, color: "text-primary" },
+                      { icon: Shield, title: "Protection Plan Available", sub: "Optional ₹99/mo damage cover", color: "text-success" },
+                      { icon: CreditCard, title: `Deposit: ₹${interpolatedPrice.securityDeposit.toLocaleString()} (refundable)`, sub: `Monthly: ₹${interpolatedPrice.monthlyRent.toLocaleString()}/mo + 18% GST`, color: "text-primary" },
+                      { icon: RotateCcw, title: "Easy Returns", sub: "Cancel anytime with full deposit refund", color: "text-primary" },
+                    ].map(item => (
+                      <div key={item.title} className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl">
+                        <item.icon className={`w-4 h-4 ${item.color} shrink-0`} />
+                        <div>
+                          <p className="font-medium text-xs text-foreground">{item.title}</p>
+                          <p className="text-[10px] text-muted-foreground">{item.sub}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Shield className="w-5 h-5 text-green-600" />
-                      <div>
-                        <p className="font-medium text-sm text-foreground">Protection Plan Available</p>
-                        <p className="text-xs text-muted-foreground">Optional ₹99/mo damage cover</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <CreditCard className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="font-medium text-sm text-foreground">
-                          Advance: ₹{interpolatedPrice.securityDeposit.toLocaleString()} (refundable)
-                        </p>
-                        <p className="text-xs text-muted-foreground">Monthly: ₹{interpolatedPrice.monthlyRent.toLocaleString()}/mo + 18% GST</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <RotateCcw className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="font-medium text-sm text-foreground">Easy Returns</p>
-                        <p className="text-xs text-muted-foreground">Cancel anytime with full deposit refund</p>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Trust Points (shown in both modes) */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <Truck className="w-5 h-5 text-primary" />
-                  <div>
-                    <p className="font-medium text-sm text-foreground">Free Delivery</p>
-                    <p className="text-xs text-muted-foreground">1-2 business days</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <Shield className="w-5 h-5 text-green-600" />
-                  <div>
-                    <p className="font-medium text-sm text-foreground">Warranty</p>
-                    <p className="text-xs text-muted-foreground">Full product coverage</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <RotateCcw className="w-5 h-5 text-primary" />
-                  <div>
-                    <p className="font-medium text-sm text-foreground">Easy Returns</p>
-                    <p className="text-xs text-muted-foreground">Hassle-free process</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <Check className="w-5 h-5 text-green-600" />
-                  <div>
-                    <p className="font-medium text-sm text-foreground">100% Refundable</p>
-                    <p className="text-xs text-muted-foreground">Security deposit</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Description & Specs */}
-          <div className="mt-12 grid lg:grid-cols-2 gap-10">
-            <div className="space-y-4">
-              <h2 className="text-xl font-bold text-foreground">About This Product</h2>
-              <p className="text-muted-foreground leading-relaxed">{product.description}</p>
-              
-              {product.features?.length > 0 && (
-                <>
-                  <h3 className="font-semibold text-foreground mt-6">Key Features</h3>
-                  <ul className="space-y-2">
-                    {product.features.map((feature: string, index: number) => (
-                      <li key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
-                        {feature}
-                      </li>
                     ))}
-                  </ul>
+                  </div>
                 </>
               )}
-            </div>
 
-            {product.specifications && Object.keys(product.specifications).length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-bold text-foreground">Specifications</h2>
-                <div className="bg-card rounded-xl border border-border overflow-hidden">
-                  {Object.entries(product.specifications as Record<string, string>).map(([key, value], index) => (
-                    <div
-                      key={key}
-                      className={`flex justify-between p-4 ${
-                        index % 2 === 0 ? "bg-muted/50" : ""
-                      }`}
-                    >
-                      <span className="text-sm text-muted-foreground">{key}</span>
-                      <span className="text-sm font-medium text-foreground">{value}</span>
+              {/* Trust Grid */}
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { icon: Truck, title: "Free Delivery", sub: "1-2 business days", color: "text-primary" },
+                  { icon: Shield, title: "Warranty", sub: "Full product coverage", color: "text-success" },
+                  { icon: RotateCcw, title: "Easy Returns", sub: "Hassle-free process", color: "text-primary" },
+                  { icon: Check, title: "100% Refundable", sub: "Security deposit", color: "text-success" },
+                ].map(item => (
+                  <div key={item.title} className="flex items-center gap-2.5 p-3 bg-muted/40 rounded-xl">
+                    <item.icon className={`w-4 h-4 ${item.color} shrink-0`} />
+                    <div>
+                      <p className="font-medium text-xs text-foreground">{item.title}</p>
+                      <p className="text-[10px] text-muted-foreground">{item.sub}</p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
+
+              {/* Description & Features */}
+              <div className="space-y-4 pt-4 border-t border-border/50">
+                <h2 className="text-lg font-bold text-foreground">About This Product</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
+                
+                {product.features?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-sm text-foreground mb-2">Key Features</h3>
+                    <ul className="space-y-1.5">
+                      {product.features.map((feature: string, index: number) => (
+                        <li key={index} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Check className="w-3.5 h-3.5 text-success flex-shrink-0" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Specifications */}
+              {product.specifications && Object.keys(product.specifications).length > 0 && (
+                <div className="space-y-3">
+                  <h2 className="text-lg font-bold text-foreground">Specifications</h2>
+                  <div className="rounded-xl border border-border/60 overflow-hidden">
+                    {Object.entries(product.specifications as Record<string, string>).map(([key, value], index) => (
+                      <div key={key} className={`flex justify-between p-3 text-xs ${index % 2 === 0 ? "bg-muted/30" : "bg-card"}`}>
+                        <span className="text-muted-foreground">{key}</span>
+                        <span className="font-medium text-foreground">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </main>
