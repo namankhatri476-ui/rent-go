@@ -51,9 +51,9 @@ const ProductDetail = () => {
     },
   });
 
-  const rentalPlans = product?.rental_plans?.sort((a: RentalPlan, b: RentalPlan) => 
-    a.duration_months - b.duration_months
-  ) || [];
+  const rentalPlans = (product?.rental_plans || [])
+    .filter((p: any) => p.is_active !== false)
+    .sort((a: RentalPlan, b: RentalPlan) => a.duration_months - b.duration_months);
   
   const maxDuration = rentalPlans.length > 0 
     ? Math.max(...rentalPlans.map((p: RentalPlan) => p.duration_months)) 
