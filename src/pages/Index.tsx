@@ -11,6 +11,7 @@ import TrustBadges from "@/components/TrustBadges";
 import HeroSlider from "@/components/HeroSlider";
 import WhyRentSection from "@/components/WhyRentSection";
 import StatsSection from "@/components/StatsSection";
+import BenefitsComparison from "@/components/BenefitsComparison";
 import { printerProducts } from "@/data/products";
 import ProductCard from "@/components/ProductCard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -228,6 +229,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Benefits Comparison */}
+      <BenefitsComparison />
 
       {/* Why Rent */}
       <WhyRentSection />
