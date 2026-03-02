@@ -273,9 +273,10 @@ const VendorProductForm = () => {
       toast.success('Product updated successfully!');
       navigate('/vendor/products');
     },
-    onError: (error) => {
-      toast.error('Failed to update product');
-      console.error(error);
+    onError: (error: any) => {
+      const msg = error?.message || error?.details || 'Unknown error';
+      toast.error(`Failed to update product: ${msg}`);
+      console.error('[updateProduct] Error:', error);
     },
   });
 
