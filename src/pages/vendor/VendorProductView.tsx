@@ -183,14 +183,14 @@ const VendorProductView = () => {
         )}
 
         {/* Rental Plans */}
-        {product.rental_plans?.length > 0 && (
+        {product.rental_plans?.filter((p: any) => p.is_active !== false).length > 0 && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Rental Plans</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4">
-                {product.rental_plans.map((plan: any) => (
+                {product.rental_plans.filter((plan: any) => plan.is_active !== false).map((plan: any) => (
                   <div key={plan.id} className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-medium">{plan.label}</h4>
