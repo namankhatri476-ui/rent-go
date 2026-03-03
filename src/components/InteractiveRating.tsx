@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
 
@@ -9,15 +9,29 @@ interface InteractiveRatingProps {
 }
 
 const InteractiveRating = ({ currentRating, reviewCount, productId }: InteractiveRatingProps) => {
+  const storageKey = `rating_${productId}`;
   const [hoverRating, setHoverRating] = useState(0);
   const [userRating, setUserRating] = useState(0);
   const [hasRated, setHasRated] = useState(false);
+
+  // Load saved rating from localStorage on mount / productId change
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      setUserRating(Number(saved));
+      setHasRated(true);
+    } else {
+      setUserRating(0);
+      setHasRated(false);
+    }
+  }, [storageKey]);
 
   const displayRating = hoverRating || userRating || currentRating;
 
   const handleRate = (rating: number) => {
     setUserRating(rating);
     setHasRated(true);
+    localStorage.setItem(storageKey, String(rating));
     toast.success(`You rated this product ${rating} star${rating > 1 ? "s" : ""}!`, {
       description: "Thank you for your feedback",
     });

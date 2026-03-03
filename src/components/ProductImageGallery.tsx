@@ -67,8 +67,8 @@ const ProductImageGallery = ({ images, productName }: ProductImageGalleryProps) 
           </>
         )}
 
-        {/* Red accent line at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-destructive" />
+        {/* Accent line at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary" />
       </div>
 
       {/* Caption area (like "COOLS YOU FASTER") - only if product has features */}
@@ -81,13 +81,13 @@ const ProductImageGallery = ({ images, productName }: ProductImageGalleryProps) 
               onClick={() => setSelectedImage(index)}
               className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
                 selectedImage === index
-                  ? "border-destructive shadow-md"
+                  ? "border-primary shadow-md"
                   : "border-border/60 hover:border-muted-foreground"
               }`}
             >
               <img src={img} alt="" className="w-full h-full object-cover" />
               {selectedImage === index && (
-                <div className="absolute inset-x-0 bottom-0 h-0.5 bg-destructive" />
+                <div className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />
               )}
             </button>
           ))}
