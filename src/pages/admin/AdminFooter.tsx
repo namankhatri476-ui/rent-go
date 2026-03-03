@@ -8,7 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2, GripVertical } from 'lucide-react';
+
+interface QuickLink {
+  to: string;
+  label: string;
+}
 
 const AdminFooter = () => {
   const queryClient = useQueryClient();
@@ -27,27 +32,51 @@ const AdminFooter = () => {
   const [brand, setBrand] = useState({ name: '', description: '' });
   const [contact, setContact] = useState({ address: '', phone: '', email: '' });
   const [copyright, setCopyright] = useState('');
+  const [quickLinks, setQuickLinks] = useState<QuickLink[]>([]);
 
   useEffect(() => {
     if (footerData) {
       setBrand(footerData.brand || { name: 'RentPR', description: '' });
       setContact(footerData.contact || { address: '', phone: '', email: '' });
       setCopyright(footerData.legal?.copyright || '© {year} RentPR. All rights reserved.');
+      setQuickLinks(footerData.links?.quick_links || [
+        { to: '/', label: 'Home' },
+        { to: '/products', label: 'All Products' },
+        { to: '/how-it-works', label: 'How It Works' },
+      ]);
     }
   }, [footerData]);
 
+  const addQuickLink = () => {
+    setQuickLinks([...quickLinks, { to: '/', label: '' }]);
+  };
+
+  const removeQuickLink = (index: number) => {
+    setQuickLinks(quickLinks.filter((_, i) => i !== index));
+  };
+
+  const updateQuickLink = (index: number, field: keyof QuickLink, value: string) => {
+    const updated = [...quickLinks];
+    updated[index] = { ...updated[index], [field]: value };
+    setQuickLinks(updated);
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const linksValue = {
+        ...(footerData?.links || {}),
+        quick_links: quickLinks.filter(l => l.label.trim()),
+      };
       const updates = [
         { key: 'brand', value: brand },
         { key: 'contact', value: contact },
         { key: 'legal', value: { ...footerData?.legal, copyright } },
+        { key: 'links', value: linksValue },
       ];
       for (const u of updates) {
         const { error } = await supabase
           .from('footer_settings')
-          .update({ value: u.value })
-          .eq('key', u.key);
+          .upsert({ key: u.key, value: u.value }, { onConflict: 'key' });
         if (error) throw error;
       }
     },
@@ -115,6 +144,48 @@ const AdminFooter = () => {
                   <Input value={contact.email} onChange={e => setContact({ ...contact, email: e.target.value })} />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Quick Links</CardTitle>
+                <Button variant="outline" size="sm" onClick={addQuickLink}>
+                  <Plus className="mr-1 h-4 w-4" /> Add Link
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {quickLinks.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No quick links yet. Click "Add Link" to get started.</p>
+              )}
+              {quickLinks.map((link, index) => (
+                <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                  <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="grid grid-cols-2 gap-3 flex-1">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Label</Label>
+                      <Input
+                        value={link.label}
+                        onChange={e => updateQuickLink(index, 'label', e.target.value)}
+                        placeholder="e.g. Home"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">URL Path</Label>
+                      <Input
+                        value={link.to}
+                        onChange={e => updateQuickLink(index, 'to', e.target.value)}
+                        placeholder="e.g. /"
+                      />
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => removeQuickLink(index)} className="shrink-0 text-destructive hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </CardContent>
           </Card>
 
