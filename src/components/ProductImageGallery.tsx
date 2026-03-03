@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface ProductImageGalleryProps {
   images: string[];
@@ -8,7 +8,6 @@ interface ProductImageGalleryProps {
 
 const ProductImageGallery = ({ images, productName }: ProductImageGalleryProps) => {
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isWishlisted, setIsWishlisted] = useState(false);
 
   const hasImages = images && images.length > 0;
   const totalImages = hasImages ? images.length : 0;
@@ -37,17 +36,7 @@ const ProductImageGallery = ({ images, productName }: ProductImageGalleryProps) 
           </div>
         )}
 
-        {/* Wishlist */}
-        <button
-          onClick={() => setIsWishlisted(!isWishlisted)}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-card/90 backdrop-blur-sm border border-border/60 flex items-center justify-center hover:bg-card transition-colors shadow-sm"
-        >
-          <Heart
-            className={`w-5 h-5 transition-colors ${
-              isWishlisted ? "fill-destructive text-destructive" : "text-muted-foreground"
-            }`}
-          />
-        </button>
+
 
         {/* Nav Arrows */}
         {totalImages > 1 && (
