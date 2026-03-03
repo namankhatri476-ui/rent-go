@@ -15,6 +15,8 @@ import InteractiveRating from "@/components/InteractiveRating";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { useLocation } from "@/contexts/LocationContext";
+import { getProductBySlug } from "@/data/products";
+
 interface RentalPlan {
   id: string;
   label: string;
@@ -37,20 +39,51 @@ const ProductDetail = () => {
   const [payAdvance, setPayAdvance] = useState(false);
   const [selectedVariation, setSelectedVariation] = useState<string | null>(null);
 
-  const { data: product, isLoading, error } = useQuery({
+  const { data: dbProduct, isLoading, error } = useQuery({
     queryKey: ['product-detail', slug],
     enabled: !!slug,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
         .select(`*, categories (name), rental_plans (*), product_variations (*)`)
-        .eq('slug', slug)
+        .eq('slug', slug!)
         .eq('status', 'approved')
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
   });
+
+  // Fall back to static product data if not found in DB
+  const staticProduct = !dbProduct && slug ? getProductBySlug(slug) : null;
+  const product = dbProduct ? dbProduct : staticProduct ? {
+    id: staticProduct.id,
+    name: staticProduct.name,
+    brand: staticProduct.brand,
+    slug: staticProduct.slug,
+    description: staticProduct.description,
+    features: staticProduct.features,
+    specifications: staticProduct.specifications,
+    images: staticProduct.images,
+    rating: staticProduct.rating,
+    review_count: staticProduct.reviewCount,
+    in_stock: staticProduct.inStock,
+    tags: staticProduct.tags,
+    buy_price: null,
+    advance_discount_percent: 0,
+    categories: { name: staticProduct.category },
+    rental_plans: staticProduct.rentalPlans.map(rp => ({
+      id: rp.id,
+      label: rp.label,
+      duration_months: rp.duration,
+      monthly_rent: rp.monthlyRent,
+      security_deposit: rp.securityDeposit,
+      delivery_fee: staticProduct.deliveryFee,
+      installation_fee: staticProduct.installationFee,
+      is_active: true,
+    })),
+    product_variations: [],
+  } : null;
 
   const rentalPlans = (product?.rental_plans || [])
     .filter((p: any) => p.is_active !== false)
