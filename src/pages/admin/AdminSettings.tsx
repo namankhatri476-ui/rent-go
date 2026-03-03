@@ -28,8 +28,8 @@ const AdminSettings = () => {
   });
 
   const [settings, setSettings] = useState({
-    platformName: 'RentEase',
-    supportEmail: 'support@rentease.com',
+    platformName: 'RentPR',
+    supportEmail: 'support@rentpr.in',
     defaultCommission: 30,
     gstRate: 18,
     minRentalDuration: 3,
@@ -44,8 +44,8 @@ const AdminSettings = () => {
   useEffect(() => {
     if (dbSettings) {
       setSettings({
-        platformName: dbSettings.general?.platformName || 'RentEase',
-        supportEmail: dbSettings.general?.supportEmail || 'support@rentease.com',
+        platformName: dbSettings.general?.platformName || 'RentPR',
+        supportEmail: dbSettings.general?.supportEmail || 'support@rentpr.in',
         maintenanceMode: dbSettings.general?.maintenanceMode || false,
         defaultCommission: dbSettings.pricing?.defaultCommission || 30,
         gstRate: dbSettings.pricing?.gstRate || 18,

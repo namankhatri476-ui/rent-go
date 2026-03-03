@@ -28,7 +28,7 @@ const VendorRejected = () => {
 
           <div className="space-y-3">
             <Button asChild variant="outline" className="w-full">
-              <a href="mailto:support@rentease.com">Contact Support</a>
+              <a href="mailto:support@rentpr.in">Contact Support</a>
             </Button>
             
             <Button asChild variant="ghost" className="w-full">

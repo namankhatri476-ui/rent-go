@@ -95,7 +95,7 @@ const VendorPayouts = () => {
               <div>
                 <h3 className="font-medium">Platform Commission</h3>
                 <p className="text-sm text-muted-foreground">
-                  RentEase retains 30% of all order values. Payouts are processed weekly.
+                  RentPR retains 30% of all order values. Payouts are processed weekly.
                 </p>
               </div>
               <div className="text-right">
