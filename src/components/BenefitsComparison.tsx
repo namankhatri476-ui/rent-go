@@ -28,7 +28,7 @@ const BenefitsComparison = () => {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-5 gap-8 max-w-5xl mx-auto items-start">
+        <div className="grid lg:grid-cols-5 gap-8 mx-auto items-start">
           {/* Comparison Table */}
           <div className="lg:col-span-3">
             <div className="bg-card rounded-2xl border border-border/60 overflow-hidden shadow-sm">
@@ -140,9 +140,9 @@ const BenefitsComparison = () => {
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <div className="bg-primary-foreground/10 rounded-xl p-3 text-center">
-                    <p className="text-2xl font-extrabold">₹0</p>
+                    <p className="text-2xl font-extrabold">24/7</p>
                     <p className="text-[10px] text-primary-foreground/70 mt-0.5">
-                      Delivery Charges
+                      Customer Support
                     </p>
                   </div>
                   <div className="bg-primary-foreground/10 rounded-xl p-3 text-center">

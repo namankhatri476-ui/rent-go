@@ -84,7 +84,7 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {categories && categories.length > 0 ? (
               categories.slice(0, 3).map((cat) => (
                 <Link
@@ -199,7 +199,7 @@ const Index = () => {
             <h2 className="text-2xl md:text-3xl font-bold text-foreground mt-2">How Renting Works</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mx-auto">
             {[
               { step: "01", title: "Choose Product", desc: "Browse & select from verified vendors", icon: Printer },
               { step: "02", title: "Select Plan", desc: "Pick 3, 6, or 12 month duration", icon: Clock },
