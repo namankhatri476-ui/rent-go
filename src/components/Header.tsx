@@ -86,7 +86,7 @@ const Header = () => {
                 <Printer className="w-[18px] h-[18px] text-primary-foreground" />
               </div>
               <span className="text-lg font-extrabold tracking-tight text-foreground">
-                Rent<span className="text-primary">Ease</span>
+                Rent<span className="text-primary">PR</span>
               </span>
             </Link>
 

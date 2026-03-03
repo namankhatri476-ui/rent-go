@@ -116,7 +116,7 @@ const VendorRegister = () => {
           </div>
           <h1 className="text-3xl font-bold text-foreground">Become a Vendor</h1>
           <p className="text-muted-foreground mt-2">
-            Start selling your rental products on RentEase
+            Start selling your rental products on RentPR
           </p>
         </div>
 

@@ -3,13 +3,13 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 const features = [
-  { label: "No Lump Sum Payment", purchase: false, emi: false, rentease: true },
-  { label: "Monthly Pay Solution", purchase: false, emi: true, rentease: true },
-  { label: "Free Relocation (Within City)", purchase: false, emi: false, rentease: true },
-  { label: "Free Relocation (Between Cities)", purchase: false, emi: false, rentease: true },
-  { label: "Free Repair & Maintenance", purchase: false, emi: false, rentease: true },
-  { label: "No Long-term Commitment", purchase: false, emi: false, rentease: true },
-  { label: "Easy Returns & Upgrades", purchase: false, emi: false, rentease: true },
+  { label: "No Lump Sum Payment", purchase: false, emi: false, rentpr: true },
+  { label: "Monthly Pay Solution", purchase: false, emi: true, rentpr: true },
+  { label: "Free Relocation (Within City)", purchase: false, emi: false, rentpr: true },
+  { label: "Free Relocation (Between Cities)", purchase: false, emi: false, rentpr: true },
+  { label: "Free Repair & Maintenance", purchase: false, emi: false, rentpr: true },
+  { label: "No Long-term Commitment", purchase: false, emi: false, rentpr: true },
+  { label: "Easy Returns & Upgrades", purchase: false, emi: false, rentpr: true },
 ];
 
 const BenefitsComparison = () => {
@@ -24,7 +24,7 @@ const BenefitsComparison = () => {
             Renting is the <span className="text-primary">Smart Choice</span>
           </h2>
           <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-            See how RentEase compares to buying or EMI options
+            See how RentPR compares to buying or EMI options
           </p>
         </div>
 
@@ -51,7 +51,7 @@ const BenefitsComparison = () => {
                 </div>
                 <div className="p-4 text-center bg-primary/5">
                   <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                    RentEase
+                    RentPR
                   </span>
                 </div>
               </div>

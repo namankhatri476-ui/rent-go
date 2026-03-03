@@ -18,7 +18,7 @@ const features = [
   {
     icon: Smile,
     title: "Hassle Free Experience",
-    description: "Enjoy a smooth, stress-free rental experience with RentEase.",
+    description: "Enjoy a smooth, stress-free rental experience with RentPR.",
     color: "text-primary",
     bg: "bg-primary/8",
   },
@@ -38,7 +38,7 @@ const WhyRentSection = () => {
         <div className="text-center mb-12">
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Why Rent?</span>
           <h2 className="text-2xl md:text-3xl font-bold text-foreground mt-2">
-            The RentEase Experience
+            The RentPR Experience
           </h2>
           <p className="text-muted-foreground mt-2 text-sm max-w-md mx-auto">
             Your Home, Your Style – The Smart Way to Rent!

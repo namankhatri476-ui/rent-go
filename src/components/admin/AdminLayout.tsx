@@ -11,7 +11,8 @@ import {
   FolderTree,
   BarChart3,
   Users,
-  CalendarDays
+  CalendarDays,
+  FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +32,7 @@ const navItems = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/reports', label: 'Reports', icon: BarChart3 },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin/footer', label: 'Footer', icon: FileText },
 ];
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {
@@ -42,7 +44,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       {/* Sidebar */}
       <aside className="w-64 bg-card border-r border-border flex flex-col">
         <div className="p-4 border-b border-border">
-          <Link to="/" className="text-2xl font-bold text-primary">RentEase</Link>
+          <Link to="/" className="text-2xl font-bold text-primary">RentPR</Link>
           <span className="ml-2 text-xs text-white px-2 py-0.5 bg-destructive rounded">Admin</span>
         </div>
         

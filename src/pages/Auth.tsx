@@ -201,7 +201,7 @@ const Auth = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">RentEase</h1>
+          <h1 className="text-3xl font-bold text-primary">RentPR</h1>
           <p className="text-muted-foreground mt-2">Marketplace for Rentals</p>
         </div>
 
@@ -215,7 +215,7 @@ const Auth = () => {
             <p className="text-muted-foreground mt-2">
               {mode === "login"
                 ? "Sign in to continue"
-                : "Join the RentEase marketplace"}
+                : "Join the RentPR marketplace"}
             </p>
           </div>
 

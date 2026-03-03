@@ -32,7 +32,7 @@ const VendorLayout = ({ children }: VendorLayoutProps) => {
       {/* Sidebar */}
       <aside className="w-64 bg-card border-r border-border flex flex-col">
         <div className="p-4 border-b border-border">
-          <Link to="/" className="text-2xl font-bold text-primary">RentEase</Link>
+          <Link to="/" className="text-2xl font-bold text-primary">RentPR</Link>
           <span className="ml-2 text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">Vendor</span>
         </div>
         
