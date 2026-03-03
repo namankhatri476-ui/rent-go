@@ -13,21 +13,17 @@ const RentalDurationTimeline = ({
   onDurationChange,
   rentalPlans,
 }: RentalDurationTimelineProps) => {
-  const milestones = useMemo(() => {
-    const points = new Set<number>();
-    rentalPlans.forEach((p) => points.add(p.duration_months));
-    [3, 6, 12].forEach((m) => {
-      if (m <= maxDuration) points.add(m);
-    });
-    if (!points.has(1)) points.add(1);
-    points.add(maxDuration);
-    return Array.from(points).sort((a, b) => a - b);
-  }, [maxDuration, rentalPlans]);
+  // Create dots for every month from 1 to maxDuration
+  const months = useMemo(() => {
+    const arr: number[] = [];
+    for (let i = 1; i <= maxDuration; i++) arr.push(i);
+    return arr;
+  }, [maxDuration]);
 
   const getPosition = (month: number) =>
-    ((month - milestones[0]) / (milestones[milestones.length - 1] - milestones[0])) * 100;
+    ((month - 1) / (maxDuration - 1)) * 100;
 
-  const filledWidth = getPosition(currentDuration);
+  const filledWidth = maxDuration > 1 ? getPosition(currentDuration) : 100;
 
   return (
     <div className="space-y-3">
@@ -45,13 +41,13 @@ const RentalDurationTimeline = ({
         <div className="relative h-2 bg-muted rounded-full">
           {/* Filled track */}
           <div
-            className="absolute h-full bg-destructive rounded-full transition-all duration-300 ease-out"
+            className="absolute h-full bg-primary rounded-full transition-all duration-300 ease-out"
             style={{ width: `${Math.max(0, Math.min(filledWidth, 100))}%` }}
           />
         </div>
 
-        {/* Milestone dots */}
-        {milestones.map((month) => {
+        {/* Month dots */}
+        {months.map((month) => {
           const pos = getPosition(month);
           const isActive = month <= currentDuration;
           const isCurrent = month === currentDuration;
@@ -64,15 +60,15 @@ const RentalDurationTimeline = ({
               className="absolute -translate-x-1/2 group"
               style={{ left: `${pos}%`, top: "4px" }}
             >
-              {/* Circle dot - white with border when inactive, white filled on active track */}
+              {/* Circle dot */}
               <div
                 className={`
                   w-5 h-5 rounded-full border-[3px] transition-all duration-200
                   ${
                     isCurrent
-                      ? "bg-card border-destructive scale-110 shadow-md"
+                      ? "bg-card border-primary scale-110 shadow-md"
                       : isActive
-                      ? "bg-card border-destructive"
+                      ? "bg-card border-primary"
                       : "bg-card border-muted-foreground/30 hover:border-muted-foreground/50 hover:scale-105"
                   }
                 `}
@@ -83,14 +79,14 @@ const RentalDurationTimeline = ({
                   absolute top-7 left-1/2 -translate-x-1/2 text-xs whitespace-nowrap transition-colors font-medium
                   ${
                     isCurrent
-                      ? "text-destructive font-bold"
+                      ? "text-primary font-bold"
                       : isActive
                       ? "text-foreground"
                       : "text-muted-foreground"
                   }
                 `}
               >
-                {month}+
+                {month}
               </span>
             </button>
           );
@@ -99,8 +95,8 @@ const RentalDurationTimeline = ({
         {/* Invisible range slider for smooth dragging */}
         <input
           type="range"
-          min={milestones[0]}
-          max={milestones[milestones.length - 1]}
+          min={1}
+          max={maxDuration}
           step={1}
           value={currentDuration}
           onChange={(e) => onDurationChange(Number(e.target.value))}

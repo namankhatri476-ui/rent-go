@@ -193,7 +193,7 @@ const Index = () => {
 
       {/* How It Works */}
       <section className="py-14 md:py-16">
-        <div className="container mx-auto px-4">
+        <div className="mx-auto px-4 max-w-[1400px]">
           <div className="text-center mb-10">
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Simple Process</span>
             <h2 className="text-2xl md:text-3xl font-bold text-foreground mt-2">How Renting Works</h2>

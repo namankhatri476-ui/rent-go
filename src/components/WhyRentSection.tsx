@@ -34,7 +34,7 @@ const features = [
 const WhyRentSection = () => {
   return (
     <section className="py-16 md:py-20 bg-muted/30">
-      <div className="container mx-auto px-4">
+      <div className="mx-auto px-4 max-w-[1400px]">
         <div className="text-center mb-12">
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Why Rent?</span>
           <h2 className="text-2xl md:text-3xl font-bold text-foreground mt-2">

@@ -15,7 +15,7 @@ const features = [
 const BenefitsComparison = () => {
   return (
     <section className="py-14 md:py-16 bg-muted/30">
-      <div className="container mx-auto px-4">
+      <div className="mx-auto px-4 max-w-[1400px]">
         <div className="text-center mb-10">
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
             Why Choose Us
