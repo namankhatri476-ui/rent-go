@@ -15,6 +15,12 @@ interface QuickLink {
   label: string;
 }
 
+interface CategoryLink {
+  to?: string;
+  label: string;
+  disabled?: boolean;
+}
+
 const AdminFooter = () => {
   const queryClient = useQueryClient();
 
@@ -33,6 +39,7 @@ const AdminFooter = () => {
   const [contact, setContact] = useState({ address: '', phone: '', email: '' });
   const [copyright, setCopyright] = useState('');
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>([]);
+  const [categories, setCategories] = useState<CategoryLink[]>([]);
 
   useEffect(() => {
     if (footerData) {
@@ -43,6 +50,10 @@ const AdminFooter = () => {
         { to: '/', label: 'Home' },
         { to: '/products', label: 'All Products' },
         { to: '/how-it-works', label: 'How It Works' },
+      ]);
+      setCategories(footerData.links?.categories || [
+        { to: '/products', label: 'Printers' },
+        { label: 'Electronics (Coming Soon)', disabled: true },
       ]);
     }
   }, [footerData]);
@@ -61,11 +72,26 @@ const AdminFooter = () => {
     setQuickLinks(updated);
   };
 
+  const addCategory = () => {
+    setCategories([...categories, { to: '/products', label: '', disabled: false }]);
+  };
+
+  const removeCategory = (index: number) => {
+    setCategories(categories.filter((_, i) => i !== index));
+  };
+
+  const updateCategory = (index: number, field: keyof CategoryLink, value: string | boolean) => {
+    const updated = [...categories];
+    updated[index] = { ...updated[index], [field]: value };
+    setCategories(updated);
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const linksValue = {
         ...(footerData?.links || {}),
         quick_links: quickLinks.filter(l => l.label.trim()),
+        categories: categories.filter(c => c.label.trim()),
       };
       const updates = [
         { key: 'brand', value: brand },
@@ -182,6 +208,60 @@ const AdminFooter = () => {
                     </div>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => removeQuickLink(index)} className="shrink-0 text-destructive hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Categories</CardTitle>
+                <Button variant="outline" size="sm" onClick={addCategory}>
+                  <Plus className="mr-1 h-4 w-4" /> Add Category
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {categories.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No categories yet. Click "Add Category" to get started.</p>
+              )}
+              {categories.map((cat, index) => (
+                <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                  <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="grid grid-cols-3 gap-3 flex-1">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Label</Label>
+                      <Input
+                        value={cat.label}
+                        onChange={e => updateCategory(index, 'label', e.target.value)}
+                        placeholder="e.g. Printers"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">URL Path</Label>
+                      <Input
+                        value={cat.to || ''}
+                        onChange={e => updateCategory(index, 'to', e.target.value)}
+                        placeholder="e.g. /products"
+                        disabled={cat.disabled}
+                      />
+                    </div>
+                    <div className="space-y-1 flex items-end gap-2">
+                      <label className="flex items-center gap-2 text-xs cursor-pointer pb-2">
+                        <input
+                          type="checkbox"
+                          checked={cat.disabled || false}
+                          onChange={e => updateCategory(index, 'disabled', e.target.checked)}
+                          className="rounded"
+                        />
+                        Coming Soon
+                      </label>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => removeCategory(index)} className="shrink-0 text-destructive hover:text-destructive">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
