@@ -48,8 +48,8 @@ const TermsAgreementModal = ({ open, onClose, onAccept }: TermsAgreementModalPro
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl w-[95vw] h-[90vh] max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary" />
             Terms & Conditions
@@ -57,38 +57,40 @@ const TermsAgreementModal = ({ open, onClose, onAccept }: TermsAgreementModalPro
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex items-center justify-center py-12 flex-1">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : (
           <>
-            <ScrollArea className="flex-1 max-h-[50vh] border rounded-lg p-4 bg-muted/30">
+            <ScrollArea className="flex-1 min-h-0 border-y px-6 py-4 bg-muted/30">
               {terms && renderContent(terms.content)}
             </ScrollArea>
 
-            <div className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg mt-2">
-              <Checkbox
-                id="agree-terms"
-                checked={agreed}
-                onCheckedChange={(v) => setAgreed(v === true)}
-              />
-              <label htmlFor="agree-terms" className="text-sm cursor-pointer leading-relaxed">
-                I have read and agree to the <span className="font-semibold text-foreground">Terms & Conditions</span> and
-                the <span className="font-semibold text-foreground">Rental Agreement</span>. I understand that my payment
-                will be processed upon acceptance.
-              </label>
-            </div>
+            <div className="shrink-0 px-6 pb-6 pt-4 space-y-4">
+              <div className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg">
+                <Checkbox
+                  id="agree-terms"
+                  checked={agreed}
+                  onCheckedChange={(v) => setAgreed(v === true)}
+                />
+                <label htmlFor="agree-terms" className="text-sm cursor-pointer leading-relaxed">
+                  I have read and agree to the <span className="font-semibold text-foreground">Terms & Conditions</span> and
+                  the <span className="font-semibold text-foreground">Rental Agreement</span>. I understand that my payment
+                  will be processed upon acceptance.
+                </label>
+              </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={onClose}>Cancel</Button>
-              <Button
-                variant="hero"
-                disabled={!agreed}
-                onClick={() => terms && onAccept(terms.version)}
-              >
-                Accept & Pay
-              </Button>
-            </DialogFooter>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={onClose}>Cancel</Button>
+                <Button
+                  variant="hero"
+                  disabled={!agreed}
+                  onClick={() => terms && onAccept(terms.version)}
+                >
+                  Accept & Pay
+                </Button>
+              </DialogFooter>
+            </div>
           </>
         )}
       </DialogContent>

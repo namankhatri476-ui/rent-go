@@ -11,11 +11,11 @@ const TrustBadges = () => {
   ];
 
   return (
-    <div className="flex items-center justify-between gap-3 overflow-x-auto py-1 scrollbar-hide">
-      {badges.map((badge, i) => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-3 py-1">
+      {badges.map((badge) => (
         <div
           key={badge.title}
-          className="flex items-center gap-2.5 min-w-fit px-1"
+          className="flex items-center gap-2.5 px-1"
         >
           <div className="w-9 h-9 rounded-full bg-primary/8 flex items-center justify-center shrink-0">
             <badge.icon className="w-[18px] h-[18px] text-primary" />
@@ -24,9 +24,6 @@ const TrustBadges = () => {
             <p className="text-xs font-semibold text-foreground whitespace-nowrap">{badge.title}</p>
             <p className="text-[11px] text-muted-foreground whitespace-nowrap">{badge.description}</p>
           </div>
-          {i < badges.length - 1 && (
-            <div className="hidden lg:block w-px h-8 bg-border/60 ml-3" />
-          )}
         </div>
       ))}
     </div>
