@@ -40,12 +40,18 @@ const AdminFooter = () => {
   const [copyright, setCopyright] = useState('');
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>([]);
   const [categories, setCategories] = useState<CategoryLink[]>([]);
+  const [policyLinks, setPolicyLinks] = useState<QuickLink[]>([]);
 
   useEffect(() => {
     if (footerData) {
       setBrand(footerData.brand || { name: 'RentPR', description: '' });
       setContact(footerData.contact || { address: '', phone: '', email: '' });
       setCopyright(footerData.legal?.copyright || '© {year} RentPR. All rights reserved.');
+      setPolicyLinks(footerData.legal?.policies?.map((p: any) => ({ to: p.href, label: p.label })) || [
+        { to: '/legal/privacy-policy', label: 'Privacy Policy' },
+        { to: '/legal/terms-of-service', label: 'Terms of Service' },
+        { to: '/legal/refund-policy', label: 'Refund Policy' },
+      ]);
       setQuickLinks(footerData.links?.quick_links || [
         { to: '/', label: 'Home' },
         { to: '/products', label: 'All Products' },
@@ -96,7 +102,7 @@ const AdminFooter = () => {
       const updates = [
         { key: 'brand', value: brand },
         { key: 'contact', value: contact },
-        { key: 'legal', value: { ...footerData?.legal, copyright } },
+        { key: 'legal', value: { ...footerData?.legal, copyright, policies: policyLinks.filter(l => l.label.trim()).map(l => ({ label: l.label, href: l.to })) } },
         { key: 'links', value: linksValue },
       ];
       for (const u of updates) {
@@ -262,6 +268,56 @@ const AdminFooter = () => {
                     </div>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => removeCategory(index)} className="shrink-0 text-destructive hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Policy / Footer Links</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => setPolicyLinks([...policyLinks, { to: '/', label: '' }])}>
+                  <Plus className="mr-1 h-4 w-4" /> Add Link
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {policyLinks.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No policy links yet.</p>
+              )}
+              {policyLinks.map((link, index) => (
+                <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                  <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="grid grid-cols-2 gap-3 flex-1">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Label</Label>
+                      <Input
+                        value={link.label}
+                        onChange={e => {
+                          const updated = [...policyLinks];
+                          updated[index] = { ...updated[index], label: e.target.value };
+                          setPolicyLinks(updated);
+                        }}
+                        placeholder="e.g. Privacy Policy"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">URL Path</Label>
+                      <Input
+                        value={link.to}
+                        onChange={e => {
+                          const updated = [...policyLinks];
+                          updated[index] = { ...updated[index], to: e.target.value };
+                          setPolicyLinks(updated);
+                        }}
+                        placeholder="e.g. /legal/privacy-policy"
+                      />
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setPolicyLinks(policyLinks.filter((_, i) => i !== index))} className="shrink-0 text-destructive hover:text-destructive">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
