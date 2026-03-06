@@ -21,6 +21,7 @@ import MyOrders from "./pages/MyOrders";
 import Auth from "./pages/Auth";
 import HowItWorks from "./pages/HowItWorks";
 import NotFound from "./pages/NotFound";
+import LegalPage from "./pages/LegalPage";
 
 // Vendor pages
 import VendorDashboard from "./pages/VendorDashboard";
@@ -47,6 +48,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminMonthlyRent from "./pages/admin/AdminMonthlyRent";
 import AdminSlider from "./pages/admin/AdminSlider";
 import AdminFooter from "./pages/admin/AdminFooter";
+import AdminLegal from "./pages/admin/AdminLegal";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +71,7 @@ const App = () => (
               <Route path="/cart" element={<Cart />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/legal/:slug" element={<LegalPage />} />
               
               {/* Protected checkout */}
               <Route
@@ -283,7 +286,14 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
-
+              <Route
+                path="/admin/legal"
+                element={
+                  <ProtectedRoute requiredRoles={['admin']}>
+                    <AdminLegal />
+                  </ProtectedRoute>
+                }
+              />
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>

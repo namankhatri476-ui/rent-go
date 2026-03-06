@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Package, Calendar, Clock, Loader2, ArrowLeft, ShoppingBag } from "lucide-react";
+import { Package, Calendar, Clock, Loader2, ArrowLeft, ShoppingBag, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,8 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { downloadAgreementPdf } from "@/utils/generateAgreementPdf";
+import { toast } from "sonner";
 
 interface OrderWithProduct {
   id: string;
@@ -22,6 +24,8 @@ interface OrderWithProduct {
   rental_start_date: string | null;
   rental_end_date: string | null;
   protection_plan_fee: number | null;
+  terms_accepted_at: string | null;
+  terms_version: number | null;
   product: {
     id: string;
     name: string;
@@ -42,7 +46,7 @@ const statusColors: Record<string, string> = {
 };
 
 const MyOrders = () => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, profile, isLoading: authLoading } = useAuth();
   const [orders, setOrders] = useState<OrderWithProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -65,6 +69,8 @@ const MyOrders = () => {
             rental_start_date,
             rental_end_date,
             protection_plan_fee,
+            terms_accepted_at,
+            terms_version,
             product:products (
               id,
               name,
@@ -246,6 +252,36 @@ const MyOrders = () => {
                       <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                         Protection Plan Active
                       </Badge>
+                    )}
+
+                    {/* Download Agreement PDF */}
+                    {order.terms_accepted_at && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={async () => {
+                          const { data: terms } = await supabase
+                            .from("legal_documents")
+                            .select("content")
+                            .eq("slug", "terms-and-conditions")
+                            .maybeSingle();
+                          
+                          downloadAgreementPdf({
+                            orderNumber: order.order_number,
+                            customerName: profile?.full_name || "Customer",
+                            productName: order.product?.name || "Product",
+                            monthlyRent: order.monthly_rent,
+                            securityDeposit: order.security_deposit,
+                            duration: order.rental_duration_months,
+                            createdAt: order.created_at,
+                            termsContent: terms?.content || "Terms not available",
+                          });
+                        }}
+                      >
+                        <Download className="w-4 h-4" />
+                        Download Agreement
+                      </Button>
                     )}
                   </CardContent>
                 </Card>

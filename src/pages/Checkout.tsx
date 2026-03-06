@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, CreditCard, Smartphone, Building2, CheckCircle, Loader2 } from "lucide-react";
+import TermsAgreementModal from "@/components/TermsAgreementModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,8 @@ const Checkout = () => {
   const breakdown = getBreakdown();
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [termsVersion, setTermsVersion] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -61,8 +64,8 @@ const Checkout = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePayClick = (e?: React.FormEvent) => {
+    e?.preventDefault();
     
     if (!user) {
       toast.error("Please sign in to checkout");
@@ -75,17 +78,25 @@ const Checkout = () => {
       return;
     }
 
+    // Show T&C modal instead of processing directly
+    setShowTerms(true);
+  };
+
+  const handleTermsAccepted = async (version: number) => {
+    setShowTerms(false);
+    setTermsVersion(version);
     setIsProcessing(true);
 
     try {
       const result = await processCheckout(
-        user.id,
+        user!.id,
         items,
         breakdown,
         {
           ...formData,
           paymentMethod,
-        }
+        },
+        version
       );
 
       if (result.success) {
@@ -384,7 +395,7 @@ const Checkout = () => {
                   variant="hero"
                   size="xl"
                   className="w-full"
-                  onClick={handleSubmit}
+                  onClick={handlePayClick}
                   disabled={isProcessing}
                 >
                   {isProcessing ? "Processing..." : `Pay ₹${breakdown.payableNow.toLocaleString()} Now`}
@@ -402,13 +413,15 @@ const Checkout = () => {
                   variant="hero"
                   size="xl"
                   className="w-full"
-                  onClick={handleSubmit}
+                  onClick={handlePayClick}
                   disabled={isProcessing}
                 >
                   {isProcessing ? "Processing..." : `Pay ₹${breakdown.payableNow.toLocaleString()} Now`}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center mt-3">
-                  By placing this order, you agree to our Terms of Service and Privacy Policy
+                  By placing this order, you agree to our{" "}
+                  <Link to="/legal/terms-of-service" className="underline">Terms of Service</Link> and{" "}
+                  <Link to="/legal/privacy-policy" className="underline">Privacy Policy</Link>
                 </p>
               </div>
             </div>
@@ -417,6 +430,12 @@ const Checkout = () => {
       </main>
 
       <Footer />
+
+      <TermsAgreementModal
+        open={showTerms}
+        onClose={() => setShowTerms(false)}
+        onAccept={handleTermsAccepted}
+      />
     </div>
   );
 };

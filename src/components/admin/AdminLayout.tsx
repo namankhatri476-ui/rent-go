@@ -12,7 +12,8 @@ import {
   BarChart3,
   Users,
   CalendarDays,
-  FileText
+  FileText,
+  Scale
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +34,7 @@ const navItems = [
   { href: '/admin/reports', label: 'Reports', icon: BarChart3 },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
   { href: '/admin/footer', label: 'Footer', icon: FileText },
+  { href: '/admin/legal', label: 'Legal Pages', icon: Scale },
 ];
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {

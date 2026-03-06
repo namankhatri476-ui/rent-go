@@ -39,7 +39,11 @@ const Footer = () => {
   };
   const legal = footerData?.legal || {
     copyright: "© {year} RentPR. All rights reserved.",
-    policies: [{ label: "Privacy Policy", href: "#" }, { label: "Terms of Service", href: "#" }, { label: "Refund Policy", href: "#" }],
+    policies: [
+      { label: "Privacy Policy", href: "/legal/privacy-policy" },
+      { label: "Terms of Service", href: "/legal/terms-of-service" },
+      { label: "Refund Policy", href: "/legal/refund-policy" },
+    ],
   };
 
   return (
@@ -117,9 +121,9 @@ const Footer = () => {
           </p>
           <div className="flex gap-6">
             {legal.policies.map(policy => (
-              <a key={policy.label} href={policy.href} className="text-xs text-white/40 hover:text-white/70 transition-colors">
+              <Link key={policy.label} to={policy.href} className="text-xs text-white/40 hover:text-white/70 transition-colors">
                 {policy.label}
-              </a>
+              </Link>
             ))}
           </div>
         </div>
