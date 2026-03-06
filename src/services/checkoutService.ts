@@ -217,7 +217,8 @@ export async function createOrders(
   addressId: string,
   items: CartItem[],
   breakdown: CheckoutBreakdown,
-  paymentMethod: string
+  paymentMethod: string,
+  termsVersion?: number
 ): Promise<OrderResult> {
   const orderNumbers: string[] = [];
   
@@ -268,6 +269,8 @@ export async function createOrders(
           platform_commission: platformCommission,
           vendor_payout: vendorPayout,
           status: "pending",
+          terms_accepted_at: termsVersion ? new Date().toISOString() : null,
+          terms_version: termsVersion || null,
         })
         .select("id, order_number")
         .single();
@@ -308,7 +311,8 @@ export async function processCheckout(
   userId: string,
   items: CartItem[],
   breakdown: CheckoutBreakdown,
-  formData: CheckoutFormData
+  formData: CheckoutFormData,
+  termsVersion?: number
 ): Promise<OrderResult> {
   // 1. Save address
   const { addressId, error: addressError } = await saveAddress(userId, formData);
@@ -322,7 +326,8 @@ export async function processCheckout(
     addressId,
     items,
     breakdown,
-    formData.paymentMethod
+    formData.paymentMethod,
+    termsVersion
   );
 
   return result;

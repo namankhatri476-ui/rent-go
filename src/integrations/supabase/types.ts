@@ -119,6 +119,39 @@ export type Database = {
         }
         Relationships: []
       }
+      legal_documents: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          slug: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          slug: string
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          slug?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       locations: {
         Row: {
           created_at: string
@@ -236,6 +269,8 @@ export type Database = {
           security_deposit: number
           shipped_at: string | null
           status: Database["public"]["Enums"]["order_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           updated_at: string
           vendor_id: string
           vendor_payout: number
@@ -267,6 +302,8 @@ export type Database = {
           security_deposit: number
           shipped_at?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          terms_accepted_at?: string | null
+          terms_version?: number | null
           updated_at?: string
           vendor_id: string
           vendor_payout: number
@@ -298,6 +335,8 @@ export type Database = {
           security_deposit?: number
           shipped_at?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          terms_accepted_at?: string | null
+          terms_version?: number | null
           updated_at?: string
           vendor_id?: string
           vendor_payout?: number
