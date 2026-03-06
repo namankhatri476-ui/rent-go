@@ -51,6 +51,11 @@ const AdminSlider = () => {
     }
   };
 
+  const invalidateSliders = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-slider-images'] });
+    queryClient.invalidateQueries({ queryKey: ['slider-images'] });
+  };
+
   const addSlideMutation = useMutation({
     mutationFn: async (imageUrl: string) => {
       const maxOrder = slides?.length ? Math.max(...slides.map(s => s.display_order)) + 1 : 0;
@@ -65,8 +70,7 @@ const AdminSlider = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-slider-images'] });
-      queryClient.invalidateQueries({ queryKey: ['slider-images'] });
+      invalidateSliders();
       setNewSlide({ title: '', subtitle: '', cta_text: 'Browse Products', cta_link: '/products', image_url: '' });
       toast.success('Slide added');
     },
@@ -79,8 +83,7 @@ const AdminSlider = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-slider-images'] });
-      queryClient.invalidateQueries({ queryKey: ['slider-images'] });
+      invalidateSliders();
       toast.success('Slide removed');
     },
   });
@@ -90,10 +93,7 @@ const AdminSlider = () => {
       const { error } = await supabase.from('slider_images').update({ is_active }).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-slider-images'] });
-      queryClient.invalidateQueries({ queryKey: ['slider-images'] });
-    },
+    onSuccess: () => invalidateSliders(),
   });
 
   const reorderMutation = useMutation({
@@ -109,11 +109,21 @@ const AdminSlider = () => {
       await supabase.from('slider_images').update({ display_order: swapOrder }).eq('id', slides[idx].id);
       await supabase.from('slider_images').update({ display_order: currentOrder }).eq('id', slides[swapIdx].id);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-slider-images'] });
-      queryClient.invalidateQueries({ queryKey: ['slider-images'] });
-    },
+    onSuccess: () => invalidateSliders(),
   });
+
+  const updateMobileImage = async (slideId: string, mobileUrl: string | null) => {
+    const { error } = await supabase
+      .from('slider_images')
+      .update({ mobile_image_url: mobileUrl })
+      .eq('id', slideId);
+    if (error) {
+      toast.error('Failed to update mobile image');
+      throw error;
+    }
+    invalidateSliders();
+    toast.success('Mobile image updated');
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -220,7 +230,7 @@ const AdminSlider = () => {
                           <span className="text-[10px] text-muted-foreground">Desktop</span>
                         </div>
                         <div className="text-center">
-                          <img src={(slide as any).mobile_image_url || slide.image_url} alt={slide.title || 'Mobile'} className="w-14 h-14 object-cover rounded-lg border border-dashed border-muted-foreground/30" />
+                          <img src={slide.mobile_image_url || slide.image_url} alt={slide.title || 'Mobile'} className="w-14 h-14 object-cover rounded-lg border border-dashed border-muted-foreground/30" />
                           <span className="text-[10px] text-muted-foreground">Mobile</span>
                         </div>
                       </div>
@@ -250,14 +260,12 @@ const AdminSlider = () => {
                       <Input
                         className="h-8 text-xs flex-1"
                         placeholder="Mobile image URL (optional, falls back to desktop)"
-                        defaultValue={(slide as any).mobile_image_url || ''}
+                        defaultValue={slide.mobile_image_url || ''}
+                        key={slide.mobile_image_url || 'empty'}
                         onBlur={async (e) => {
                           const val = e.target.value.trim() || null;
-                          if (val !== ((slide as any).mobile_image_url || null)) {
-                            await supabase.from('slider_images').update({ mobile_image_url: val } as any).eq('id', slide.id);
-                            queryClient.invalidateQueries({ queryKey: ['admin-slider-images'] });
-                            queryClient.invalidateQueries({ queryKey: ['slider-images'] });
-                            toast.success('Mobile image updated');
+                          if (val !== (slide.mobile_image_url || null)) {
+                            await updateMobileImage(slide.id, val);
                           }
                         }}
                       />
@@ -268,10 +276,7 @@ const AdminSlider = () => {
                           if (file.size > 5 * 1024 * 1024) { toast.error('File must be under 5MB'); return; }
                           try {
                             const url = await uploadImage(file);
-                            await supabase.from('slider_images').update({ mobile_image_url: url } as any).eq('id', slide.id);
-                            queryClient.invalidateQueries({ queryKey: ['admin-slider-images'] });
-                            queryClient.invalidateQueries({ queryKey: ['slider-images'] });
-                            toast.success('Mobile image uploaded');
+                            await updateMobileImage(slide.id, url);
                           } catch { toast.error('Upload failed'); }
                         }} />
                         <Button asChild variant="outline" size="sm" className="h-8 text-xs">

@@ -13,6 +13,7 @@ const fallbackSlides = [
     cta_text: "Browse Printers",
     cta_link: "/products",
     image_url: "",
+    mobile_image_url: null as string | null,
     gradient: "from-[hsl(168,78%,22%)] via-[hsl(168,65%,30%)] to-[hsl(168,50%,40%)]",
   },
   {
@@ -21,6 +22,7 @@ const fallbackSlides = [
     cta_text: "View Plans",
     cta_link: "/products",
     image_url: "",
+    mobile_image_url: null as string | null,
     gradient: "from-[hsl(220,25%,18%)] via-[hsl(220,20%,25%)] to-[hsl(168,40%,30%)]",
   },
   {
@@ -29,6 +31,7 @@ const fallbackSlides = [
     cta_text: "Get Started",
     cta_link: "/products",
     image_url: "",
+    mobile_image_url: null as string | null,
     gradient: "from-[hsl(24,80%,45%)] via-[hsl(24,70%,40%)] to-[hsl(168,50%,30%)]",
   },
 ];
@@ -57,7 +60,8 @@ const HeroSlider = () => {
         subtitle: s.subtitle || '',
         cta_text: s.cta_text || 'Browse Products',
         cta_link: s.cta_link || '/products',
-        image_url: (isMobile && (s as any).mobile_image_url) ? (s as any).mobile_image_url : s.image_url,
+        image_url: s.image_url,
+        mobile_image_url: s.mobile_image_url,
         gradient: '',
       }))
     : fallbackSlides;
@@ -77,64 +81,70 @@ const HeroSlider = () => {
     return () => clearInterval(timer);
   }, [next]);
 
+  const getImageUrl = (slide: typeof slides[0]) => {
+    if (isMobile && slide.mobile_image_url) return slide.mobile_image_url;
+    return slide.image_url;
+  };
+
   return (
     <section className="relative w-full overflow-hidden">
       <div className="relative h-[320px] md:h-[400px] lg:h-[460px]">
-        {slides.map((slide, i) => (
-          <div
-            key={i}
-            className={`absolute inset-0 transition-all duration-600 ease-out ${
-              i === current ? "opacity-100 scale-100" : "opacity-0 scale-105"
-            }`}
-          >
+        {slides.map((slide, i) => {
+          const imgUrl = getImageUrl(slide);
+          return (
             <div
-              className={`w-full h-full flex items-center ${
-                slide.image_url
-                  ? 'bg-cover bg-center'
-                  : `bg-gradient-to-br ${slide.gradient}`
+              key={i}
+              className={`absolute inset-0 transition-all duration-600 ease-out ${
+                i === current ? "opacity-100 scale-100" : "opacity-0 scale-105"
               }`}
-              style={slide.image_url ? { backgroundImage: `url(${slide.image_url})` } : undefined}
             >
-              {/* Overlay for readability on images */}
-              {slide.image_url && (
-                <div className="absolute inset-0 bg-black/40" />
-              )}
-              {/* Decorative circles for gradient slides */}
-              {!slide.image_url && (
-                <>
-                  <div className="absolute right-[-5%] top-[-10%] w-[40%] h-[120%] rounded-full bg-white/[0.04]" />
-                  <div className="absolute right-[10%] bottom-[-20%] w-[25%] h-[80%] rounded-full bg-white/[0.03]" />
-                </>
-              )}
+              <div
+                className={`w-full h-full flex items-center ${
+                  imgUrl
+                    ? 'bg-cover bg-center'
+                    : `bg-gradient-to-br ${slide.gradient}`
+                }`}
+                style={imgUrl ? { backgroundImage: `url(${imgUrl})` } : undefined}
+              >
+                {imgUrl && (
+                  <div className="absolute inset-0 bg-black/40" />
+                )}
+                {!imgUrl && (
+                  <>
+                    <div className="absolute right-[-5%] top-[-10%] w-[40%] h-[120%] rounded-full bg-white/[0.04]" />
+                    <div className="absolute right-[10%] bottom-[-20%] w-[25%] h-[80%] rounded-full bg-white/[0.03]" />
+                  </>
+                )}
 
-              {(slide.title || slide.subtitle) && (
-                <div className="container mx-auto px-4 relative z-10">
-                  <div className="max-w-xl space-y-5">
-                    {slide.title && (
-                      <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.15] tracking-tight">
-                        {slide.title}
-                      </h1>
-                    )}
-                    {slide.subtitle && (
-                      <p className="text-base md:text-lg text-white/80 max-w-md leading-relaxed">
-                        {slide.subtitle}
-                      </p>
-                    )}
-                    <Link to={slide.cta_link}>
-                      <Button
-                        size="lg"
-                        className="bg-white text-foreground hover:bg-white/90 shadow-lg rounded-full gap-2 mt-1 font-semibold"
-                      >
-                        {slide.cta_text}
-                        <ArrowRight className="w-4 h-4" />
-                      </Button>
-                    </Link>
+                {(slide.title || slide.subtitle) && (
+                  <div className="container mx-auto px-4 relative z-10">
+                    <div className="max-w-xl space-y-5">
+                      {slide.title && (
+                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.15] tracking-tight">
+                          {slide.title}
+                        </h1>
+                      )}
+                      {slide.subtitle && (
+                        <p className="text-base md:text-lg text-white/80 max-w-md leading-relaxed">
+                          {slide.subtitle}
+                        </p>
+                      )}
+                      <Link to={slide.cta_link}>
+                        <Button
+                          size="lg"
+                          className="bg-white text-foreground hover:bg-white/90 shadow-lg rounded-full gap-2 mt-1 font-semibold"
+                        >
+                          {slide.cta_text}
+                          <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {slides.length > 1 && (
