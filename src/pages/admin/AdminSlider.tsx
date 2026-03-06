@@ -212,26 +212,72 @@ const AdminSlider = () => {
             ) : (
               <div className="space-y-3">
                 {slides?.map((slide, index) => (
-                  <div key={slide.id} className="flex items-center gap-4 p-3 border border-border rounded-xl bg-card">
-                    <img src={slide.image_url} alt={slide.title || 'Slide'} className="w-24 h-14 object-cover rounded-lg" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{slide.title || '(No title)'}</p>
-                      <p className="text-xs text-muted-foreground truncate">{slide.subtitle || '(No subtitle)'}</p>
+                  <div key={slide.id} className="flex flex-col gap-3 p-4 border border-border rounded-xl bg-card">
+                    <div className="flex items-center gap-4">
+                      <div className="flex gap-2 shrink-0">
+                        <div className="text-center">
+                          <img src={slide.image_url} alt={slide.title || 'Desktop'} className="w-24 h-14 object-cover rounded-lg" />
+                          <span className="text-[10px] text-muted-foreground">Desktop</span>
+                        </div>
+                        <div className="text-center">
+                          <img src={(slide as any).mobile_image_url || slide.image_url} alt={slide.title || 'Mobile'} className="w-14 h-14 object-cover rounded-lg border border-dashed border-muted-foreground/30" />
+                          <span className="text-[10px] text-muted-foreground">Mobile</span>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{slide.title || '(No title)'}</p>
+                        <p className="text-xs text-muted-foreground truncate">{slide.subtitle || '(No subtitle)'}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={slide.is_active}
+                          onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: slide.id, is_active: checked })}
+                        />
+                        <Button variant="ghost" size="icon" disabled={index === 0} onClick={() => reorderMutation.mutate({ id: slide.id, direction: 'up' })}>
+                          <ArrowUp className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" disabled={index === (slides?.length || 0) - 1} onClick={() => reorderMutation.mutate({ id: slide.id, direction: 'down' })}>
+                          <ArrowDown className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteSlideMutation.mutate(slide.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={slide.is_active}
-                        onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: slide.id, is_active: checked })}
+                    {/* Mobile image upload */}
+                    <div className="flex items-center gap-3 pl-2">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">Mobile Image:</span>
+                      <Input
+                        className="h-8 text-xs flex-1"
+                        placeholder="Mobile image URL (optional, falls back to desktop)"
+                        defaultValue={(slide as any).mobile_image_url || ''}
+                        onBlur={async (e) => {
+                          const val = e.target.value.trim() || null;
+                          if (val !== ((slide as any).mobile_image_url || null)) {
+                            await supabase.from('slider_images').update({ mobile_image_url: val } as any).eq('id', slide.id);
+                            queryClient.invalidateQueries({ queryKey: ['admin-slider-images'] });
+                            queryClient.invalidateQueries({ queryKey: ['slider-images'] });
+                            toast.success('Mobile image updated');
+                          }
+                        }}
                       />
-                      <Button variant="ghost" size="icon" disabled={index === 0} onClick={() => reorderMutation.mutate({ id: slide.id, direction: 'up' })}>
-                        <ArrowUp className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" disabled={index === (slides?.length || 0) - 1} onClick={() => reorderMutation.mutate({ id: slide.id, direction: 'down' })}>
-                        <ArrowDown className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteSlideMutation.mutate(slide.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <label className="cursor-pointer shrink-0">
+                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 5 * 1024 * 1024) { toast.error('File must be under 5MB'); return; }
+                          try {
+                            const url = await uploadImage(file);
+                            await supabase.from('slider_images').update({ mobile_image_url: url } as any).eq('id', slide.id);
+                            queryClient.invalidateQueries({ queryKey: ['admin-slider-images'] });
+                            queryClient.invalidateQueries({ queryKey: ['slider-images'] });
+                            toast.success('Mobile image uploaded');
+                          } catch { toast.error('Upload failed'); }
+                        }} />
+                        <Button asChild variant="outline" size="sm" className="h-8 text-xs">
+                          <span><Upload className="h-3 w-3 mr-1" /> Upload</span>
+                        </Button>
+                      </label>
                     </div>
                   </div>
                 ))}

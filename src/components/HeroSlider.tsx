@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const fallbackSlides = [
   {
@@ -35,6 +36,7 @@ const fallbackSlides = [
 const HeroSlider = () => {
   const [current, setCurrent] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const isMobile = useIsMobile();
 
   const { data: dbSlides } = useQuery({
     queryKey: ['slider-images'],
@@ -55,7 +57,7 @@ const HeroSlider = () => {
         subtitle: s.subtitle || '',
         cta_text: s.cta_text || 'Browse Products',
         cta_link: s.cta_link || '/products',
-        image_url: s.image_url,
+        image_url: (isMobile && (s as any).mobile_image_url) ? (s as any).mobile_image_url : s.image_url,
         gradient: '',
       }))
     : fallbackSlides;
