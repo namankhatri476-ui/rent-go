@@ -45,17 +45,17 @@ const WhyRentSection = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mx-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mx-auto">
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="bg-card rounded-2xl p-6 border border-border/60 hover:border-primary/20 hover:shadow-md transition-all duration-300 group"
+              className="bg-card rounded-2xl p-5 md:p-6 border border-border/60 hover:border-primary/20 hover:shadow-md transition-all duration-300 group"
             >
-              <div className={`w-12 h-12 rounded-xl ${feature.bg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+              <div className={`w-11 h-11 md:w-12 md:h-12 rounded-xl ${feature.bg} flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform`}>
                 <feature.icon className={`w-5 h-5 ${feature.color}`} />
               </div>
-              <h3 className="font-bold text-foreground mb-1.5 text-sm">{feature.title}</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
+              <h3 className="font-bold text-foreground mb-1 md:mb-1.5 text-xs md:text-sm">{feature.title}</h3>
+              <p className="text-[11px] md:text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
             </div>
           ))}
         </div>
