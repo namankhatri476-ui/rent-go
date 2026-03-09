@@ -131,6 +131,14 @@ const VendorProductView = () => {
             {product.categories?.name && (
               <p className="text-sm text-muted-foreground mt-1">Category: {product.categories.name}</p>
             )}
+            {productLocations && productLocations.length > 0 && (
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                {productLocations.map((pl: any) => (
+                  <Badge key={pl.location_id} variant="outline">{pl.locations?.name}</Badge>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-4 mt-3">
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
