@@ -5,6 +5,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+interface MobileSlide {
+  id: string;
+  image_url: string;
+  title: string | null;
+  subtitle: string | null;
+  cta_text: string | null;
+  cta_link: string | null;
+  display_order: number;
+  is_active: boolean;
+}
+
 const MobileHeroSlider = () => {
   const [current, setCurrent] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -13,12 +24,12 @@ const MobileHeroSlider = () => {
     queryKey: ['mobile-slider-images'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('mobile_slider_images')
+        .from('mobile_slider_images' as any)
         .select('*')
         .eq('is_active', true)
         .order('display_order', { ascending: true });
       if (error) throw error;
-      return data;
+      return data as unknown as MobileSlide[];
     },
   });
 

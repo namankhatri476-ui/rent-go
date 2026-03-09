@@ -9,6 +9,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TrustBadges from "@/components/TrustBadges";
 import HeroSlider from "@/components/HeroSlider";
+import MobileHeroSlider from "@/components/MobileHeroSlider";
 import WhyRentSection from "@/components/WhyRentSection";
 import StatsSection from "@/components/StatsSection";
 import BenefitsComparison from "@/components/BenefitsComparison";
