@@ -36,13 +36,24 @@ const Products = () => {
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select(`*, categories (name), rental_plans (*), locations (name)`)
+        .select(`*, categories (name), rental_plans (*), locations (name), product_locations (location_id)`)
         .eq('status', 'approved')
         .eq('in_stock', true);
-      if (selectedLocation?.id) query = query.eq('location_id', selectedLocation.id);
       if (selectedCategory?.id) query = query.eq('category_id', selectedCategory.id);
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
+      
+      // Filter by location through product_locations junction table
+      if (selectedLocation?.id && data) {
+        return data.filter(product => {
+          const productLocations = (product as any).product_locations as { location_id: string }[] | null;
+          // Check junction table first, fallback to legacy location_id
+          if (productLocations && productLocations.length > 0) {
+            return productLocations.some(pl => pl.location_id === selectedLocation.id);
+          }
+          return product.location_id === selectedLocation.id;
+        });
+      }
       return data;
     },
   });
