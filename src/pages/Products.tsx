@@ -6,17 +6,22 @@ import { useLocation } from "@/contexts/LocationContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
-import { Filter, SlidersHorizontal, Star, Loader2, MapPin, Truck, Shield } from "lucide-react";
+import { Star, Loader2, MapPin, Truck, Shield, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { printerProducts } from "@/data/products";
 
 const Products = () => {
-  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const { selectedLocation } = useLocation();
   const [searchParams] = useSearchParams();
   const categorySlug = searchParams.get('category');
 
-  const { data: selectedCategory } = useQuery({
+  const { data: categoryFromSlug } = useQuery({
     queryKey: ['category-by-slug', categorySlug],
     queryFn: async () => {
       if (!categorySlug) return null;
@@ -31,19 +36,33 @@ const Products = () => {
     enabled: !!categorySlug,
   });
 
+  const { data: categories } = useQuery({
+    queryKey: ['all-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, slug')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const activeCategoryId = selectedCategory || categoryFromSlug?.id || null;
+
   const { data: dbProducts, isLoading } = useQuery({
-    queryKey: ['approved-products', selectedLocation?.id, selectedCategory?.id],
+    queryKey: ['approved-products', selectedLocation?.id, activeCategoryId],
     queryFn: async () => {
       let query = supabase
         .from('products')
         .select(`*, categories (name), rental_plans (*)`)
         .eq('status', 'approved')
         .eq('in_stock', true);
-      if (selectedCategory?.id) query = query.eq('category_id', selectedCategory.id);
+      if (activeCategoryId) query = query.eq('category_id', activeCategoryId);
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       
-      // Filter by location through product_locations junction table
       if (selectedLocation?.id && data) {
         const { data: plData } = await supabase
           .from('product_locations')
@@ -52,7 +71,6 @@ const Products = () => {
         const locationProductIds = new Set((plData || []).map(pl => pl.product_id));
         
         return data.filter(product => {
-          // Check junction table first, fallback to legacy location_id
           if (locationProductIds.has(product.id)) return true;
           return product.location_id === selectedLocation.id;
         });
@@ -63,8 +81,9 @@ const Products = () => {
 
   const products = useMemo(() => {
     const dbProductsList = dbProducts || [];
+    const activeCatName = categories?.find(c => c.id === activeCategoryId)?.name || categoryFromSlug?.name;
     const staticProducts = printerProducts
-      .filter(p => !categorySlug || p.category.toLowerCase() === (selectedCategory?.name?.toLowerCase() || categorySlug.toLowerCase()))
+      .filter(p => !activeCategoryId || p.category.toLowerCase() === (activeCatName?.toLowerCase() || ''))
       .map(p => ({
         id: p.id, name: p.name, brand: p.brand, slug: p.slug, description: p.description,
         images: p.images, rating: p.rating, review_count: p.reviewCount, tags: p.tags,
@@ -76,21 +95,31 @@ const Products = () => {
       }));
     const dbSlugs = new Set(dbProductsList.map(p => p.slug));
     const uniqueStaticProducts = staticProducts.filter(p => !dbSlugs.has(p.slug));
-    const allProducts = [...dbProductsList, ...uniqueStaticProducts];
-    return selectedBrand ? allProducts.filter(p => p.brand === selectedBrand) : allProducts;
-  }, [dbProducts, selectedBrand, categorySlug, selectedCategory]);
+    let allProducts = [...dbProductsList, ...uniqueStaticProducts];
 
-  const brands = useMemo(() => {
-    const dbBrands = (dbProducts || []).map(p => p.brand).filter(Boolean);
-    const staticBrands = printerProducts.map(p => p.brand);
-    return [...new Set([...dbBrands, ...staticBrands])] as string[];
-  }, [dbProducts]);
+    // Price filter
+    allProducts = allProducts.filter(p => {
+      const plans = (p.rental_plans || []).filter((rp: any) => rp.is_active !== false);
+      if (plans.length === 0) return true;
+      const lowest = Math.min(...plans.map((rp: any) => rp.monthly_rent));
+      return lowest >= priceRange[0] && lowest <= priceRange[1];
+    });
+
+    return allProducts;
+  }, [dbProducts, activeCategoryId, categories, categoryFromSlug, priceRange]);
 
   const getLowestRent = (rentalPlans: any[]) => {
     if (!rentalPlans || rentalPlans.length === 0) return null;
     const activePlans = rentalPlans.filter(p => p.is_active !== false);
     if (activePlans.length === 0) return null;
     return Math.min(...activePlans.map(p => p.monthly_rent));
+  };
+
+  const activeFilterCount = (activeCategoryId && !categorySlug ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 50000 ? 1 : 0);
+
+  const clearFilters = () => {
+    setSelectedCategory(null);
+    setPriceRange([0, 50000]);
   };
 
   return (
@@ -108,7 +137,7 @@ const Products = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-foreground">
-                {selectedCategory?.name || 'Products'} on Rent {selectedLocation ? `in ${selectedLocation.name}` : ''}
+                {categoryFromSlug?.name || (categories?.find(c => c.id === activeCategoryId)?.name) || 'Products'} on Rent {selectedLocation ? `in ${selectedLocation.name}` : ''}
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {products?.length || 0} products available
@@ -125,29 +154,67 @@ const Products = () => {
         </div>
       </section>
 
-      {/* Brand Filter */}
+      {/* Filters */}
       <section className="py-3 border-b border-border/50 bg-card">
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            <button 
-              onClick={() => setSelectedBrand(null)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                !selectedBrand ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              All Brands
-            </button>
-            {brands?.map((brand) => (
-              <button
-                key={brand}
-                onClick={() => setSelectedBrand(brand)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                  selectedBrand === brand ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {brand}
-              </button>
-            ))}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Category Filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-full text-xs gap-1.5">
+                  <SlidersHorizontal className="w-3 h-3" />
+                  Category
+                  {activeCategoryId && !categorySlug && <Badge variant="secondary" className="ml-1 h-4 w-4 p-0 flex items-center justify-center text-[9px] rounded-full">1</Badge>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-3" align="start">
+                <p className="text-xs font-semibold mb-2 text-foreground">Filter by Category</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {categories?.map((cat) => (
+                    <div key={cat.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`cat-${cat.id}`}
+                        checked={activeCategoryId === cat.id}
+                        onCheckedChange={(checked) => setSelectedCategory(checked ? cat.id : null)}
+                      />
+                      <Label htmlFor={`cat-${cat.id}`} className="text-xs cursor-pointer">{cat.name}</Label>
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Price Filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-full text-xs gap-1.5">
+                  <SlidersHorizontal className="w-3 h-3" />
+                  Price
+                  {(priceRange[0] > 0 || priceRange[1] < 50000) && <Badge variant="secondary" className="ml-1 h-4 w-4 p-0 flex items-center justify-center text-[9px] rounded-full">1</Badge>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-4" align="start">
+                <p className="text-xs font-semibold mb-3 text-foreground">Monthly Rent Range</p>
+                <Slider
+                  min={0}
+                  max={50000}
+                  step={500}
+                  value={priceRange}
+                  onValueChange={(val) => setPriceRange(val as [number, number])}
+                  className="mb-3"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>₹{priceRange[0].toLocaleString()}</span>
+                  <span>₹{priceRange[1].toLocaleString()}</span>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="sm" className="rounded-full text-xs gap-1 text-muted-foreground" onClick={clearFilters}>
+                <X className="w-3 h-3" /> Clear filters
+              </Button>
+            )}
           </div>
         </div>
       </section>
@@ -172,7 +239,7 @@ const Products = () => {
                 return (
                   <Link key={product.id} to={`/product/${product.slug}`} className="block group">
                     <div className="bg-card rounded-2xl border border-border/60 overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all duration-300 h-full flex flex-col">
-                      <div className="aspect-square relative overflow-hidden bg-muted">
+                      <div className="aspect-[4/3] relative overflow-hidden bg-muted">
                         {product.images?.[0] ? (
                           <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         ) : (
