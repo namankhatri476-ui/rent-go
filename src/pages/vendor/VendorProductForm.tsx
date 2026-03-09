@@ -348,7 +348,17 @@ const VendorProductForm = () => {
           if (varError) throw varError;
         }
       }
-    },
+
+      // Update product locations - delete old and insert new
+      await supabase.from('product_locations').delete().eq('product_id', productId);
+      if (selectedLocationIds.length > 0) {
+        const locationRows = selectedLocationIds.map(locId => ({
+          product_id: productId,
+          location_id: locId,
+        }));
+        const { error: locError } = await supabase.from('product_locations').insert(locationRows);
+        if (locError) throw locError;
+      }
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendor-products'] });
       queryClient.invalidateQueries({ queryKey: ['vendor-product', productId] });
