@@ -78,6 +78,7 @@ const Index = () => {
       {/* Hero Slider */}
       <div className="container mx-auto px-4 pt-4 pb-4">
         <HeroSlider />
+        <MobileHeroSlider />
       </div>
 
       {/* Trust Badges - Horizontal strip */}
