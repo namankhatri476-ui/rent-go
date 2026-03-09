@@ -70,7 +70,7 @@ const MobileHeroSlider = () => {
 
   return (
     <section className="relative w-full overflow-hidden md:hidden">
-      <div className="relative w-full aspect-square rounded-[15px] overflow-hidden">
+      <div className="relative w-full aspect-square overflow-hidden">
         {slides.map((slide, i) => (
           <div
             key={i}
