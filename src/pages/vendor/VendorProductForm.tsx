@@ -586,28 +586,77 @@ const VendorProductForm = () => {
           <Card>
             <CardHeader>
               <CardTitle>Product Images</CardTitle>
+              <p className="text-sm text-muted-foreground">Add images via URL or upload directly</p>
             </CardHeader>
             <CardContent className="space-y-4">
               {formData.images.map((image, index) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    value={image}
-                    onChange={(e) => {
-                      const newImages = [...formData.images];
-                      newImages[index] = e.target.value;
-                      setFormData({ ...formData, images: newImages });
-                    }}
-                    placeholder="Image URL"
-                  />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeImage(index)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div key={index} className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      value={image}
+                      onChange={(e) => {
+                        const newImages = [...formData.images];
+                        newImages[index] = e.target.value;
+                        setFormData({ ...formData, images: newImages });
+                      }}
+                      placeholder="Image URL or upload below"
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeImage(index)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {image && (
+                    <img src={image} alt={`Preview ${index + 1}`} className="h-20 w-20 object-cover rounded border" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                  )}
                 </div>
               ))}
-              <Button type="button" variant="outline" size="sm" onClick={addImage}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Image
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={addImage}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add URL
+                </Button>
+                <label className="cursor-pointer">
+                  <Button type="button" variant="outline" size="sm" asChild>
+                    <span>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={async (e) => {
+                          const files = e.target.files;
+                          if (!files) return;
+                          for (const file of Array.from(files)) {
+                            const ext = file.name.split('.').pop();
+                            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
+                            const filePath = `products/${fileName}`;
+                            toast.info(`Uploading ${file.name}...`);
+                            const { error: uploadError } = await supabase.storage
+                              .from('product-images')
+                              .upload(filePath, file);
+                            if (uploadError) {
+                              toast.error(`Failed to upload ${file.name}`);
+                              console.error(uploadError);
+                              continue;
+                            }
+                            const { data: urlData } = supabase.storage
+                              .from('product-images')
+                              .getPublicUrl(filePath);
+                            setFormData(prev => ({
+                              ...prev,
+                              images: [...prev.images.filter(i => i.trim()), urlData.publicUrl],
+                            }));
+                            toast.success(`${file.name} uploaded!`);
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </span>
+                  </Button>
+                </label>
+              </div>
             </CardContent>
           </Card>
 
