@@ -9,6 +9,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TrustBadges from "@/components/TrustBadges";
 import HeroSlider from "@/components/HeroSlider";
+import MobileHeroSlider from "@/components/MobileHeroSlider";
 import WhyRentSection from "@/components/WhyRentSection";
 import StatsSection from "@/components/StatsSection";
 import BenefitsComparison from "@/components/BenefitsComparison";
@@ -75,12 +76,13 @@ const Index = () => {
       <Header />
       
       {/* Hero Slider */}
-      <div className="container mx-auto px-4 pt-4">
+      <div className="container mx-auto px-4 pt-4 pb-4">
         <HeroSlider />
+        <MobileHeroSlider />
       </div>
 
       {/* Trust Badges - Horizontal strip */}
-      <section className="py-4 border-b border-border/50 bg-card">
+      <section className="py-4 border-b border-border/50">
         <div className="container mx-auto px-4">
           <TrustBadges />
         </div>
