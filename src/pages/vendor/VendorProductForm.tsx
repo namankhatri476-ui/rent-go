@@ -34,7 +34,6 @@ const VendorProductForm = () => {
     brand: '',
     description: '',
     category_id: '',
-    location_id: '',
     features: [''],
     images: [''],
     specifications: {} as Record<string, string>,
@@ -44,6 +43,9 @@ const VendorProductForm = () => {
     buy_price: '' as string | number,
     advance_discount_percent: '' as string | number,
   });
+
+  // Multi-location selection state
+  const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
 
   // Variations state
   const [variations, setVariations] = useState<{ variation_type: string; variation_value: string; price_adjustment: number }[]>([]);
