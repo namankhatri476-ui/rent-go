@@ -21,7 +21,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Trash2, ArrowLeft, Loader2, Info, MapPin } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Loader2, Info, MapPin, Upload } from 'lucide-react';
 
 const VendorProductForm = () => {
   const navigate = useNavigate();
