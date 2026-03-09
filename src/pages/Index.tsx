@@ -75,7 +75,9 @@ const Index = () => {
       <Header />
       
       {/* Hero Slider */}
-      <HeroSlider />
+      <div className="container mx-auto px-4 pt-4">
+        <HeroSlider />
+      </div>
 
       {/* Trust Badges - Horizontal strip */}
       <section className="py-4 border-b border-border/50 bg-card">
