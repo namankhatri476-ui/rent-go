@@ -76,10 +76,10 @@ const Index = () => {
       <Header />
       
       {/* Hero Slider */}
-      <div className="container mx-auto px-4 pt-4 pb-4">
+      <div className="container mx-auto px-4 pt-4 pb-4 hidden md:block">
         <HeroSlider />
-        <MobileHeroSlider />
       </div>
+      <MobileHeroSlider />
 
       {/* Trust Badges - Horizontal strip */}
       <section className="py-4 border-b border-border/50">
