@@ -31,6 +31,18 @@ const VendorProductView = () => {
     },
   });
 
+  const { data: productLocations } = useQuery({
+    queryKey: ['vendor-product-locations', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('product_locations')
+        .select('location_id, locations (name)')
+        .eq('product_id', id!);
+      return data || [];
+    },
+  });
+
   const getStatusBadge = (status: ProductStatus) => {
     const variants: Record<ProductStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
       pending: 'secondary',
