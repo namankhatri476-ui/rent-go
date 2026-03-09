@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CartItem, CheckoutBreakdown, GST_RATE } from "@/types/product";
+import { initiatePhonePePayment } from "@/services/phonepeService";
 
 export interface CheckoutFormData {
   fullName: string;
