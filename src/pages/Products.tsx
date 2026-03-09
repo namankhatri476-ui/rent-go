@@ -36,7 +36,7 @@ const Products = () => {
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select(`*, categories (name), rental_plans (*), locations (name), product_locations (location_id)`)
+        .select(`*, categories (name), rental_plans (*)`)
         .eq('status', 'approved')
         .eq('in_stock', true);
       if (selectedCategory?.id) query = query.eq('category_id', selectedCategory.id);
@@ -45,12 +45,15 @@ const Products = () => {
       
       // Filter by location through product_locations junction table
       if (selectedLocation?.id && data) {
+        const { data: plData } = await supabase
+          .from('product_locations')
+          .select('product_id')
+          .eq('location_id', selectedLocation.id);
+        const locationProductIds = new Set((plData || []).map(pl => pl.product_id));
+        
         return data.filter(product => {
-          const productLocations = (product as any).product_locations as { location_id: string }[] | null;
           // Check junction table first, fallback to legacy location_id
-          if (productLocations && productLocations.length > 0) {
-            return productLocations.some(pl => pl.location_id === selectedLocation.id);
-          }
+          if (locationProductIds.has(product.id)) return true;
           return product.location_id === selectedLocation.id;
         });
       }
