@@ -498,38 +498,61 @@ const VendorProductForm = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
                     Service Locations *
                   </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Select all cities where you can provide this product for rent
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4 border rounded-lg max-h-60 overflow-y-auto">
-                    {locations?.map((loc) => (
-                      <div key={loc.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`loc-${loc.id}`}
-                          checked={selectedLocationIds.includes(loc.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedLocationIds([...selectedLocationIds, loc.id]);
-                            } else {
-                              setSelectedLocationIds(selectedLocationIds.filter(id => id !== loc.id));
-                            }
-                          }}
-                        />
-                        <Label htmlFor={`loc-${loc.id}`} className="text-sm cursor-pointer">
-                          {loc.name}
-                        </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between font-normal">
+                        {selectedLocationIds.length > 0
+                          ? `${selectedLocationIds.length} location(s) selected`
+                          : 'Select service locations'}
+                        <MapPin className="h-4 w-4 ml-2 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-3" align="start">
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {locations?.map((loc) => (
+                          <div key={loc.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`loc-${loc.id}`}
+                              checked={selectedLocationIds.includes(loc.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedLocationIds([...selectedLocationIds, loc.id]);
+                                } else {
+                                  setSelectedLocationIds(selectedLocationIds.filter(id => id !== loc.id));
+                                }
+                              }}
+                            />
+                            <Label htmlFor={`loc-${loc.id}`} className="text-sm cursor-pointer font-normal">
+                              {loc.name}
+                            </Label>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </PopoverContent>
+                  </Popover>
                   {selectedLocationIds.length > 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      {selectedLocationIds.length} location(s) selected
-                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedLocationIds.map(id => {
+                        const loc = locations?.find(l => l.id === id);
+                        return loc ? (
+                          <Badge key={id} variant="secondary" className="text-xs gap-1">
+                            {loc.name}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedLocationIds(selectedLocationIds.filter(lid => lid !== id))}
+                              className="ml-0.5 hover:text-destructive"
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        ) : null;
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
