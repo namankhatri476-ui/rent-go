@@ -75,7 +75,7 @@ const Index = () => {
       <Header />
       
       {/* Hero Slider */}
-      <div className="container mx-auto px-4 pt-4">
+      <div className="container mx-auto px-4 pt-4 pb-4">
         <HeroSlider />
       </div>
 
