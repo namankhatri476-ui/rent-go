@@ -231,7 +231,7 @@ const VendorProductForm = () => {
           brand: formData.brand || null,
           description: formData.description || null,
           category_id: formData.category_id || null,
-          location_id: formData.location_id || null,
+          location_id: selectedLocationIds[0] || null, // Keep first location for backward compatibility
           features: formData.features.filter(f => f.trim()),
           images: formData.images.filter(i => i.trim()),
           specifications: formData.specifications,
