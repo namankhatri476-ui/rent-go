@@ -266,6 +266,16 @@ const VendorProductForm = () => {
         }
       }
 
+      // Save product locations (many-to-many)
+      if (selectedLocationIds.length > 0) {
+        const locationRows = selectedLocationIds.map(locId => ({
+          product_id: product.id,
+          location_id: locId,
+        }));
+        const { error: locError } = await supabase.from('product_locations').insert(locationRows);
+        if (locError) throw locError;
+      }
+
       return product;
     },
     onSuccess: () => {
