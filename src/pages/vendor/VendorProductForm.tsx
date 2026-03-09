@@ -359,6 +359,7 @@ const VendorProductForm = () => {
         const { error: locError } = await supabase.from('product_locations').insert(locationRows);
         if (locError) throw locError;
       }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendor-products'] });
       queryClient.invalidateQueries({ queryKey: ['vendor-product', productId] });
