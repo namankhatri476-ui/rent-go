@@ -47,12 +47,24 @@ const Index = () => {
         .select(`*, categories (name), rental_plans (*)`)
         .eq('status', 'approved')
         .eq('in_stock', true);
-      if (selectedLocation?.id) {
-        query = query.eq('location_id', selectedLocation.id);
-      }
-      const { data, error } = await query.order('created_at', { ascending: false }).limit(4);
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(20);
       if (error) throw error;
-      return data;
+      
+      // Filter by location using product_locations junction table
+      if (selectedLocation?.id && data) {
+        const { data: plData } = await supabase
+          .from('product_locations')
+          .select('product_id')
+          .eq('location_id', selectedLocation.id);
+        const locationProductIds = new Set((plData || []).map(pl => pl.product_id));
+        
+        const filtered = data.filter(product => {
+          if (locationProductIds.has(product.id)) return true;
+          return product.location_id === selectedLocation.id;
+        });
+        return filtered.slice(0, 4);
+      }
+      return data?.slice(0, 4) || [];
     },
   });
 
