@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -18,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Trash2, ArrowLeft, Loader2, Info } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Loader2, Info, MapPin } from 'lucide-react';
 
 const VendorProductForm = () => {
   const navigate = useNavigate();
