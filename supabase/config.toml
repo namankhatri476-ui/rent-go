@@ -1,1 +1,4 @@
 project_id = "yhlruonnbtlxoihnjeaj"
+
+[functions.phonepe-payment]
+verify_jwt = false

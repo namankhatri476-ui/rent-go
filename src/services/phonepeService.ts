@@ -1,26 +1,11 @@
 /**
- * PhonePe Payment Gateway - Dummy Integration
+ * PhonePe Payment Gateway - Live Integration
  * 
- * This is a placeholder integration for PhonePe payment gateway.
- * Replace the dummy logic with actual PhonePe API calls when ready.
- * 
- * CREDENTIALS SETUP:
- * When you're ready to go live, add these as backend secrets:
- *   - PHONEPE_MERCHANT_ID: Your PhonePe Merchant ID
- *   - PHONEPE_SALT_KEY: Your PhonePe Salt Key
- *   - PHONEPE_SALT_INDEX: Your PhonePe Salt Index (usually "1")
- *   - PHONEPE_ENV: "sandbox" or "production"
- * 
- * These secrets should be configured in Lovable Cloud → Secrets,
- * and used inside a backend function (edge function) for secure processing.
- * 
- * FLOW:
- * 1. Frontend calls initiatePhonePePayment() with order details
- * 2. Backend edge function creates a PhonePe payment request
- * 3. User is redirected to PhonePe checkout page
- * 4. PhonePe redirects back with payment status
- * 5. Backend webhook verifies and updates order status
+ * Calls the backend edge function for secure payment processing.
+ * Supports one-time payments and autopay subscription setup.
  */
+
+import { supabase } from "@/integrations/supabase/client";
 
 export interface PhonePePaymentRequest {
   orderId: string;
@@ -38,50 +23,112 @@ export interface PhonePePaymentResponse {
   error?: string;
 }
 
+export interface AutopaySetupRequest {
+  orderId: string;
+  subscriptionName?: string;
+  monthlyAmount: number; // in rupees
+  customerPhone: string;
+  maxCycles?: number;
+  startDate?: string;
+  redirectUrl: string;
+}
+
+export interface AutopaySetupResponse {
+  success: boolean;
+  subscriptionId?: string;
+  redirectUrl?: string;
+  error?: string;
+}
+
 /**
- * Initiate a PhonePe payment (DUMMY - simulates success)
- * 
- * Replace this with an actual call to your backend edge function:
- * ```ts
- * const { data } = await supabase.functions.invoke('phonepe-payment', {
- *   body: { orderId, amount, ... }
- * });
- * ```
+ * Initiate a one-time PhonePe payment (security deposit + delivery + installation)
  */
 export async function initiatePhonePePayment(
   request: PhonePePaymentRequest
 ): Promise<PhonePePaymentResponse> {
-  console.log('[PhonePe] Initiating payment (DUMMY MODE):', request);
+  console.log("[PhonePe] Initiating payment:", request);
 
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  try {
+    const { data, error } = await supabase.functions.invoke("phonepe-payment", {
+      body: {
+        ...request,
+      },
+    });
 
-  // Dummy transaction ID
-  const transactionId = `PHONEPE_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    if (error) {
+      console.error("[PhonePe] Edge function error:", error);
+      return { success: false, error: error.message || "Payment initiation failed" };
+    }
 
-  // In production, this would return a PhonePe checkout URL
-  return {
-    success: true,
-    transactionId,
-    redirectUrl: request.redirectUrl, // In production: PhonePe's hosted checkout URL
-  };
+    return {
+      success: data.success,
+      transactionId: data.transactionId,
+      redirectUrl: data.redirectUrl,
+      error: data.error,
+    };
+  } catch (err: any) {
+    console.error("[PhonePe] Network error:", err);
+    return { success: false, error: err.message || "Network error" };
+  }
 }
 
 /**
- * Verify PhonePe payment status (DUMMY - always returns success)
- * 
- * In production, call your backend edge function which verifies
- * the payment using PhonePe's Status API with the salt key.
+ * Setup autopay subscription for monthly rent payments
+ * Called after the initial one-time payment succeeds
+ */
+export async function setupAutopaySubscription(
+  request: AutopaySetupRequest
+): Promise<AutopaySetupResponse> {
+  console.log("[PhonePe] Setting up autopay:", request);
+
+  try {
+    const { data, error } = await supabase.functions.invoke("phonepe-payment/setup-autopay", {
+      body: {
+        ...request,
+      },
+    });
+
+    if (error) {
+      console.error("[PhonePe] Autopay setup error:", error);
+      return { success: false, error: error.message || "Autopay setup failed" };
+    }
+
+    return {
+      success: data.success,
+      subscriptionId: data.subscriptionId,
+      redirectUrl: data.redirectUrl,
+      error: data.error,
+    };
+  } catch (err: any) {
+    console.error("[PhonePe] Autopay network error:", err);
+    return { success: false, error: err.message || "Network error" };
+  }
+}
+
+/**
+ * Verify PhonePe payment status
  */
 export async function verifyPhonePePayment(
   transactionId: string
 ): Promise<{ verified: boolean; status: string }> {
-  console.log('[PhonePe] Verifying payment (DUMMY MODE):', transactionId);
+  console.log("[PhonePe] Verifying payment:", transactionId);
 
-  await new Promise(resolve => setTimeout(resolve, 500));
+  try {
+    const { data, error } = await supabase.functions.invoke("phonepe-payment/status", {
+      body: { transactionId },
+    });
 
-  return {
-    verified: true,
-    status: 'COMPLETED',
-  };
+    if (error) {
+      console.error("[PhonePe] Verification error:", error);
+      return { verified: false, status: "ERROR" };
+    }
+
+    return {
+      verified: data.verified,
+      status: data.status,
+    };
+  } catch (err: any) {
+    console.error("[PhonePe] Verify network error:", err);
+    return { verified: false, status: "ERROR" };
+  }
 }
