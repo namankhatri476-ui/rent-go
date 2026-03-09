@@ -80,7 +80,7 @@ const Index = () => {
       </div>
 
       {/* Trust Badges - Horizontal strip */}
-      <section className="py-4 border-b border-border/50 bg-card">
+      <section className="py-4 border-b border-border/50">
         <div className="container mx-auto px-4">
           <TrustBadges />
         </div>
