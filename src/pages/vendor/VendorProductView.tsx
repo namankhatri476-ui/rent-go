@@ -5,7 +5,7 @@ import VendorLayout from '@/components/vendor/VendorLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Pencil, Loader2, Star, Check } from 'lucide-react';
+import { ArrowLeft, Pencil, Loader2, Star, Check, MapPin } from 'lucide-react';
 
 type ProductStatus = 'pending' | 'approved' | 'rejected' | 'inactive';
 
@@ -28,6 +28,18 @@ const VendorProductView = () => {
         .single();
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: productLocations } = useQuery({
+    queryKey: ['vendor-product-locations', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('product_locations')
+        .select('location_id, locations (name)')
+        .eq('product_id', id!);
+      return data || [];
     },
   });
 
@@ -118,6 +130,14 @@ const VendorProductView = () => {
             <p className="text-muted-foreground">{product.brand}</p>
             {product.categories?.name && (
               <p className="text-sm text-muted-foreground mt-1">Category: {product.categories.name}</p>
+            )}
+            {productLocations && productLocations.length > 0 && (
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                {productLocations.map((pl: any) => (
+                  <Badge key={pl.location_id} variant="outline">{pl.locations?.name}</Badge>
+                ))}
+              </div>
             )}
             <div className="flex items-center gap-4 mt-3">
               <div className="flex items-center gap-1">
