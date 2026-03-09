@@ -477,21 +477,39 @@ const VendorProductForm = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Service Location *</Label>
-                  <Select 
-                    value={formData.location_id} 
-                    onValueChange={(v) => setFormData({ ...formData, location_id: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select city where you rent" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations?.map((loc) => (
-                        <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Service Locations *
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Select all cities where you can provide this product for rent
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4 border rounded-lg max-h-60 overflow-y-auto">
+                    {locations?.map((loc) => (
+                      <div key={loc.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`loc-${loc.id}`}
+                          checked={selectedLocationIds.includes(loc.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedLocationIds([...selectedLocationIds, loc.id]);
+                            } else {
+                              setSelectedLocationIds(selectedLocationIds.filter(id => id !== loc.id));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`loc-${loc.id}`} className="text-sm cursor-pointer">
+                          {loc.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  {selectedLocationIds.length > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      {selectedLocationIds.length} location(s) selected
+                    </p>
+                  )}
                 </div>
               </div>
 
