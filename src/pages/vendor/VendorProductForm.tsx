@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -18,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Trash2, ArrowLeft, Loader2, Info } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Loader2, Info, MapPin } from 'lucide-react';
 
 const VendorProductForm = () => {
   const navigate = useNavigate();
@@ -33,7 +34,6 @@ const VendorProductForm = () => {
     brand: '',
     description: '',
     category_id: '',
-    location_id: '',
     features: [''],
     images: [''],
     specifications: {} as Record<string, string>,
@@ -43,6 +43,9 @@ const VendorProductForm = () => {
     buy_price: '' as string | number,
     advance_discount_percent: '' as string | number,
   });
+
+  // Multi-location selection state
+  const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
 
   // Variations state
   const [variations, setVariations] = useState<{ variation_type: string; variation_value: string; price_adjustment: number }[]>([]);
@@ -100,7 +103,6 @@ const VendorProductForm = () => {
         brand: existingProduct.brand || '',
         description: existingProduct.description || '',
         category_id: existingProduct.category_id || '',
-        location_id: existingProduct.location_id || '',
         features: existingProduct.features?.length ? existingProduct.features : [''],
         images: existingProduct.images?.length ? existingProduct.images : [''],
         specifications: (existingProduct.specifications as Record<string, string>) || {},
@@ -110,6 +112,21 @@ const VendorProductForm = () => {
         buy_price: (existingProduct as any).buy_price ?? '',
         advance_discount_percent: (existingProduct as any).advance_discount_percent ?? '',
       });
+
+      // Load existing product locations
+      const loadProductLocations = async () => {
+        const { data } = await supabase
+          .from('product_locations')
+          .select('location_id')
+          .eq('product_id', existingProduct.id);
+        if (data && data.length > 0) {
+          setSelectedLocationIds(data.map(pl => pl.location_id));
+        } else if (existingProduct.location_id) {
+          // Fallback to legacy location_id
+          setSelectedLocationIds([existingProduct.location_id]);
+        }
+      };
+      loadProductLocations();
 
       // Reverse-engineer pricing from ACTIVE rental plans only
       const activePlans = (existingProduct.rental_plans || []).filter(
@@ -214,7 +231,7 @@ const VendorProductForm = () => {
           brand: formData.brand || null,
           description: formData.description || null,
           category_id: formData.category_id || null,
-          location_id: formData.location_id || null,
+          location_id: selectedLocationIds[0] || null, // Keep first location for backward compatibility
           features: formData.features.filter(f => f.trim()),
           images: formData.images.filter(i => i.trim()),
           specifications: formData.specifications,
@@ -249,6 +266,16 @@ const VendorProductForm = () => {
         }
       }
 
+      // Save product locations (many-to-many)
+      if (selectedLocationIds.length > 0) {
+        const locationRows = selectedLocationIds.map(locId => ({
+          product_id: product.id,
+          location_id: locId,
+        }));
+        const { error: locError } = await supabase.from('product_locations').insert(locationRows);
+        if (locError) throw locError;
+      }
+
       return product;
     },
     onSuccess: () => {
@@ -276,7 +303,7 @@ const VendorProductForm = () => {
         brand: formData.brand || null,
         description: formData.description || null,
         category_id: formData.category_id || null,
-        location_id: formData.location_id || null,
+        location_id: selectedLocationIds[0] || null, // Keep first location for backward compatibility
         features: formData.features.filter(f => f.trim()),
         images: formData.images.filter(i => i.trim()),
         specifications: formData.specifications,
@@ -320,6 +347,17 @@ const VendorProductForm = () => {
           const { error: varError } = await supabase.from('product_variations').insert(varRows);
           if (varError) throw varError;
         }
+      }
+
+      // Update product locations - delete old and insert new
+      await supabase.from('product_locations').delete().eq('product_id', productId);
+      if (selectedLocationIds.length > 0) {
+        const locationRows = selectedLocationIds.map(locId => ({
+          product_id: productId,
+          location_id: locId,
+        }));
+        const { error: locError } = await supabase.from('product_locations').insert(locationRows);
+        if (locError) throw locError;
       }
     },
     onSuccess: () => {
@@ -460,21 +498,39 @@ const VendorProductForm = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Service Location *</Label>
-                  <Select 
-                    value={formData.location_id} 
-                    onValueChange={(v) => setFormData({ ...formData, location_id: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select city where you rent" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations?.map((loc) => (
-                        <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Service Locations *
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Select all cities where you can provide this product for rent
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4 border rounded-lg max-h-60 overflow-y-auto">
+                    {locations?.map((loc) => (
+                      <div key={loc.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`loc-${loc.id}`}
+                          checked={selectedLocationIds.includes(loc.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedLocationIds([...selectedLocationIds, loc.id]);
+                            } else {
+                              setSelectedLocationIds(selectedLocationIds.filter(id => id !== loc.id));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`loc-${loc.id}`} className="text-sm cursor-pointer">
+                          {loc.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  {selectedLocationIds.length > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      {selectedLocationIds.length} location(s) selected
+                    </p>
+                  )}
                 </div>
               </div>
 
