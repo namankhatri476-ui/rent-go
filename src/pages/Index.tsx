@@ -47,12 +47,24 @@ const Index = () => {
         .select(`*, categories (name), rental_plans (*)`)
         .eq('status', 'approved')
         .eq('in_stock', true);
-      if (selectedLocation?.id) {
-        query = query.eq('location_id', selectedLocation.id);
-      }
-      const { data, error } = await query.order('created_at', { ascending: false }).limit(4);
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(20);
       if (error) throw error;
-      return data;
+      
+      // Filter by location using product_locations junction table
+      if (selectedLocation?.id && data) {
+        const { data: plData } = await supabase
+          .from('product_locations')
+          .select('product_id')
+          .eq('location_id', selectedLocation.id);
+        const locationProductIds = new Set((plData || []).map(pl => pl.product_id));
+        
+        const filtered = data.filter(product => {
+          if (locationProductIds.has(product.id)) return true;
+          return product.location_id === selectedLocation.id;
+        });
+        return filtered.slice(0, 4);
+      }
+      return data?.slice(0, 4) || [];
     },
   });
 
@@ -154,7 +166,7 @@ const Index = () => {
                 return (
                   <Link key={product.id} to={`/product/${product.slug}`} className="block group">
                     <div className="bg-card rounded-2xl border border-border/60 overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all duration-300">
-                      <div className="aspect-[4/3] relative overflow-hidden bg-muted">
+                      <div className="aspect-square relative overflow-hidden bg-muted">
                         {product.images?.[0] ? (
                           <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         ) : (
