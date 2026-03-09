@@ -88,7 +88,8 @@ const HeroSlider = () => {
 
   return (
     <section className="relative w-full overflow-hidden">
-      <div className="relative h-[320px] md:h-[400px] lg:h-[460px]">
+      {/* Container with aspect ratio for responsive height */}
+      <div className="relative w-full aspect-[16/6] md:aspect-[16/5] lg:aspect-[16/4.5]">
         {slides.map((slide, i) => {
           const imgUrl = getImageUrl(slide);
           return (
@@ -98,34 +99,61 @@ const HeroSlider = () => {
                 i === current ? "opacity-100 scale-100" : "opacity-0 scale-105"
               }`}
             >
-              <div
-                className={`w-full h-full flex items-center ${
-                  imgUrl
-                    ? 'bg-cover bg-center'
-                    : `bg-gradient-to-br ${slide.gradient}`
-                }`}
-                style={imgUrl ? { backgroundImage: `url(${imgUrl})` } : undefined}
-              >
-                {imgUrl && (
-                  <div className="absolute inset-0 bg-black/40" />
-                )}
-                {!imgUrl && (
-                  <>
-                    <div className="absolute right-[-5%] top-[-10%] w-[40%] h-[120%] rounded-full bg-white/[0.04]" />
-                    <div className="absolute right-[10%] bottom-[-20%] w-[25%] h-[80%] rounded-full bg-white/[0.03]" />
-                  </>
-                )}
-
-                {(slide.title || slide.subtitle) && (
+              {/* Image-based slide */}
+              {imgUrl ? (
+                <div className="relative w-full h-full">
+                  <img
+                    src={imgUrl}
+                    alt={slide.title || 'Promotional banner'}
+                    className="w-full h-full object-cover object-center"
+                  />
+                  {/* Overlay for text readability */}
+                  {(slide.title || slide.subtitle) && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-transparent" />
+                  )}
+                  {/* Text overlay */}
+                  {(slide.title || slide.subtitle) && (
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="container mx-auto px-4">
+                        <div className="max-w-xl space-y-4 md:space-y-5">
+                          {slide.title && (
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.15] tracking-tight drop-shadow-lg">
+                              {slide.title}
+                            </h1>
+                          )}
+                          {slide.subtitle && (
+                            <p className="text-sm sm:text-base md:text-lg text-white/90 max-w-md leading-relaxed drop-shadow">
+                              {slide.subtitle}
+                            </p>
+                          )}
+                          <Link to={slide.cta_link}>
+                            <Button
+                              size="lg"
+                              className="bg-white text-foreground hover:bg-white/90 shadow-lg rounded-full gap-2 mt-1 font-semibold"
+                            >
+                              {slide.cta_text}
+                              <ArrowRight className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Gradient fallback slide */
+                <div className={`w-full h-full flex items-center bg-gradient-to-br ${slide.gradient}`}>
+                  <div className="absolute right-[-5%] top-[-10%] w-[40%] h-[120%] rounded-full bg-white/[0.04]" />
+                  <div className="absolute right-[10%] bottom-[-20%] w-[25%] h-[80%] rounded-full bg-white/[0.03]" />
                   <div className="container mx-auto px-4 relative z-10">
-                    <div className="max-w-xl space-y-5">
+                    <div className="max-w-xl space-y-4 md:space-y-5">
                       {slide.title && (
-                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.15] tracking-tight">
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.15] tracking-tight">
                           {slide.title}
                         </h1>
                       )}
                       {slide.subtitle && (
-                        <p className="text-base md:text-lg text-white/80 max-w-md leading-relaxed">
+                        <p className="text-sm sm:text-base md:text-lg text-white/80 max-w-md leading-relaxed">
                           {slide.subtitle}
                         </p>
                       )}
@@ -140,8 +168,8 @@ const HeroSlider = () => {
                       </Link>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           );
         })}
