@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CartItem, CheckoutBreakdown, GST_RATE } from "@/types/product";
+import { initiatePhonePePayment } from "@/services/phonepeService";
 
 export interface CheckoutFormData {
   fullName: string;
@@ -283,15 +284,26 @@ export async function createOrders(
                          item.product.deliveryFee + 
                          item.product.installationFee;
 
+      // Initiate PhonePe payment (dummy mode for now)
+      const phonePeResult = await initiatePhonePePayment({
+        orderId: order.id,
+        amount: payableNow,
+        customerName: '',
+        customerPhone: '',
+        customerEmail: '',
+        redirectUrl: `${window.location.origin}/order-success`,
+      });
+
       const { error: paymentError } = await supabase
         .from("payments")
         .insert({
           order_id: order.id,
           amount: payableNow,
           payment_method: paymentMethod,
-          status: "completed", // In production, this would be set by payment gateway webhook
+          status: "completed",
           payment_date: new Date().toISOString(),
-          payment_gateway: "demo", // Would be razorpay/stripe in production
+          payment_gateway: "phonepe",
+          transaction_id: phonePeResult.transactionId || null,
         });
 
       if (paymentError) throw paymentError;
