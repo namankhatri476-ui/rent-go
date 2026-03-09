@@ -5,7 +5,7 @@ import VendorLayout from '@/components/vendor/VendorLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Pencil, Loader2, Star, Check } from 'lucide-react';
+import { ArrowLeft, Pencil, Loader2, Star, Check, MapPin } from 'lucide-react';
 
 type ProductStatus = 'pending' | 'approved' | 'rejected' | 'inactive';
 
