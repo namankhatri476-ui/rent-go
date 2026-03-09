@@ -387,15 +387,15 @@ const ProductDetail = () => {
                     </Button>
                   </div>
 
-                  {/* Plan Details */}
-                  <div className="space-y-2.5">
+                  {/* Plan Details - 2 columns */}
+                  <div className="grid grid-cols-2 gap-2.5">
                     {[
-                      { icon: Truck, title: "Delivery in 1-2 days", sub: `Delivery: ₹${interpolatedPrice.deliveryFee.toLocaleString()}${interpolatedPrice.installationFee > 0 ? ` · Install: ₹${interpolatedPrice.installationFee.toLocaleString()}` : ''}`, color: "text-primary" },
+                      { icon: Truck, title: "Delivery in 1-2 days", sub: `Delivery: ₹${interpolatedPrice.deliveryFee.toLocaleString()}`, color: "text-primary" },
                       { icon: Shield, title: "Protection Plan Available", sub: "Optional ₹99/mo damage cover", color: "text-success" },
                       { icon: CreditCard, title: `Deposit: ₹${interpolatedPrice.securityDeposit.toLocaleString()} (refundable)`, sub: `Monthly: ₹${interpolatedPrice.monthlyRent.toLocaleString()}/mo + 18% GST`, color: "text-primary" },
                       { icon: RotateCcw, title: "Easy Returns", sub: "Cancel anytime with full deposit refund", color: "text-primary" },
                     ].map(item => (
-                      <div key={item.title} className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl">
+                      <div key={item.title} className="flex items-center gap-2.5 p-3 bg-muted/40 rounded-xl">
                         <item.icon className={`w-4 h-4 ${item.color} shrink-0`} />
                         <div>
                           <p className="font-medium text-xs text-foreground">{item.title}</p>

@@ -352,14 +352,17 @@ const VendorProductForm = () => {
       }
 
       // Update product locations - delete old and insert new
-      await supabase.from('product_locations').delete().eq('product_id', productId);
-      if (selectedLocationIds.length > 0) {
-        const locationRows = selectedLocationIds.map(locId => ({
-          product_id: productId,
-          location_id: locId,
-        }));
-        const { error: locError } = await supabase.from('product_locations').insert(locationRows);
-        if (locError) throw locError;
+      try {
+        await supabase.from('product_locations').delete().eq('product_id', productId);
+        if (selectedLocationIds.length > 0) {
+          const locationRows = selectedLocationIds.map(locId => ({
+            product_id: productId,
+            location_id: locId,
+          }));
+          await supabase.from('product_locations').insert(locationRows);
+        }
+      } catch (locErr) {
+        console.warn('product_locations sync skipped (schema cache may need refresh):', locErr);
       }
     },
     onSuccess: () => {

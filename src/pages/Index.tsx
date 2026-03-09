@@ -33,7 +33,7 @@ const Index = () => {
         .select('*')
         .eq('is_active', true)
         .order('name')
-        .limit(6);
+        .limit(20);
       if (error) throw error;
       return data;
     },
@@ -96,9 +96,9 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {categories && categories.length > 0 ? (
-              categories.slice(0, 3).map((cat) => (
+              categories.map((cat) => (
                 <Link
                   key={cat.id}
                   to={`/products?category=${cat.slug}`}
@@ -166,7 +166,7 @@ const Index = () => {
                 return (
                   <Link key={product.id} to={`/product/${product.slug}`} className="block group">
                     <div className="bg-card rounded-2xl border border-border/60 overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all duration-300">
-                      <div className="aspect-square relative overflow-hidden bg-muted">
+                      <div className="aspect-[4/3] relative overflow-hidden bg-muted">
                         {product.images?.[0] ? (
                           <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         ) : (
