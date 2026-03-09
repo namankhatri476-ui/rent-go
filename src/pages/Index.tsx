@@ -33,7 +33,7 @@ const Index = () => {
         .select('*')
         .eq('is_active', true)
         .order('name')
-        .limit(6);
+        .limit(20);
       if (error) throw error;
       return data;
     },
