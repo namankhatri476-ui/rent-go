@@ -103,7 +103,6 @@ const VendorProductForm = () => {
         brand: existingProduct.brand || '',
         description: existingProduct.description || '',
         category_id: existingProduct.category_id || '',
-        location_id: existingProduct.location_id || '',
         features: existingProduct.features?.length ? existingProduct.features : [''],
         images: existingProduct.images?.length ? existingProduct.images : [''],
         specifications: (existingProduct.specifications as Record<string, string>) || {},
@@ -113,6 +112,21 @@ const VendorProductForm = () => {
         buy_price: (existingProduct as any).buy_price ?? '',
         advance_discount_percent: (existingProduct as any).advance_discount_percent ?? '',
       });
+
+      // Load existing product locations
+      const loadProductLocations = async () => {
+        const { data } = await supabase
+          .from('product_locations')
+          .select('location_id')
+          .eq('product_id', existingProduct.id);
+        if (data && data.length > 0) {
+          setSelectedLocationIds(data.map(pl => pl.location_id));
+        } else if (existingProduct.location_id) {
+          // Fallback to legacy location_id
+          setSelectedLocationIds([existingProduct.location_id]);
+        }
+      };
+      loadProductLocations();
 
       // Reverse-engineer pricing from ACTIVE rental plans only
       const activePlans = (existingProduct.rental_plans || []).filter(
