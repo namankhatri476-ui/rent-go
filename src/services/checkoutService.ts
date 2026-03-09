@@ -284,29 +284,53 @@ export async function createOrders(
                          item.product.deliveryFee + 
                          item.product.installationFee;
 
-      // Initiate PhonePe payment (dummy mode for now)
+      // Initiate PhonePe payment for one-time charges
       const phonePeResult = await initiatePhonePePayment({
         orderId: order.id,
         amount: payableNow,
-        customerName: '',
+        customerName: item.product.name,
         customerPhone: '',
         customerEmail: '',
-        redirectUrl: `${window.location.origin}/order-success`,
+        redirectUrl: `${window.location.origin}/order-success?order=${order.order_number}`,
       });
 
+      // Create payment record (pending until webhook confirms)
       const { error: paymentError } = await supabase
         .from("payments")
         .insert({
           order_id: order.id,
           amount: payableNow,
           payment_method: paymentMethod,
-          status: "completed",
-          payment_date: new Date().toISOString(),
+          status: phonePeResult.success ? "pending" : "failed",
           payment_gateway: "phonepe",
           transaction_id: phonePeResult.transactionId || null,
         });
 
       if (paymentError) throw paymentError;
+
+      // Setup autopay subscription for monthly rent (for rent items not paying advance)
+      if (item.mode === 'rent' && !item.payAdvance) {
+        const autopayResult = await setupAutopaySubscription({
+          orderId: order.id,
+          subscriptionName: `Monthly Rent - ${item.product.name}`,
+          monthlyAmount: monthlyTotal,
+          customerPhone: '',
+          maxCycles: item.selectedPlan.duration,
+          redirectUrl: `${window.location.origin}/order-success?order=${order.order_number}`,
+        });
+
+        if (!autopayResult.success) {
+          console.warn("[Checkout] Autopay setup failed, rent will need manual collection:", autopayResult.error);
+        }
+      }
+
+      // If PhonePe returned a redirect URL, we need to redirect the user
+      if (phonePeResult.success && phonePeResult.redirectUrl && phonePeResult.redirectUrl !== `${window.location.origin}/order-success?order=${order.order_number}`) {
+        // Store order numbers for post-redirect handling
+        sessionStorage.setItem('pendingOrderNumbers', JSON.stringify([...orderNumbers, order.order_number]));
+        window.location.href = phonePeResult.redirectUrl;
+        return { success: true, orderNumbers: [...orderNumbers, order.order_number] };
+      }
     }
 
     return { success: true, orderNumbers };
