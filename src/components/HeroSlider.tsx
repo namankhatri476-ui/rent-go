@@ -89,7 +89,7 @@ const HeroSlider = () => {
   return (
     <section className="relative w-full overflow-hidden">
       {/* Container with aspect ratio for responsive height */}
-      <div className="relative w-full aspect-[16/6] md:aspect-[16/5] lg:aspect-[16/4.5]">
+      <div className="relative w-full aspect-[16/6] md:aspect-[16/5] rounded-[15px] overflow-hidden">
         {slides.map((slide, i) => {
           const imgUrl = getImageUrl(slide);
           return (
