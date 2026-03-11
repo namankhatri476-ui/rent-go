@@ -13,7 +13,8 @@ import {
   Users,
   CalendarDays,
   FileText,
-  Scale
+  Scale,
+  XCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +29,7 @@ const navItems = [
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/categories', label: 'Categories', icon: FolderTree },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
+  { href: '/admin/cancellations', label: 'Cancellations', icon: XCircle },
   { href: '/admin/payouts', label: 'Payouts', icon: CreditCard },
   { href: '/admin/monthly-rent', label: 'Monthly Rent', icon: CalendarDays },
   { href: '/admin/users', label: 'Users', icon: Users },

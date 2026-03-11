@@ -284,6 +284,8 @@ export type Database = {
         Row: {
           address_id: string | null
           cancellation_reason: string | null
+          cancellation_requested_at: string | null
+          cancellation_status: string | null
           cancelled_at: string | null
           confirmed_at: string | null
           created_at: string
@@ -317,6 +319,8 @@ export type Database = {
         Insert: {
           address_id?: string | null
           cancellation_reason?: string | null
+          cancellation_requested_at?: string | null
+          cancellation_status?: string | null
           cancelled_at?: string | null
           confirmed_at?: string | null
           created_at?: string
@@ -350,6 +354,8 @@ export type Database = {
         Update: {
           address_id?: string | null
           cancellation_reason?: string | null
+          cancellation_requested_at?: string | null
+          cancellation_status?: string | null
           cancelled_at?: string | null
           confirmed_at?: string | null
           created_at?: string

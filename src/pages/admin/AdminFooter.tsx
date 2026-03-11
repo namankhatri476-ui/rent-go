@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Loader2, Save, Plus, Trash2, GripVertical } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2, GripVertical, ExternalLink } from 'lucide-react';
 
 interface QuickLink {
   to: string;
@@ -279,10 +280,22 @@ const AdminFooter = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Policy / Footer Links</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => setPolicyLinks([...policyLinks, { to: '/', label: '' }])}>
-                  <Plus className="mr-1 h-4 w-4" /> Add Link
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/admin/legal" className="gap-1">
+                      <ExternalLink className="h-4 w-4" />
+                      Edit Policy Content
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setPolicyLinks([...policyLinks, { to: '/', label: '' }])}>
+                    <Plus className="mr-1 h-4 w-4" /> Add Link
+                  </Button>
+                </div>
               </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage footer policy links here, and edit the actual policy content on the{' '}
+                <Link to="/admin/legal" className="text-primary hover:underline">Legal Pages</Link> section.
+              </p>
             </CardHeader>
             <CardContent className="space-y-3">
               {policyLinks.length === 0 && (

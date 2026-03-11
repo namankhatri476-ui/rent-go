@@ -19,6 +19,7 @@ import Checkout from "./pages/Checkout";
 import OrderSuccess from "./pages/OrderSuccess";
 import MyOrders from "./pages/MyOrders";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import HowItWorks from "./pages/HowItWorks";
 import NotFound from "./pages/NotFound";
 import LegalPage from "./pages/LegalPage";
@@ -49,6 +50,7 @@ import AdminMonthlyRent from "./pages/admin/AdminMonthlyRent";
 import AdminSlider from "./pages/admin/AdminSlider";
 import AdminFooter from "./pages/admin/AdminFooter";
 import AdminLegal from "./pages/admin/AdminLegal";
+import AdminCancellations from "./pages/admin/AdminCancellations";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +72,7 @@ const App = () => (
               <Route path="/product/:slug" element={<ProductDetail />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/legal/:slug" element={<LegalPage />} />
               
@@ -291,6 +294,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRoles={['admin']}>
                     <AdminLegal />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/cancellations"
+                element={
+                  <ProtectedRoute requiredRoles={['admin']}>
+                    <AdminCancellations />
                   </ProtectedRoute>
                 }
               />

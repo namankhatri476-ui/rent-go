@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Package, Calendar, Clock, Loader2, ArrowLeft, ShoppingBag, Download } from "lucide-react";
+import { Package, Calendar, Clock, Loader2, ArrowLeft, ShoppingBag, Download, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +31,9 @@ interface OrderWithProduct {
   protection_plan_fee: number | null;
   terms_accepted_at: string | null;
   terms_version: number | null;
+  cancellation_reason: string | null;
+  cancellation_requested_at: string | null;
+  cancellation_status: string | null;
   product: {
     id: string;
     name: string;
@@ -50,6 +58,10 @@ const MyOrders = () => {
   const [orders, setOrders] = useState<OrderWithProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
+
   useEffect(() => {
     const fetchOrders = async () => {
       if (!user) return;
@@ -71,6 +83,9 @@ const MyOrders = () => {
             protection_plan_fee,
             terms_accepted_at,
             terms_version,
+            cancellation_reason,
+            cancellation_requested_at,
+            cancellation_status,
             product:products (
               id,
               name,
@@ -95,6 +110,38 @@ const MyOrders = () => {
       fetchOrders();
     }
   }, [user, authLoading]);
+
+  const handleCancelRequest = async () => {
+    if (!cancelOrderId || !cancelReason.trim()) {
+      toast.error("Please provide a reason for cancellation");
+      return;
+    }
+    setIsCancelling(true);
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          cancellation_reason: cancelReason.trim(),
+          cancellation_requested_at: new Date().toISOString(),
+          cancellation_status: "requested",
+        } as any)
+        .eq("id", cancelOrderId);
+      if (error) throw error;
+      toast.success("Cancellation request submitted successfully");
+      setCancelOrderId(null);
+      setCancelReason("");
+      // Refresh orders
+      setOrders(prev => prev.map(o => 
+        o.id === cancelOrderId 
+          ? { ...o, cancellation_status: "requested", cancellation_reason: cancelReason.trim(), cancellation_requested_at: new Date().toISOString() }
+          : o
+      ));
+    } catch (error: any) {
+      toast.error("Failed to submit cancellation request");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   if (authLoading || isLoading) {
     return (
@@ -282,7 +329,37 @@ const MyOrders = () => {
                         <Download className="w-4 h-4" />
                         Download Agreement
                       </Button>
-                    )}
+                     )}
+
+                    {/* Cancellation Status / Request Button */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {order.cancellation_status === "requested" && (
+                        <Badge variant="outline" className="border-amber-500 text-amber-600">
+                          Cancellation Requested
+                        </Badge>
+                      )}
+                      {order.cancellation_status === "approved" && (
+                        <Badge variant="outline" className="border-destructive text-destructive">
+                          Cancellation Approved
+                        </Badge>
+                      )}
+                      {order.cancellation_status === "rejected" && (
+                        <Badge variant="outline" className="border-muted-foreground text-muted-foreground">
+                          Cancellation Rejected
+                        </Badge>
+                      )}
+                      {!order.cancellation_status && order.status !== "cancelled" && order.status !== "delivered" && order.status !== "returned" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={() => setCancelOrderId(order.id)}
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Request Cancellation
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -290,6 +367,41 @@ const MyOrders = () => {
           )}
         </div>
       </main>
+
+      {/* Cancellation Request Dialog */}
+      <Dialog open={!!cancelOrderId} onOpenChange={() => { setCancelOrderId(null); setCancelReason(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Order Cancellation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Please provide a reason for cancellation. Our team will review your request and get back to you.
+            </p>
+            <div className="space-y-2">
+              <Label>Reason for Cancellation *</Label>
+              <Textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Please explain why you want to cancel this order..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelOrderId(null); setCancelReason(""); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelRequest}
+              disabled={isCancelling || !cancelReason.trim()}
+            >
+              {isCancelling ? "Submitting..." : "Submit Request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
