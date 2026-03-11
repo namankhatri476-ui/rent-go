@@ -95,6 +95,7 @@ const AdminFooter = () => {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const filteredPolicies = policyLinks.filter(l => l.label.trim());
       const linksValue = {
         ...(footerData?.links || {}),
         quick_links: quickLinks.filter(l => l.label.trim()),
@@ -103,7 +104,7 @@ const AdminFooter = () => {
       const updates = [
         { key: 'brand', value: brand },
         { key: 'contact', value: contact },
-        { key: 'legal', value: { ...footerData?.legal, copyright, policies: policyLinks.filter(l => l.label.trim()).map(l => ({ label: l.label, href: l.to })) } },
+        { key: 'legal', value: { ...footerData?.legal, copyright, policies: filteredPolicies.map(l => ({ label: l.label, href: l.to })) } },
         { key: 'links', value: linksValue },
       ];
       for (const u of updates) {
@@ -112,11 +113,31 @@ const AdminFooter = () => {
           .upsert({ key: u.key, value: u.value }, { onConflict: 'key' });
         if (error) throw error;
       }
+
+      // Auto-create legal_documents for any new policy links with /legal/ paths
+      for (const policy of filteredPolicies) {
+        const match = policy.to.match(/^\/legal\/(.+)$/);
+        if (!match) continue;
+        const slug = match[1];
+        const { data: existing } = await supabase
+          .from('legal_documents')
+          .select('id')
+          .eq('slug', slug)
+          .maybeSingle();
+        if (!existing) {
+          await supabase.from('legal_documents').insert({
+            slug,
+            title: policy.label,
+            content: `# ${policy.label}\n\nContent coming soon. Please edit this document in the Legal Documents section.`,
+          });
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-footer-settings'] });
       queryClient.invalidateQueries({ queryKey: ['footer-settings'] });
-      toast.success('Footer settings saved!');
+      queryClient.invalidateQueries({ queryKey: ['admin-legal-documents'] });
+      toast.success('Footer settings saved! Legal documents created for new policy links.');
     },
     onError: () => toast.error('Failed to save footer settings'),
   });
