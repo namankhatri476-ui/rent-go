@@ -131,8 +131,8 @@ const AdminCancellations = () => {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="text-sm font-medium">{req.profiles?.full_name || 'N/A'}</p>
-                          <p className="text-xs text-muted-foreground">{req.profiles?.email || ''}</p>
+                          <p className="text-sm font-medium">{req.profile?.full_name || 'N/A'}</p>
+                          <p className="text-xs text-muted-foreground">{req.profile?.email || ''}</p>
                         </div>
                       </TableCell>
                       <TableCell>
