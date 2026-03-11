@@ -280,10 +280,22 @@ const AdminFooter = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Policy / Footer Links</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => setPolicyLinks([...policyLinks, { to: '/', label: '' }])}>
-                  <Plus className="mr-1 h-4 w-4" /> Add Link
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/admin/legal" className="gap-1">
+                      <ExternalLink className="h-4 w-4" />
+                      Edit Policy Content
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setPolicyLinks([...policyLinks, { to: '/', label: '' }])}>
+                    <Plus className="mr-1 h-4 w-4" /> Add Link
+                  </Button>
+                </div>
               </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage footer policy links here, and edit the actual policy content on the{' '}
+                <Link to="/admin/legal" className="text-primary hover:underline">Legal Pages</Link> section.
+              </p>
             </CardHeader>
             <CardContent className="space-y-3">
               {policyLinks.length === 0 && (
