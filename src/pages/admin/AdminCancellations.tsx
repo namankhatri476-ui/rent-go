@@ -168,10 +168,10 @@ const AdminCancellations = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Customer</p>
-                    <p className="font-medium">{selectedRequest.profiles?.full_name || 'N/A'}</p>
-                    <p className="text-sm text-muted-foreground">{selectedRequest.profiles?.email}</p>
-                    {selectedRequest.profiles?.phone && (
-                      <p className="text-sm text-muted-foreground">{selectedRequest.profiles.phone}</p>
+                    <p className="font-medium">{selectedRequest.profile?.full_name || 'N/A'}</p>
+                    <p className="text-sm text-muted-foreground">{selectedRequest.profile?.email}</p>
+                    {selectedRequest.profile?.phone && (
+                      <p className="text-sm text-muted-foreground">📞 {selectedRequest.profile.phone}</p>
                     )}
                   </div>
                   <div>
@@ -180,6 +180,20 @@ const AdminCancellations = () => {
                     <p className="text-sm text-muted-foreground">{selectedRequest.vendors?.business_name}</p>
                   </div>
                 </div>
+
+                {selectedRequest.addresses && (
+                  <div className="bg-muted/50 p-3 rounded-lg">
+                    <p className="text-sm font-medium mb-1">Shipping Address</p>
+                    <p className="text-sm">{selectedRequest.addresses.full_name}, {selectedRequest.addresses.phone}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedRequest.addresses.address_line1}
+                      {selectedRequest.addresses.address_line2 && `, ${selectedRequest.addresses.address_line2}`}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedRequest.addresses.city}, {selectedRequest.addresses.state} - {selectedRequest.addresses.pincode}
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <p className="text-sm text-muted-foreground">Order Status</p>
