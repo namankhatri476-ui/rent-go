@@ -297,6 +297,14 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/admin/cancellations"
+                element={
+                  <ProtectedRoute requiredRoles={['admin']}>
+                    <AdminCancellations />
+                  </ProtectedRoute>
+                }
+              />
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
