@@ -42,7 +42,16 @@ const AdminOrders = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+
+      // Fetch customer profiles
+      const customerIds = [...new Set(data.map((o: any) => o.customer_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email, phone')
+        .in('user_id', customerIds);
+
+      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+      return data.map((o: any) => ({ ...o, profile: profileMap.get(o.customer_id) || null }));
     },
   });
 
