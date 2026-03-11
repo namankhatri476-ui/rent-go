@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Package, Calendar, Clock, Loader2, ArrowLeft, ShoppingBag, Download } from "lucide-react";
+import { Package, Calendar, Clock, Loader2, ArrowLeft, ShoppingBag, Download, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +31,9 @@ interface OrderWithProduct {
   protection_plan_fee: number | null;
   terms_accepted_at: string | null;
   terms_version: number | null;
+  cancellation_reason: string | null;
+  cancellation_requested_at: string | null;
+  cancellation_status: string | null;
   product: {
     id: string;
     name: string;
