@@ -28,26 +28,21 @@ const AdminCancellations = () => {
           *,
           products (name, images),
           vendors (business_name),
-          profiles!orders_customer_id_fkey (full_name, email, phone)
+          addresses (full_name, phone, address_line1, address_line2, city, state, pincode)
         `)
         .not('cancellation_status', 'is', null)
         .order('cancellation_requested_at', { ascending: false });
-      
-      if (error) {
-        // Fallback query without profile join if FK doesn't exist
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            products (name, images),
-            vendors (business_name)
-          `)
-          .not('cancellation_status', 'is', null)
-          .order('cancellation_requested_at', { ascending: false });
-        if (fallbackError) throw fallbackError;
-        return fallbackData;
-      }
-      return data;
+      if (error) throw error;
+
+      // Fetch customer profiles separately using customer_id (which maps to profiles.user_id)
+      const customerIds = [...new Set(data.map((o: any) => o.customer_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email, phone')
+        .in('user_id', customerIds);
+
+      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+      return data.map((o: any) => ({ ...o, profile: profileMap.get(o.customer_id) || null }));
     },
   });
 
