@@ -42,7 +42,16 @@ const AdminOrders = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+
+      // Fetch customer profiles
+      const customerIds = [...new Set(data.map((o: any) => o.customer_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email, phone')
+        .in('user_id', customerIds);
+
+      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+      return data.map((o: any) => ({ ...o, profile: profileMap.get(o.customer_id) || null }));
     },
   });
 
@@ -299,19 +308,37 @@ const AdminOrders = () => {
                   </Card>
                 </div>
 
-                {/* Customer Address */}
+                {/* Customer Details */}
+                {selectedOrder.profile && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Customer Details</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-1">
+                        <p className="font-medium">{selectedOrder.profile.full_name || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground">{selectedOrder.profile.email}</p>
+                        {selectedOrder.profile.phone && (
+                          <p className="text-sm text-muted-foreground">📞 {selectedOrder.profile.phone}</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Shipping Address */}
                 {selectedOrder.addresses && (
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
-                        Customer Address
+                        Shipping Address
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-1">
                         <p className="font-medium">{selectedOrder.addresses.full_name}</p>
-                        <p className="text-sm text-muted-foreground">{selectedOrder.addresses.phone}</p>
+                        <p className="text-sm text-muted-foreground">📞 {selectedOrder.addresses.phone}</p>
                         <p className="text-sm">
                           {selectedOrder.addresses.address_line1}
                           {selectedOrder.addresses.address_line2 && `, ${selectedOrder.addresses.address_line2}`}

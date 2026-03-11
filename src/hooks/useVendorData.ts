@@ -154,6 +154,17 @@ export const useVendorOrders = () => {
         console.error('[useVendorOrders] Error:', error);
         throw error;
       }
+
+      // Fetch customer profiles
+      const customerIds = [...new Set((data || []).map((o: any) => o.customer_id))];
+      if (customerIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email, phone')
+          .in('user_id', customerIds);
+        const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+        return (data || []).map((o: any) => ({ ...o, profile: profileMap.get(o.customer_id) || null }));
+      }
       return data;
     },
   });
