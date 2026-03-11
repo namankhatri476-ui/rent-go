@@ -19,6 +19,7 @@ import Checkout from "./pages/Checkout";
 import OrderSuccess from "./pages/OrderSuccess";
 import MyOrders from "./pages/MyOrders";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import HowItWorks from "./pages/HowItWorks";
 import NotFound from "./pages/NotFound";
 import LegalPage from "./pages/LegalPage";
