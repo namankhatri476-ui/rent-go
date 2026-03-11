@@ -13,7 +13,8 @@ import {
   Users,
   CalendarDays,
   FileText,
-  Scale
+  Scale,
+  XCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
