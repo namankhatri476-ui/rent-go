@@ -28,26 +28,21 @@ const AdminCancellations = () => {
           *,
           products (name, images),
           vendors (business_name),
-          profiles!orders_customer_id_fkey (full_name, email, phone)
+          addresses (full_name, phone, address_line1, address_line2, city, state, pincode)
         `)
         .not('cancellation_status', 'is', null)
         .order('cancellation_requested_at', { ascending: false });
-      
-      if (error) {
-        // Fallback query without profile join if FK doesn't exist
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            products (name, images),
-            vendors (business_name)
-          `)
-          .not('cancellation_status', 'is', null)
-          .order('cancellation_requested_at', { ascending: false });
-        if (fallbackError) throw fallbackError;
-        return fallbackData;
-      }
-      return data;
+      if (error) throw error;
+
+      // Fetch customer profiles separately using customer_id (which maps to profiles.user_id)
+      const customerIds = [...new Set(data.map((o: any) => o.customer_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email, phone')
+        .in('user_id', customerIds);
+
+      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+      return data.map((o: any) => ({ ...o, profile: profileMap.get(o.customer_id) || null }));
     },
   });
 
@@ -136,8 +131,8 @@ const AdminCancellations = () => {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="text-sm font-medium">{req.profiles?.full_name || 'N/A'}</p>
-                          <p className="text-xs text-muted-foreground">{req.profiles?.email || ''}</p>
+                          <p className="text-sm font-medium">{req.profile?.full_name || 'N/A'}</p>
+                          <p className="text-xs text-muted-foreground">{req.profile?.email || ''}</p>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -173,10 +168,10 @@ const AdminCancellations = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Customer</p>
-                    <p className="font-medium">{selectedRequest.profiles?.full_name || 'N/A'}</p>
-                    <p className="text-sm text-muted-foreground">{selectedRequest.profiles?.email}</p>
-                    {selectedRequest.profiles?.phone && (
-                      <p className="text-sm text-muted-foreground">{selectedRequest.profiles.phone}</p>
+                    <p className="font-medium">{selectedRequest.profile?.full_name || 'N/A'}</p>
+                    <p className="text-sm text-muted-foreground">{selectedRequest.profile?.email}</p>
+                    {selectedRequest.profile?.phone && (
+                      <p className="text-sm text-muted-foreground">📞 {selectedRequest.profile.phone}</p>
                     )}
                   </div>
                   <div>
@@ -185,6 +180,20 @@ const AdminCancellations = () => {
                     <p className="text-sm text-muted-foreground">{selectedRequest.vendors?.business_name}</p>
                   </div>
                 </div>
+
+                {selectedRequest.addresses && (
+                  <div className="bg-muted/50 p-3 rounded-lg">
+                    <p className="text-sm font-medium mb-1">Shipping Address</p>
+                    <p className="text-sm">{selectedRequest.addresses.full_name}, {selectedRequest.addresses.phone}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedRequest.addresses.address_line1}
+                      {selectedRequest.addresses.address_line2 && `, ${selectedRequest.addresses.address_line2}`}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedRequest.addresses.city}, {selectedRequest.addresses.state} - {selectedRequest.addresses.pincode}
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <p className="text-sm text-muted-foreground">Order Status</p>
