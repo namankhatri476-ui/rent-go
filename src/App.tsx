@@ -50,6 +50,7 @@ import AdminMonthlyRent from "./pages/admin/AdminMonthlyRent";
 import AdminSlider from "./pages/admin/AdminSlider";
 import AdminFooter from "./pages/admin/AdminFooter";
 import AdminLegal from "./pages/admin/AdminLegal";
+import AdminCancellations from "./pages/admin/AdminCancellations";
 
 const queryClient = new QueryClient();
 
