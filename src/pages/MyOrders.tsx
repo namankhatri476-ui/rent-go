@@ -58,6 +58,10 @@ const MyOrders = () => {
   const [orders, setOrders] = useState<OrderWithProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
+
   useEffect(() => {
     const fetchOrders = async () => {
       if (!user) return;
@@ -79,6 +83,9 @@ const MyOrders = () => {
             protection_plan_fee,
             terms_accepted_at,
             terms_version,
+            cancellation_reason,
+            cancellation_requested_at,
+            cancellation_status,
             product:products (
               id,
               name,
@@ -103,6 +110,38 @@ const MyOrders = () => {
       fetchOrders();
     }
   }, [user, authLoading]);
+
+  const handleCancelRequest = async () => {
+    if (!cancelOrderId || !cancelReason.trim()) {
+      toast.error("Please provide a reason for cancellation");
+      return;
+    }
+    setIsCancelling(true);
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          cancellation_reason: cancelReason.trim(),
+          cancellation_requested_at: new Date().toISOString(),
+          cancellation_status: "requested",
+        } as any)
+        .eq("id", cancelOrderId);
+      if (error) throw error;
+      toast.success("Cancellation request submitted successfully");
+      setCancelOrderId(null);
+      setCancelReason("");
+      // Refresh orders
+      setOrders(prev => prev.map(o => 
+        o.id === cancelOrderId 
+          ? { ...o, cancellation_status: "requested", cancellation_reason: cancelReason.trim(), cancellation_requested_at: new Date().toISOString() }
+          : o
+      ));
+    } catch (error: any) {
+      toast.error("Failed to submit cancellation request");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   if (authLoading || isLoading) {
     return (
