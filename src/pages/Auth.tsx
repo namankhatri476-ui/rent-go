@@ -222,7 +222,7 @@ const Auth = () => {
             <p className="text-muted-foreground mt-2">
               {mode === "login"
                 ? "Sign in to continue"
-                : "Join the RentPR marketplace"}
+                : `Join the ${platformSettings.platformName} marketplace`}
             </p>
           </div>
 

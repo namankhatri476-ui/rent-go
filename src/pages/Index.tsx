@@ -23,7 +23,7 @@ const Index = () => {
   const { selectedLocation } = useLocation();
 
   useEffect(() => {
-    document.title = "RentPR | Home";
+    document.title = "Home | Rental Marketplace";
   }, []);
 
   const { data: categories } = useQuery({
