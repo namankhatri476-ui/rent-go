@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Loader2, FileText, CheckCircle, XCircle, Eye } from "lucide-react";
+import { Loader2, FileText, CheckCircle, XCircle, Eye, Download } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -19,10 +18,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 const DOCUMENT_LABELS: Record<string, string> = {
-  aadhaar: "Aadhaar Card",
-  pan: "PAN Card",
+  aadhaar: "Aadhaar",
+  pan: "PAN",
   bank_statement: "Bank Statement",
 };
+const DOC_TYPES = ["aadhaar", "pan", "bank_statement"];
 
 const AdminDocuments = () => {
   const [search, setSearch] = useState("");
@@ -30,6 +30,7 @@ const AdminDocuments = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [processing, setProcessing] = useState<string | null>(null);
 
+  // Fetch all documents grouped
   const { data: docs, isLoading, refetch } = useQuery({
     queryKey: ["admin-all-documents"],
     queryFn: async () => {
@@ -39,7 +40,6 @@ const AdminDocuments = () => {
         .order("created_at", { ascending: false });
       if (error) throw error;
 
-      // Fetch profiles for user names
       const userIds = [...new Set((data || []).map((d: any) => d.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
@@ -94,16 +94,41 @@ const AdminDocuments = () => {
     }
   };
 
-  const filtered = (docs || []).filter((d: any) => {
+  // Group docs by order_id to create compact rows
+  const grouped = (docs || []).reduce((acc: Record<string, any>, doc: any) => {
+    const key = `${doc.order_id}`;
+    if (!acc[key]) {
+      acc[key] = {
+        order_id: doc.order_id,
+        order_number: doc.orders?.order_number || "—",
+        product_name: doc.orders?.product?.name || "—",
+        customer_name: doc.profile?.full_name || "—",
+        customer_email: doc.profile?.email || "—",
+        docs: {} as Record<string, any>,
+      };
+    }
+    acc[key].docs[doc.document_type] = doc;
+    return acc;
+  }, {});
+
+  const groupedRows = Object.values(grouped) as any[];
+
+  const filtered = groupedRows.filter((row: any) => {
     if (!search) return true;
     const s = search.toLowerCase();
     return (
-      d.profile?.full_name?.toLowerCase().includes(s) ||
-      d.profile?.email?.toLowerCase().includes(s) ||
-      d.orders?.order_number?.toLowerCase().includes(s) ||
-      d.document_type?.toLowerCase().includes(s)
+      row.customer_name?.toLowerCase().includes(s) ||
+      row.customer_email?.toLowerCase().includes(s) ||
+      row.order_number?.toLowerCase().includes(s) ||
+      row.product_name?.toLowerCase().includes(s)
     );
   });
+
+  const getOverallStatus = (docMap: Record<string, any>) => {
+    const uploaded = DOC_TYPES.filter((t) => docMap[t]).length;
+    if (uploaded === DOC_TYPES.length) return "Uploaded";
+    return "Pending";
+  };
 
   return (
     <AdminLayout>
@@ -121,106 +146,136 @@ const AdminDocuments = () => {
           />
         </div>
 
-        <Card>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No documents found</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Document</TableHead>
-                    <TableHead>File</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Uploaded</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((doc: any) => (
-                    <TableRow key={doc.id}>
+        <div className="border border-border rounded-lg overflow-hidden">
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No documents found</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Order</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Documents (View / Download)</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((row: any) => {
+                  const overallStatus = getOverallStatus(row.docs);
+                  return (
+                    <TableRow key={row.order_id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium text-sm">{doc.profile?.full_name || "—"}</p>
-                          <p className="text-xs text-muted-foreground">{doc.profile?.email || "—"}</p>
+                          <p className="font-medium text-sm">{row.customer_name}</p>
+                          <p className="text-xs text-muted-foreground">{row.customer_email}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{doc.orders?.order_number || "—"}</TableCell>
-                      <TableCell className="text-sm">{doc.orders?.product?.name || "—"}</TableCell>
-                      <TableCell className="text-sm">{DOCUMENT_LABELS[doc.document_type] || doc.document_type}</TableCell>
-                      <TableCell>
-                        <p className="text-xs text-muted-foreground truncate max-w-[120px]">{doc.file_name}</p>
+                      <TableCell className="text-sm font-medium">{row.order_number}</TableCell>
+                      <TableCell className="text-sm max-w-[180px]">
+                        <p className="line-clamp-2">{row.product_name}</p>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            doc.status === "approved" ? "default" :
-                            doc.status === "rejected" ? "destructive" : "secondary"
-                          }
-                          className="capitalize"
-                        >
-                          {doc.status}
+                        <div className="flex flex-wrap gap-2">
+                          {DOC_TYPES.map((type) => {
+                            const doc = row.docs[type];
+                            const label = DOCUMENT_LABELS[type];
+                            if (doc) {
+                              return (
+                                <div key={type} className="flex items-center gap-1">
+                                  <span className="text-xs font-medium">{label}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 px-1.5"
+                                    onClick={() => window.open(doc.file_url, "_blank")}
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 px-1.5"
+                                    onClick={() => {
+                                      const a = document.createElement("a");
+                                      a.href = doc.file_url;
+                                      a.download = doc.file_name;
+                                      a.target = "_blank";
+                                      a.click();
+                                    }}
+                                  >
+                                    <Download className="w-3.5 h-3.5" />
+                                  </Button>
+                                  {doc.status === "approved" ? (
+                                    <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                                  ) : doc.status === "rejected" ? (
+                                    <XCircle className="w-3.5 h-3.5 text-destructive" />
+                                  ) : null}
+                                </div>
+                              );
+                            }
+                            return (
+                              <span key={type} className="text-xs text-muted-foreground">
+                                {label} ❌
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={overallStatus === "Uploaded" ? "default" : "secondary"}>
+                          {overallStatus}
                         </Badge>
-                        {doc.rejection_reason && (
-                          <p className="text-xs text-destructive mt-1">{doc.rejection_reason}</p>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {format(new Date(doc.created_at), "dd MMM yyyy")}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(doc.file_url, "_blank")}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {doc.status === "pending" && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-green-600 hover:text-green-700"
-                                disabled={processing === doc.id}
-                                onClick={() => handleApprove(doc.id)}
-                              >
-                                {processing === doc.id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <CheckCircle className="w-4 h-4" />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => setRejectDoc(doc)}
-                              >
-                                <XCircle className="w-4 h-4" />
-                              </Button>
-                            </>
-                          )}
+                        <div className="flex flex-col gap-1 items-end">
+                          {DOC_TYPES.map((type) => {
+                            const doc = row.docs[type];
+                            if (!doc || doc.status !== "pending") return null;
+                            return (
+                              <div key={type} className="flex items-center gap-1">
+                                <span className="text-xs text-muted-foreground">{DOCUMENT_LABELS[type]}:</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-1.5 text-green-600 hover:text-green-700"
+                                  disabled={processing === doc.id}
+                                  onClick={() => handleApprove(doc.id)}
+                                >
+                                  {processing === doc.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="w-3.5 h-3.5" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-1.5 text-destructive hover:text-destructive"
+                                  onClick={() => setRejectDoc(doc)}
+                                >
+                                  <XCircle className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            );
+                          })}
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </div>
 
         {/* Reject Dialog */}
         <Dialog open={!!rejectDoc} onOpenChange={() => { setRejectDoc(null); setRejectReason(""); }}>
@@ -228,7 +283,7 @@ const AdminDocuments = () => {
             <DialogHeader><DialogTitle>Reject Document</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <p className="text-sm text-muted-foreground">
-                Rejecting <strong>{DOCUMENT_LABELS[rejectDoc?.document_type] || ""}</strong> for order <strong>{rejectDoc?.orders?.order_number}</strong>.
+                Rejecting <strong>{DOCUMENT_LABELS[rejectDoc?.document_type] || ""}</strong>.
               </p>
               <div className="space-y-2">
                 <Label>Reason (optional)</Label>
