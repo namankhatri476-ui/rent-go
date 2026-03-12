@@ -119,7 +119,7 @@ const App = () => (
                     <OrderDocuments />
                   </ProtectedRoute>
                 }
-
+              />
               {/* Vendor routes */}
               <Route
                 path="/vendor"
