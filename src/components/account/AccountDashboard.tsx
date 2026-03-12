@@ -3,7 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { FileText, CheckCircle, Clock, AlertTriangle } from "lucide-react";
 
 interface AccountDashboardProps {
   onNavigate: (tab: string) => void;
