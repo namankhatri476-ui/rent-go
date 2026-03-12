@@ -166,9 +166,9 @@ const Header = () => {
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
-                      <Link to="/my-orders" className="flex items-center gap-2 cursor-pointer">
-                        <ShoppingCart className="w-4 h-4" />
-                        My Orders
+                      <Link to="/my-account" className="flex items-center gap-2 cursor-pointer">
+                        <User className="w-4 h-4" />
+                        My Account
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
