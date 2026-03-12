@@ -204,7 +204,11 @@ const Auth = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">RentPR</h1>
+          {platformSettings.logoUrl ? (
+            <img src={platformSettings.logoUrl} alt={platformSettings.platformName} className="h-10 w-auto mx-auto object-contain" />
+          ) : (
+            <h1 className="text-3xl font-bold text-primary">{platformSettings.platformName}</h1>
+          )}
           <p className="text-muted-foreground mt-2">Marketplace for Rentals</p>
         </div>
 
