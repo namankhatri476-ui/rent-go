@@ -43,6 +43,7 @@ const navItems = [
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { profile, signOut } = useAuth();
+  const { settings } = usePlatformSettings();
   const location = useLocation();
 
   return (
