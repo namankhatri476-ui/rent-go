@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, 
@@ -42,15 +43,22 @@ const navItems = [
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { profile, signOut } = useAuth();
+  const { settings } = usePlatformSettings();
   const location = useLocation();
 
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       <aside className="w-64 bg-card border-r border-border flex flex-col">
-        <div className="p-4 border-b border-border">
-          <Link to="/" className="text-2xl font-bold text-primary">RentPR</Link>
-          <span className="ml-2 text-xs text-white px-2 py-0.5 bg-destructive rounded">Admin</span>
+        <div className="p-4 border-b border-border flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
+            {settings.logoUrl ? (
+              <img src={settings.logoUrl} alt={settings.platformName} className="h-8 w-auto object-contain" />
+            ) : (
+              <span className="text-2xl font-bold text-primary">{settings.platformName}</span>
+            )}
+          </Link>
+          <span className="text-xs text-destructive-foreground px-2 py-0.5 bg-destructive rounded">Admin</span>
         </div>
         
         <nav className="flex-1 p-4 space-y-1">

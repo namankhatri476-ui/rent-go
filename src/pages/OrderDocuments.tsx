@@ -26,6 +26,17 @@ const statusConfig: Record<string, { icon: React.ReactNode; variant: "default" |
   rejected: { icon: <XCircle className="w-3.5 h-3.5" />, variant: "destructive" },
 };
 
+const getSignedUrl = async (storagePath: string): Promise<string | null> => {
+  const { data, error } = await supabase.storage
+    .from("customer-documents")
+    .createSignedUrl(storagePath, 300); // 5 min expiry
+  if (error) {
+    console.error("Signed URL error:", error);
+    return null;
+  }
+  return data.signedUrl;
+};
+
 const OrderDocuments = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const { user, profile } = useAuth();
@@ -76,17 +87,14 @@ const OrderDocuments = () => {
         .upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from("customer-documents")
-        .getPublicUrl(path);
-
+      // Store the storage path (not public URL) for signed URL generation
       const existing = getDocForType(docType);
 
       if (existing) {
         const { error } = await supabase
           .from("document_uploads")
           .update({
-            file_url: urlData.publicUrl,
+            file_url: path,
             file_name: file.name,
             status: "pending",
             rejection_reason: null,
@@ -100,7 +108,7 @@ const OrderDocuments = () => {
             user_id: user.id,
             order_id: orderId,
             document_type: docType,
-            file_url: urlData.publicUrl,
+            file_url: path,
             file_name: file.name,
           });
         if (error) throw error;
@@ -112,6 +120,21 @@ const OrderDocuments = () => {
       toast.error(e.message || "Upload failed");
     } finally {
       setUploading(null);
+    }
+  };
+
+  const handleView = async (fileUrl: string) => {
+    // If it's a full URL (legacy), open directly
+    if (fileUrl.startsWith("http")) {
+      window.open(fileUrl, "_blank");
+      return;
+    }
+    // Otherwise generate a signed URL
+    const url = await getSignedUrl(fileUrl);
+    if (url) {
+      window.open(url, "_blank");
+    } else {
+      toast.error("Could not generate document URL");
     }
   };
 
@@ -195,7 +218,6 @@ const OrderDocuments = () => {
 
                     return (
                       <TableRow key={docType.id}>
-                        {/* Product name only on first row */}
                         <TableCell className="font-medium text-sm">
                           {isFirst ? (
                             <div className="flex items-center gap-2">
@@ -235,7 +257,6 @@ const OrderDocuments = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            {/* Upload / Re-upload */}
                             {(!doc || (doc as any).status === "rejected") && (
                               <label className="cursor-pointer">
                                 <input
@@ -257,13 +278,12 @@ const OrderDocuments = () => {
                                 </Button>
                               </label>
                             )}
-                            {/* View */}
                             {doc && (
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="gap-1"
-                                onClick={() => window.open((doc as any).file_url, "_blank")}
+                                onClick={() => handleView((doc as any).file_url)}
                               >
                                 <Eye className="w-3.5 h-3.5" />
                                 View

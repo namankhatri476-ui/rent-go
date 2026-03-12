@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Please enter a valid email address");
@@ -25,6 +26,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, signUp, user, isLoading: authLoading, roles, isVendor, isAdmin } = useAuth();
+  const { settings: platformSettings } = usePlatformSettings();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -202,7 +204,11 @@ const Auth = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">RentPR</h1>
+          {platformSettings.logoUrl ? (
+            <img src={platformSettings.logoUrl} alt={platformSettings.platformName} className="h-10 w-auto mx-auto object-contain" />
+          ) : (
+            <h1 className="text-3xl font-bold text-primary">{platformSettings.platformName}</h1>
+          )}
           <p className="text-muted-foreground mt-2">Marketplace for Rentals</p>
         </div>
 
@@ -216,7 +222,7 @@ const Auth = () => {
             <p className="text-muted-foreground mt-2">
               {mode === "login"
                 ? "Sign in to continue"
-                : "Join the RentPR marketplace"}
+                : `Join the ${platformSettings.platformName} marketplace`}
             </p>
           </div>
 
