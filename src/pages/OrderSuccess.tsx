@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { CheckCircle, Package, Calendar, ArrowRight } from "lucide-react";
+import { CheckCircle, Package, Calendar, ArrowRight, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
