@@ -22,7 +22,7 @@ const statusIcons: Record<string, any> = {
 };
 
 const AccountDocuments = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState<string | null>(null);
 
@@ -78,8 +78,9 @@ const AccountDocuments = () => {
 
     setUploading(docType);
     try {
+      const customerName = (profile?.full_name || "customer").replace(/[^a-zA-Z0-9_-]/g, "_");
       const ext = file.name.split(".").pop();
-      const path = `${user.id}/${docType}_${Date.now()}.${ext}`;
+      const path = `${customerName}/${orderId}/${docType}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("customer-documents")

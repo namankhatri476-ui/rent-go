@@ -5,11 +5,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import { toast } from "sonner";
-import { ArrowLeft, Upload, FileText, CheckCircle, Clock, XCircle, Loader2, Eye, Package } from "lucide-react";
+import { ArrowLeft, Upload, Eye, Loader2, Package, FileText, Clock, CheckCircle, XCircle } from "lucide-react";
+import { format } from "date-fns";
 
 const DOCUMENT_TYPES = [
   { id: "aadhaar", label: "Aadhaar Card" },
@@ -17,27 +20,25 @@ const DOCUMENT_TYPES = [
   { id: "bank_statement", label: "6-Month Bank Statement" },
 ];
 
-const statusConfig: Record<string, { icon: React.ReactNode; variant: "default" | "secondary" | "destructive" }> = {
-  pending: { icon: <Clock className="w-4 h-4" />, variant: "secondary" },
-  approved: { icon: <CheckCircle className="w-4 h-4" />, variant: "default" },
-  rejected: { icon: <XCircle className="w-4 h-4" />, variant: "destructive" },
+const statusConfig: Record<string, { icon: React.ReactNode; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  pending: { icon: <Clock className="w-3.5 h-3.5" />, variant: "secondary" },
+  approved: { icon: <CheckCircle className="w-3.5 h-3.5" />, variant: "default" },
+  rejected: { icon: <XCircle className="w-3.5 h-3.5" />, variant: "destructive" },
 };
 
 const OrderDocuments = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState<string | null>(null);
-  const [viewingDoc, setViewingDoc] = useState<string | null>(null);
 
-  // Fetch order with product info
   const { data: order, isLoading: orderLoading } = useQuery({
     queryKey: ["order-for-docs", orderId],
     enabled: !!user && !!orderId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, order_number, status, product:products(id, name, images, brand)")
+        .select("id, order_number, status, created_at, product:products(id, name, images, brand)")
         .eq("id", orderId!)
         .eq("customer_id", user!.id)
         .maybeSingle();
@@ -46,7 +47,6 @@ const OrderDocuments = () => {
     },
   });
 
-  // Fetch documents for this order
   const { data: docs, isLoading: docsLoading } = useQuery({
     queryKey: ["order-documents", orderId],
     enabled: !!user && !!orderId,
@@ -60,16 +60,16 @@ const OrderDocuments = () => {
     },
   });
 
-  const getDocForType = (docType: string) => {
-    return (docs || []).find((d: any) => d.document_type === docType) || null;
-  };
+  const getDocForType = (docType: string) =>
+    (docs || []).find((d: any) => d.document_type === docType) || null;
 
   const handleUpload = async (docType: string, file: File) => {
     if (!user || !orderId) return;
     setUploading(docType);
     try {
+      const customerName = (profile?.full_name || "customer").replace(/[^a-zA-Z0-9_-]/g, "_");
       const ext = file.name.split(".").pop();
-      const path = `${user.id}/${orderId}/${docType}_${Date.now()}.${ext}`;
+      const path = `${customerName}/${orderId}/${(order as any)?.product?.id || "product"}/${docType}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("customer-documents")
@@ -145,13 +145,13 @@ const OrderDocuments = () => {
     );
   }
 
-  const uploadedCount = DOCUMENT_TYPES.filter((dt) => getDocForType(dt.id)).length;
+  const productName = (order as any).product?.name || "Product";
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       <main className="flex-1 py-8">
-        <div className="container mx-auto px-4 max-w-4xl">
+        <div className="container mx-auto px-4 max-w-5xl">
           <Link
             to="/my-account?tab=orders"
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
@@ -160,90 +160,83 @@ const OrderDocuments = () => {
             Back to My Orders
           </Link>
 
-          <div className="space-y-6">
-            {/* Order Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Documents for {order.order_number}</h1>
+                <h1 className="text-2xl font-bold text-foreground">Upload Documents</h1>
                 <p className="text-muted-foreground text-sm mt-1">
-                  Upload required documents to complete order verification. {uploadedCount}/{DOCUMENT_TYPES.length} submitted.
+                  Order: {order.order_number} • {format(new Date(order.created_at), "dd MMM yyyy")}
                 </p>
               </div>
-              <Badge variant="secondary" className="self-start">
-                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+              <Badge variant="secondary" className="self-start capitalize">
+                {order.status}
               </Badge>
             </div>
 
-            {/* Product Section */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Package className="w-4 h-4" />
-                  {(order as any).product?.name || "Product"}
-                  {(order as any).product?.brand && (
-                    <span className="text-sm font-normal text-muted-foreground">— {(order as any).product.brand}</span>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {DOCUMENT_TYPES.map((docType) => {
+            {/* Documents Table */}
+            <div className="border border-border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Product</TableHead>
+                    <TableHead>Document</TableHead>
+                    <TableHead>File</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Uploaded</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {DOCUMENT_TYPES.map((docType, idx) => {
                     const doc = getDocForType(docType.id);
-                    const status = doc ? (doc as any).status : null;
-                    const config = status ? statusConfig[status] : null;
+                    const status = doc ? (doc as any).status : "pending";
+                    const config = statusConfig[status] || statusConfig.pending;
+                    const isFirst = idx === 0;
 
                     return (
-                      <div
-                        key={docType.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border border-border rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
-                          <div>
-                            <p className="font-medium text-sm">{docType.label}</p>
-                            {doc && (
-                              <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                {(doc as any).file_name}
-                              </p>
-                            )}
-                            {doc && (doc as any).rejection_reason && (
-                              <p className="text-xs text-destructive mt-1">
-                                Reason: {(doc as any).rejection_reason}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          {/* Status Badge */}
-                          {config ? (
-                            <Badge variant={config.variant} className="gap-1 capitalize">
-                              {config.icon}
-                              {status}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="gap-1 text-muted-foreground">
-                              <Clock className="w-3 h-3" />
-                              Not uploaded
-                            </Badge>
-                          )}
-
-                          {/* Action Buttons */}
+                      <TableRow key={docType.id}>
+                        {/* Product name only on first row */}
+                        <TableCell className="font-medium text-sm">
+                          {isFirst ? (
+                            <div className="flex items-center gap-2">
+                              <Package className="w-4 h-4 text-muted-foreground shrink-0" />
+                              <span className="line-clamp-2">{productName}</span>
+                            </div>
+                          ) : null}
+                        </TableCell>
+                        <TableCell>
                           <div className="flex items-center gap-2">
-                            {doc && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-1"
-                                onClick={() => window.open((doc as any).file_url, "_blank")}
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                                View
-                              </Button>
-                            )}
-
+                            <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                            <span className="text-sm font-medium">{docType.label}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {doc ? (
+                            <p className="text-xs text-muted-foreground truncate max-w-[140px]">
+                              {(doc as any).file_name}
+                            </p>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                          {doc && (doc as any).rejection_reason && (
+                            <p className="text-xs text-destructive mt-0.5">
+                              {(doc as any).rejection_reason}
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={doc ? config.variant : "outline"} className="gap-1 capitalize text-xs">
+                            {doc ? config.icon : <Clock className="w-3 h-3" />}
+                            {doc ? status : "Pending"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {doc ? format(new Date((doc as any).created_at), "dd MMM yyyy") : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
                             {/* Upload / Re-upload */}
-                            {(!doc || status === "rejected") && (
+                            {(!doc || (doc as any).status === "rejected") && (
                               <label className="cursor-pointer">
                                 <input
                                   type="file"
@@ -264,14 +257,26 @@ const OrderDocuments = () => {
                                 </Button>
                               </label>
                             )}
+                            {/* View */}
+                            {doc && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => window.open((doc as any).file_url, "_blank")}
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                View
+                              </Button>
+                            )}
                           </div>
-                        </div>
-                      </div>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </div>
-              </CardContent>
-            </Card>
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
       </main>
