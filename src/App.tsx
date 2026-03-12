@@ -52,6 +52,8 @@ import AdminSlider from "./pages/admin/AdminSlider";
 import AdminFooter from "./pages/admin/AdminFooter";
 import AdminLegal from "./pages/admin/AdminLegal";
 import AdminCancellations from "./pages/admin/AdminCancellations";
+import AdminDocuments from "./pages/admin/AdminDocuments";
+import OrderDocuments from "./pages/OrderDocuments";
 
 const queryClient = new QueryClient();
 
