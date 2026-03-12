@@ -22,7 +22,7 @@ const statusIcons: Record<string, any> = {
 };
 
 const AccountDocuments = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState<string | null>(null);
 
