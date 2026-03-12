@@ -26,6 +26,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, signUp, user, isLoading: authLoading, roles, isVendor, isAdmin } = useAuth();
+  const { settings: platformSettings } = usePlatformSettings();
 
   const [formData, setFormData] = useState({
     name: "",
