@@ -9,10 +9,11 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Settings, CreditCard, Percent, Shield, Loader2 } from 'lucide-react';
+import { Settings, CreditCard, Percent, Shield, Loader2, Upload, X, Image } from 'lucide-react';
 
 const AdminSettings = () => {
   const queryClient = useQueryClient();
+  const [logoUploading, setLogoUploading] = useState(false);
 
   const { data: dbSettings, isLoading } = useQuery({
     queryKey: ['platform-settings'],
@@ -30,6 +31,7 @@ const AdminSettings = () => {
   const [settings, setSettings] = useState({
     platformName: 'RentPR',
     supportEmail: 'support@rentpr.in',
+    logoUrl: '' as string,
     defaultCommission: 30,
     gstRate: 18,
     minRentalDuration: 3,
@@ -46,6 +48,7 @@ const AdminSettings = () => {
       setSettings({
         platformName: dbSettings.general?.platformName || 'RentPR',
         supportEmail: dbSettings.general?.supportEmail || 'support@rentpr.in',
+        logoUrl: dbSettings.general?.logoUrl || '',
         maintenanceMode: dbSettings.general?.maintenanceMode || false,
         defaultCommission: dbSettings.pricing?.defaultCommission || 30,
         gstRate: dbSettings.pricing?.gstRate || 18,
@@ -59,10 +62,33 @@ const AdminSettings = () => {
     }
   }, [dbSettings]);
 
+  const handleLogoUpload = async (file: File) => {
+    setLogoUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `logo.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('site-assets')
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('site-assets')
+        .getPublicUrl(path);
+
+      setSettings(prev => ({ ...prev, logoUrl: urlData.publicUrl }));
+      toast.success('Logo uploaded');
+    } catch (e: any) {
+      toast.error(e.message || 'Logo upload failed');
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const updates = [
-        { key: 'general', value: { platformName: settings.platformName, supportEmail: settings.supportEmail, maintenanceMode: settings.maintenanceMode } },
+        { key: 'general', value: { platformName: settings.platformName, supportEmail: settings.supportEmail, maintenanceMode: settings.maintenanceMode, logoUrl: settings.logoUrl } },
         { key: 'pricing', value: { defaultCommission: settings.defaultCommission, gstRate: settings.gstRate, protectionPlanFee: settings.protectionPlanFee } },
         { key: 'rentals', value: { minRentalDuration: settings.minRentalDuration, maxRentalDuration: settings.maxRentalDuration } },
         { key: 'approvals', value: { autoApproveVendors: settings.autoApproveVendors, autoApproveProducts: settings.autoApproveProducts, requireEmailVerification: settings.requireEmailVerification } },
@@ -78,6 +104,7 @@ const AdminSettings = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['platform-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['platform-settings-general'] });
       toast.success('Settings saved successfully');
     },
     onError: (error) => {
@@ -124,6 +151,44 @@ const AdminSettings = () => {
                 <CardDescription>Basic platform configuration</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Logo Upload */}
+                <div className="space-y-3">
+                  <Label>Site Logo</Label>
+                  <div className="flex items-center gap-4">
+                    {settings.logoUrl ? (
+                      <div className="relative">
+                        <img src={settings.logoUrl} alt="Logo" className="h-12 w-auto max-w-[200px] object-contain border rounded-lg p-1" />
+                        <button
+                          onClick={() => setSettings(prev => ({ ...prev, logoUrl: '' }))}
+                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="h-12 w-32 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
+                        <Image className="w-5 h-5" />
+                      </div>
+                    )}
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleLogoUpload(f);
+                        }}
+                      />
+                      <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none" tabIndex={-1}>
+                        {logoUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                        {settings.logoUrl ? 'Change' : 'Upload'}
+                      </Button>
+                    </label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Recommended: PNG or SVG, transparent background, max height 60px</p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="platformName">Platform Name</Label>

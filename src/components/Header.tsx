@@ -1,11 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, Printer, Search, Building2, Shield, LogOut, ChevronDown } from "lucide-react";
+import { ShoppingCart, User, Menu, X, Search, Building2, Shield, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "@/contexts/LocationContext";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -27,6 +28,7 @@ import LocationSelector from "@/components/LocationSelector";
 const Header = () => {
   const { itemCount } = useCart();
   const { user, profile, isVendor, isAdmin, signOut } = useAuth();
+  const { settings } = usePlatformSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -82,12 +84,24 @@ const Header = () => {
           <div className="flex items-center justify-between h-[60px]">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2.5 shrink-0">
-              <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-                <Printer className="w-[18px] h-[18px] text-primary-foreground" />
-              </div>
-              <span className="text-lg font-extrabold tracking-tight text-foreground">
-                Rent<span className="text-primary">PR</span>
-              </span>
+              {settings.logoUrl ? (
+                <img
+                  src={settings.logoUrl}
+                  alt={settings.platformName}
+                  className="h-9 w-auto object-contain max-w-[160px]"
+                />
+              ) : (
+                <span className="text-lg font-extrabold tracking-tight text-foreground">
+                  {settings.platformName.includes("Rent") ? (
+                    <>
+                      {settings.platformName.slice(0, 4)}
+                      <span className="text-primary">{settings.platformName.slice(4)}</span>
+                    </>
+                  ) : (
+                    <span className="text-primary">{settings.platformName}</span>
+                  )}
+                </span>
+              )}
             </Link>
 
             {/* Location Selector */}
