@@ -102,6 +102,14 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/my-account"
+                element={
+                  <ProtectedRoute>
+                    <MyAccount />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Vendor routes */}
               <Route
