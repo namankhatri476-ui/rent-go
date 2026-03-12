@@ -3,7 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { FileText, CheckCircle, Clock, AlertTriangle } from "lucide-react";
 
 interface AccountDashboardProps {
   onNavigate: (tab: string) => void;
@@ -105,6 +108,9 @@ const AccountDashboard = ({ onNavigate }: AccountDashboardProps) => {
         </CardContent>
       </Card>
 
+      {/* Credit Check / Document Upload */}
+      <DocumentUploadCard userId={user?.id} onNavigate={onNavigate} />
+
       {/* Account Info & Address */}
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
@@ -158,5 +164,93 @@ const AccountDashboard = ({ onNavigate }: AccountDashboardProps) => {
     </div>
   );
 };
+
+// Sub-component for document upload status on dashboard
+function DocumentUploadCard({ userId, onNavigate }: { userId?: string; onNavigate: (tab: string) => void }) {
+  const { data: docs } = useQuery({
+    queryKey: ["my-all-documents", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("document_uploads")
+        .select("document_type, status")
+        .eq("user_id", userId!);
+      return data || [];
+    },
+  });
+
+  const REQUIRED = ["aadhaar", "pan", "bank_statement"];
+  const uploadedTypes = new Set((docs || []).map((d: any) => d.document_type));
+  const approvedTypes = new Set((docs || []).filter((d: any) => d.status === "approved").map((d: any) => d.document_type));
+  const rejectedTypes = (docs || []).filter((d: any) => d.status === "rejected");
+  const progress = Math.round((uploadedTypes.size / REQUIRED.length) * 100);
+
+  const allApproved = approvedTypes.size === REQUIRED.length;
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <FileText className="w-5 h-5" />
+          Credit Check — Document Verification
+        </CardTitle>
+        <button
+          onClick={() => onNavigate("documents")}
+          className="text-sm text-primary hover:underline font-medium"
+        >
+          Upload Documents
+        </button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium">Verification Progress</span>
+            <span className="font-bold">{progress}% Complete</span>
+          </div>
+          <Progress value={progress} className="h-3" />
+        </div>
+
+        {allApproved ? (
+          <div className="flex items-center gap-2 text-sm text-green-600">
+            <CheckCircle className="w-4 h-4" />
+            All documents verified successfully!
+          </div>
+        ) : uploadedTypes.size === 0 ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <AlertTriangle className="w-4 h-4" />
+            No documents submitted yet. Please upload your Aadhaar, PAN, and Bank Statement.
+          </div>
+        ) : (
+          <div className="space-y-1 text-sm">
+            {REQUIRED.map((type) => {
+              const doc = (docs || []).find((d: any) => d.document_type === type);
+              const label = type === "aadhaar" ? "Aadhaar Card" : type === "pan" ? "PAN Card" : "Bank Statement";
+              return (
+                <div key={type} className="flex items-center gap-2">
+                  {doc ? (
+                    doc.status === "approved" ? <CheckCircle className="w-3.5 h-3.5 text-green-600" /> :
+                    doc.status === "rejected" ? <AlertTriangle className="w-3.5 h-3.5 text-destructive" /> :
+                    <Clock className="w-3.5 h-3.5 text-yellow-600" />
+                  ) : (
+                    <span className="w-3.5 h-3.5 rounded-full border border-muted-foreground/30" />
+                  )}
+                  <span className={doc ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+                  {doc && <Badge variant={doc.status === "approved" ? "default" : doc.status === "rejected" ? "destructive" : "secondary"} className="text-xs ml-auto">{doc.status}</Badge>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {!allApproved && (
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => onNavigate("documents")}>
+            <FileText className="w-4 h-4" />
+            Upload Documents
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default AccountDashboard;

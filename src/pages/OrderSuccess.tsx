@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { CheckCircle, Package, Calendar, ArrowRight } from "lucide-react";
+import { CheckCircle, Package, Calendar, ArrowRight, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -71,10 +71,32 @@ const OrderSuccess = () => {
               </div>
             </div>
 
+            {/* Document Upload Prompt */}
+            <div
+              className="bg-accent/5 border border-accent/20 rounded-2xl p-6 text-left space-y-3 animate-fade-in"
+              style={{ animationDelay: "0.3s" }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5 text-accent" />
+                </div>
+                <h3 className="font-semibold text-foreground">Complete Your Order</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Thank you for your order! Please submit the required documents (Aadhaar, PAN, and 6-month Bank Statement) to complete the processing of your order.
+              </p>
+              <Link to="/my-account?tab=documents">
+                <Button variant="outline" size="sm" className="gap-2 mt-2">
+                  <FileText className="w-4 h-4" />
+                  Upload Documents Now
+                </Button>
+              </Link>
+            </div>
+
             {/* Info */}
             <p 
               className="text-sm text-muted-foreground animate-fade-in"
-              style={{ animationDelay: "0.3s" }}
+              style={{ animationDelay: "0.4s" }}
             >
               A confirmation email has been sent to your registered email address.
             </p>
@@ -82,9 +104,9 @@ const OrderSuccess = () => {
             {/* Actions */}
             <div 
               className="flex flex-col sm:flex-row gap-3 justify-center animate-fade-in"
-              style={{ animationDelay: "0.4s" }}
+              style={{ animationDelay: "0.5s" }}
             >
-              <Link to="/my-orders">
+              <Link to="/my-account?tab=orders">
                 <Button variant="outline" size="lg" className="w-full sm:w-auto">
                   View My Orders
                 </Button>
