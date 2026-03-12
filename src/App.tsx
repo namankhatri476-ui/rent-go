@@ -112,6 +112,13 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/order-documents/:orderId"
+                element={
+                  <ProtectedRoute>
+                    <OrderDocuments />
+                  </ProtectedRoute>
+                }
 
               {/* Vendor routes */}
               <Route
