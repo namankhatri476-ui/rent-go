@@ -27,6 +27,7 @@ const navItems = [
 const VendorLayout = ({ children }: VendorLayoutProps) => {
   const { profile, vendorProfile, signOut } = useAuth();
   const location = useLocation();
+  const { settings } = usePlatformSettings();
 
   return (
     <div className="min-h-screen bg-background flex">
