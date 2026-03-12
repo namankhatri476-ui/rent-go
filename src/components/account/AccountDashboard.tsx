@@ -108,6 +108,9 @@ const AccountDashboard = ({ onNavigate }: AccountDashboardProps) => {
         </CardContent>
       </Card>
 
+      {/* Credit Check / Document Upload */}
+      <DocumentUploadCard userId={user?.id} onNavigate={onNavigate} />
+
       {/* Account Info & Address */}
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
