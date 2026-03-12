@@ -173,20 +173,24 @@ const AccountOrders = () => {
                     </div>
                   </div>
 
-                  {/* Document Upload Status */}
-                  <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                  {/* Credit Check / Documents Link */}
+                  <div className="bg-muted/50 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Document Upload</span>
+                        <span className="text-sm font-medium">Credit Check</span>
                       </div>
-                      <span className="text-sm font-semibold">{percent}% Complete</span>
+                      <Link
+                        to={`/order-documents/${order.id}`}
+                        className="text-sm font-semibold text-primary hover:underline"
+                      >
+                        Documents →
+                      </Link>
                     </div>
-                    <Progress value={percent} className="h-2" />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {count === 0
-                        ? "NO DOCUMENTS WERE SUBMITTED FOR THIS ORDER."
-                        : `${count}/${DOCUMENT_TYPES.length} documents submitted`}
+                        ? "No documents submitted yet"
+                        : `${count}/${DOCUMENT_TYPES.length} documents submitted (${percent}%)`}
                     </p>
                   </div>
 
