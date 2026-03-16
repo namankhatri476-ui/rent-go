@@ -253,6 +253,9 @@ const VendorProductForm = () => {
           }));
         } else {
           setPricingMode('auto');
+          // Populate selected tenures from existing plans
+          const existingTenures = plans.map((p: any) => p.duration_months as number);
+          setSelectedTenures(existingTenures.filter((t: number) => TENURE_OPTIONS.includes(t)));
           setPricing(prev => ({
             ...prev,
             deliveryFee: firstPlan.delivery_fee || 500,
