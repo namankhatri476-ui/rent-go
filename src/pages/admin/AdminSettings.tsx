@@ -28,10 +28,13 @@ const AdminSettings = () => {
     },
   });
 
+  const [footerLogoUploading, setFooterLogoUploading] = useState(false);
+
   const [settings, setSettings] = useState({
     platformName: 'RentPR',
     supportEmail: 'support@rentpr.in',
     logoUrl: '' as string,
+    footerLogoUrl: '' as string,
     marqueeText: 'Free Delivery & Installation on all orders • 100% Refundable Deposit',
     marqueeEnabled: true,
     defaultCommission: 30,
@@ -51,6 +54,7 @@ const AdminSettings = () => {
         platformName: dbSettings.general?.platformName || 'RentPR',
         supportEmail: dbSettings.general?.supportEmail || 'support@rentpr.in',
         logoUrl: dbSettings.general?.logoUrl || '',
+        footerLogoUrl: dbSettings.general?.footerLogoUrl || '',
         marqueeText: dbSettings.general?.marqueeText || 'Free Delivery & Installation on all orders • 100% Refundable Deposit',
         marqueeEnabled: dbSettings.general?.marqueeEnabled !== undefined ? dbSettings.general.marqueeEnabled : true,
         maintenanceMode: dbSettings.general?.maintenanceMode || false,
@@ -89,10 +93,30 @@ const AdminSettings = () => {
     }
   };
 
+  const handleFooterLogoUpload = async (file: File) => {
+    setFooterLogoUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `footer-logo.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('site-assets')
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage
+        .from('site-assets')
+        .getPublicUrl(path);
+      setSettings(prev => ({ ...prev, footerLogoUrl: urlData.publicUrl }));
+      toast.success('Footer logo uploaded');
+    } catch (e: any) {
+      toast.error(e.message || 'Footer logo upload failed');
+    } finally {
+      setFooterLogoUploading(false);
+    }
+  };
   const saveMutation = useMutation({
     mutationFn: async () => {
       const updates = [
-        { key: 'general', value: { platformName: settings.platformName, supportEmail: settings.supportEmail, maintenanceMode: settings.maintenanceMode, logoUrl: settings.logoUrl, marqueeText: settings.marqueeText, marqueeEnabled: settings.marqueeEnabled } },
+        { key: 'general', value: { platformName: settings.platformName, supportEmail: settings.supportEmail, maintenanceMode: settings.maintenanceMode, logoUrl: settings.logoUrl, footerLogoUrl: settings.footerLogoUrl, marqueeText: settings.marqueeText, marqueeEnabled: settings.marqueeEnabled } },
         { key: 'pricing', value: { defaultCommission: settings.defaultCommission, gstRate: settings.gstRate, protectionPlanFee: settings.protectionPlanFee } },
         { key: 'rentals', value: { minRentalDuration: settings.minRentalDuration, maxRentalDuration: settings.maxRentalDuration } },
         { key: 'approvals', value: { autoApproveVendors: settings.autoApproveVendors, autoApproveProducts: settings.autoApproveProducts, requireEmailVerification: settings.requireEmailVerification } },
@@ -193,7 +217,43 @@ const AdminSettings = () => {
                   <p className="text-xs text-muted-foreground">Recommended: PNG or SVG, transparent background, max height 60px</p>
                 </div>
 
-                {/* Marquee Banner */}
+                {/* Footer Logo Upload */}
+                <div className="space-y-3">
+                  <Label>Footer Logo</Label>
+                  <p className="text-xs text-muted-foreground">If not set, the header logo will be used in the footer</p>
+                  <div className="flex items-center gap-4">
+                    {settings.footerLogoUrl ? (
+                      <div className="relative">
+                        <img src={settings.footerLogoUrl} alt="Footer Logo" className="h-12 w-auto max-w-[200px] object-contain border rounded-lg p-1" />
+                        <button
+                          onClick={() => setSettings(prev => ({ ...prev, footerLogoUrl: '' }))}
+                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="h-12 w-32 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
+                        <Image className="w-5 h-5" />
+                      </div>
+                    )}
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleFooterLogoUpload(f);
+                        }}
+                      />
+                      <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none" tabIndex={-1}>
+                        {footerLogoUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                        {settings.footerLogoUrl ? 'Change' : 'Upload'}
+                      </Button>
+                    </label>
+                  </div>
+                </div>
                 <div className="space-y-3 p-4 bg-muted rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
