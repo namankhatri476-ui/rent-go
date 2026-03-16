@@ -86,7 +86,7 @@ const ProductDetail = () => {
   const deliveryTat = (product as any)?.delivery_tat ?? 2;
   const installationTat = (product as any)?.installation_tat ?? 1;
   const protectionValue = (product as any)?.protection_value ?? null;
-
+  const protectionPlanPrice = (product as any)?.protection_plan_price ?? 99;
   const rentalPlans = (product?.rental_plans || [])
     .filter((p: any) => p.is_active !== false)
     .sort((a: RentalPlan, b: RentalPlan) => a.duration_months - b.duration_months);
