@@ -775,17 +775,7 @@ const VendorProductForm = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Security Deposit (₹)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={pricing.securityDeposit || ''}
-                    onChange={(e) => setPricing({ ...pricing, securityDeposit: Number(e.target.value) })}
-                    placeholder="0"
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Delivery Fee (₹)</Label>
                   <Input
@@ -807,6 +797,14 @@ const VendorProductForm = () => {
                   />
                  </div>
                </div>
+
+              {/* Auto-calculated deposit info */}
+              {pricing.baseMonthlyRent > 0 && (
+                <div className="p-3 bg-muted/50 rounded-lg text-sm flex items-center gap-2">
+                  <Info className="h-4 w-4 text-primary shrink-0" />
+                  <span>Security Deposit: <strong>₹{pricing.baseMonthlyRent.toLocaleString()}</strong> (auto-calculated = monthly rent)</span>
+                </div>
+              )}
 
               {/* Buy Price & Advance Discount */}
               <div className="grid grid-cols-2 gap-4">
