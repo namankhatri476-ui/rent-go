@@ -394,6 +394,12 @@ const AdminOrders = () => {
                               <span>₹{selectedOrder.protection_plan_fee?.toLocaleString()}</span>
                             </div>
                           )}
+                          <div className="flex justify-between text-sm">
+                            <span>Protection Status</span>
+                            <span className={selectedOrder.protection_plan_fee > 0 ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}>
+                              {selectedOrder.protection_plan_fee > 0 ? '✓ Enabled' : '✗ Disabled'}
+                            </span>
+                          </div>
                           <div className="flex justify-between font-medium pt-2 border-t">
                             <span>Monthly Total</span>
                             <span>₹{selectedOrder.monthly_total?.toLocaleString()}/mo</span>
