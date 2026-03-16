@@ -79,6 +79,18 @@ const AdminProducts = () => {
     },
   });
 
+  const togglePopularMutation = useMutation({
+    mutationFn: async ({ productId, isPopular }: { productId: string; isPopular: boolean }) => {
+      const { error } = await supabase.from('products').update({ is_popular: isPopular } as any).eq('id', productId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      toast.success('Popular status updated');
+    },
+    onError: () => toast.error('Failed to update popular status'),
+  });
+
   const updateProtectionMutation = useMutation({
     mutationFn: async ({ productId, protectionPlanPrice, protectionValue }: { productId: string; protectionPlanPrice: number; protectionValue: number | null }) => {
       const { error } = await supabase.from('products').update({
