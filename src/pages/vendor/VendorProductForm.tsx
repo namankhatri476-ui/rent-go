@@ -107,32 +107,32 @@ const VendorProductForm = () => {
     return costBreakdown.landingCost + costBreakdown.transportCost + costBreakdown.installationCost + costBreakdown.maintenanceReserve;
   }, [costBreakdown]);
 
-  // Auto Slab pricing preview using factors
+  // Auto Slab pricing preview using factors — only for selected tenures
   const autoSlabPreview = useMemo(() => {
-    if (totalCost <= 0) return [];
-    return TENURE_OPTIONS.map(tenure => {
-      const factor = PRICING_FACTORS[tenure];
-      let baseRent = roundToNearest50(totalCost * factor);
-      let installFeeForPlan = 0;
+    if (totalCost <= 0 || selectedTenures.length === 0) return [];
+    return selectedTenures
+      .sort((a, b) => a - b)
+      .map(tenure => {
+        const factor = PRICING_FACTORS[tenure];
+        let baseRent = roundToNearest50(totalCost * factor);
+        let installFeeForPlan = 0;
 
-      if (installationChargeVisible) {
-        // Show installation charge separately
-        installFeeForPlan = costBreakdown.installationCost;
-      } else {
-        // Distribute installation cost into monthly rent
-        const extraPerMonth = Math.round(costBreakdown.installationCost / tenure);
-        baseRent = roundToNearest50(totalCost * factor + extraPerMonth);
-        installFeeForPlan = 0;
-      }
+        if (installationChargeVisible) {
+          installFeeForPlan = costBreakdown.installationCost;
+        } else {
+          const extraPerMonth = Math.round(costBreakdown.installationCost / tenure);
+          baseRent = roundToNearest50(totalCost * factor + extraPerMonth);
+          installFeeForPlan = 0;
+        }
 
-      return {
-        tenure,
-        factor,
-        monthlyRent: baseRent,
-        installationFee: installFeeForPlan,
-      };
-    });
-  }, [totalCost, costBreakdown.installationCost, installationChargeVisible]);
+        return {
+          tenure,
+          factor,
+          monthlyRent: baseRent,
+          installationFee: installFeeForPlan,
+        };
+      });
+  }, [totalCost, costBreakdown.installationCost, installationChargeVisible, selectedTenures]);
 
   // 2-year (24 months) vendor earnings estimate
   const vendorEarnings24 = useMemo(() => {
