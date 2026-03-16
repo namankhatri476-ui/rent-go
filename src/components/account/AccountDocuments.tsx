@@ -87,18 +87,14 @@ const AccountDocuments = () => {
         .upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from("customer-documents")
-        .getPublicUrl(path);
-
-      // Check if a document of this type already exists for this user & order
+      // Store the storage path (not public URL) for signed URL generation
       const existing = latestDocs.find((d) => d.type.id === docType)?.doc;
 
       if (existing) {
         const { error } = await supabase
           .from("document_uploads")
           .update({
-            file_url: urlData.publicUrl,
+            file_url: path,
             file_name: file.name,
             status: "pending",
             rejection_reason: null,
@@ -112,7 +108,7 @@ const AccountDocuments = () => {
             user_id: user.id,
             order_id: orderId,
             document_type: docType,
-            file_url: urlData.publicUrl,
+            file_url: path,
             file_name: file.name,
           });
         if (error) throw error;

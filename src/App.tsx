@@ -185,14 +185,9 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/vendor/register"
-                element={
-                  <ProtectedRoute>
-                    <VendorRegister />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Vendor Register is public (separate vendor auth) */}
+              <Route path="/vendor/register" element={<VendorRegister />} />
+              <Route path="/vendor/login" element={<VendorRegister />} />
               <Route
                 path="/vendor/pending"
                 element={
