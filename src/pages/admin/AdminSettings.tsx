@@ -32,6 +32,8 @@ const AdminSettings = () => {
     platformName: 'RentPR',
     supportEmail: 'support@rentpr.in',
     logoUrl: '' as string,
+    marqueeText: 'Free Delivery & Installation on all orders • 100% Refundable Deposit',
+    marqueeEnabled: true,
     defaultCommission: 30,
     gstRate: 18,
     minRentalDuration: 3,
