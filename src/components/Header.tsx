@@ -147,12 +147,36 @@ const Header = () => {
                         </Link>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem asChild>
-                      <Link to="/my-account" className="flex items-center gap-2 cursor-pointer">
-                        <User className="w-4 h-4" />
-                        My Account
-                      </Link>
-                    </DropdownMenuItem>
+                    {isVendor && (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link to="/vendor/dashboard" className="flex items-center gap-2 cursor-pointer">
+                            <Store className="w-4 h-4" />
+                            Vendor Dashboard
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/vendor/products" className="flex items-center gap-2 cursor-pointer">
+                            <Package className="w-4 h-4" />
+                            My Products
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/vendor/orders" className="flex items-center gap-2 cursor-pointer">
+                            <ShoppingBag className="w-4 h-4" />
+                            Orders
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {!isVendor && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/my-account" className="flex items-center gap-2 cursor-pointer">
+                          <User className="w-4 h-4" />
+                          My Account
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer text-destructive">
                       <LogOut className="w-4 h-4" />
