@@ -54,10 +54,9 @@ const VendorProductForm = () => {
   // Variations state
   const [variations, setVariations] = useState<{ variation_type: string; variation_value: string; price_adjustment: number }[]>([]);
 
-  // New simplified pricing model
+  // New simplified pricing model - deposit auto-calculated from baseMonthlyRent
   const [pricing, setPricing] = useState({
     baseMonthlyRent: 0,
-    securityDeposit: 0,
     deliveryFee: 500,
     installationFee: 0,
     maxDuration: 12,
