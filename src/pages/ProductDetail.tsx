@@ -106,16 +106,17 @@ const ProductDetail = () => {
     if (rentalPlans.length === 0) return { monthlyRent: 0, securityDeposit: 0, deliveryFee: 0, installationFee: 0 };
     const basePlan = rentalPlans[0];
     const baseRent = basePlan.monthly_rent + variationAdjustment;
-    const securityDeposit = basePlan.monthly_rent; // Auto: deposit = monthly rent
     const deliveryFee = basePlan.delivery_fee || 0;
     const installationFee = basePlan.installation_fee || 0;
-    if (rentalPlans.length === 1 || duration <= 1) return { monthlyRent: baseRent, securityDeposit, deliveryFee, installationFee };
+    if (rentalPlans.length === 1 || duration <= 1) {
+      return { monthlyRent: baseRent, securityDeposit: baseRent, deliveryFee, installationFee };
+    }
     const lastPlan = rentalPlans[rentalPlans.length - 1];
     const discountPerMonth = basePlan.monthly_rent > 0 && lastPlan.duration_months > 1
       ? ((basePlan.monthly_rent - lastPlan.monthly_rent) / basePlan.monthly_rent * 100) / (lastPlan.duration_months - 1) : 0;
     const totalDiscount = Math.min(discountPerMonth * (duration - 1), 80);
     const monthlyRent = Math.round((basePlan.monthly_rent * (1 - totalDiscount / 100)) + variationAdjustment);
-    return { monthlyRent, securityDeposit, deliveryFee, installationFee };
+    return { monthlyRent, securityDeposit: monthlyRent, deliveryFee, installationFee };
   };
 
   const interpolatedPrice = useMemo(() => getDiscountedPrice(currentDuration), [currentDuration, rentalPlans, variationAdjustment]);
