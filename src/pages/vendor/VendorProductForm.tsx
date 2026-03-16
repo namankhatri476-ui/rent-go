@@ -21,7 +21,23 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Trash2, ArrowLeft, Loader2, Info, MapPin, Upload } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Loader2, Info, MapPin, Upload, TrendingUp } from 'lucide-react';
+
+// Predefined pricing factors for Auto Slab
+const PRICING_FACTORS: Record<number, number> = {
+  1: 0.22,
+  3: 0.16,
+  6: 0.12,
+  11: 0.095,
+  12: 0.085,
+  24: 0.065,
+  36: 0.055,
+};
+
+const TENURE_OPTIONS = Object.keys(PRICING_FACTORS).map(Number).sort((a, b) => a - b);
+
+// Round rent to nearest 50
+const roundToNearest50 = (value: number) => Math.round(value / 50) * 50;
 
 const VendorProductForm = () => {
   const navigate = useNavigate();
@@ -48,6 +64,16 @@ const VendorProductForm = () => {
     installation_tat: 1,
   });
 
+  // Cost breakdown fields for Auto Slab
+  const [costBreakdown, setCostBreakdown] = useState({
+    landingCost: 0,
+    transportCost: 0,
+    installationCost: 0,
+    maintenanceReserve: 0,
+  });
+
+  const [installationChargeVisible, setInstallationChargeVisible] = useState(true);
+
   // Multi-location selection state
   const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
 
@@ -61,33 +87,81 @@ const VendorProductForm = () => {
   const [manualSlabs, setManualSlabs] = useState<Record<number, number>>({});
   const [manualMaxDuration, setManualMaxDuration] = useState(12);
 
-  // New simplified pricing model - deposit auto-calculated from baseMonthlyRent
+  // Common pricing fields
   const [pricing, setPricing] = useState({
     baseMonthlyRent: 0,
     deliveryFee: 500,
     installationFee: 0,
     maxDuration: 12,
-    discountPerMonth: 2, // % discount per additional month
+    discountPerMonth: 2,
   });
 
   const [specKey, setSpecKey] = useState('');
   const [specValue, setSpecValue] = useState('');
 
-  // Calculate price for any month
+  // Total Cost calculation
+  const totalCost = useMemo(() => {
+    return costBreakdown.landingCost + costBreakdown.transportCost + costBreakdown.installationCost + costBreakdown.maintenanceReserve;
+  }, [costBreakdown]);
+
+  // Auto Slab pricing preview using factors
+  const autoSlabPreview = useMemo(() => {
+    if (totalCost <= 0) return [];
+    return TENURE_OPTIONS.map(tenure => {
+      const factor = PRICING_FACTORS[tenure];
+      let baseRent = roundToNearest50(totalCost * factor);
+      let installFeeForPlan = 0;
+
+      if (installationChargeVisible) {
+        // Show installation charge separately
+        installFeeForPlan = costBreakdown.installationCost;
+      } else {
+        // Distribute installation cost into monthly rent
+        const extraPerMonth = Math.round(costBreakdown.installationCost / tenure);
+        baseRent = roundToNearest50(totalCost * factor + extraPerMonth);
+        installFeeForPlan = 0;
+      }
+
+      return {
+        tenure,
+        factor,
+        monthlyRent: baseRent,
+        installationFee: installFeeForPlan,
+      };
+    });
+  }, [totalCost, costBreakdown.installationCost, installationChargeVisible]);
+
+  // 2-year (24 months) vendor earnings estimate
+  const vendorEarnings24 = useMemo(() => {
+    if (pricingMode === 'auto') {
+      // Use the 24-month plan if available, else use longest tenure
+      const plan24 = autoSlabPreview.find(p => p.tenure === 24);
+      if (plan24) return plan24.monthlyRent * 24;
+      // Fallback: use longest tenure plan
+      if (autoSlabPreview.length > 0) {
+        const longest = autoSlabPreview[autoSlabPreview.length - 1];
+        return longest.monthlyRent * 24;
+      }
+      return 0;
+    } else {
+      // Manual: find a 24-month slab or longest
+      const sorted = Object.entries(manualSlabs)
+        .map(([m, p]) => ({ month: Number(m), price: Number(p) }))
+        .filter(e => e.price > 0)
+        .sort((a, b) => a.month - b.month);
+      const plan24 = sorted.find(p => p.month === 24);
+      if (plan24) return plan24.price * 24;
+      if (sorted.length > 0) return sorted[sorted.length - 1].price * 24;
+      return 0;
+    }
+  }, [pricingMode, autoSlabPreview, manualSlabs]);
+
+  // Calculate price for manual slab compatibility (kept for manual mode)
   const getPriceForMonth = (month: number) => {
     const discount = pricing.discountPerMonth * (month - 1);
-    const cappedDiscount = Math.min(discount, 80); // Cap at 80% max discount
+    const cappedDiscount = Math.min(discount, 80);
     return Math.round(pricing.baseMonthlyRent * (1 - cappedDiscount / 100));
   };
-
-  // Preview pricing table
-  const pricingPreview = useMemo(() => {
-    if (pricing.baseMonthlyRent <= 0) return [];
-    const months = [1, 2, 3, 6, 12, pricing.maxDuration].filter(
-      (m, i, arr) => m <= pricing.maxDuration && arr.indexOf(m) === i
-    ).sort((a, b) => a - b);
-    return months.map(m => ({ month: m, price: getPriceForMonth(m) }));
-  }, [pricing.baseMonthlyRent, pricing.maxDuration, pricing.discountPerMonth]);
 
   // Fetch product data for edit mode
   const { data: existingProduct, isLoading: isLoadingProduct } = useQuery({
@@ -125,6 +199,15 @@ const VendorProductForm = () => {
         installation_tat: (existingProduct as any).installation_tat ?? 1,
       });
 
+      // Load cost breakdown fields
+      setCostBreakdown({
+        landingCost: (existingProduct as any).landing_cost ?? 0,
+        transportCost: (existingProduct as any).transport_cost ?? 0,
+        installationCost: (existingProduct as any).installation_fee ?? (existingProduct as any).installation_cost ?? 0,
+        maintenanceReserve: (existingProduct as any).maintenance_reserve ?? 0,
+      });
+      setInstallationChargeVisible((existingProduct as any).installation_charge_visible ?? true);
+
       // Load existing product locations
       const loadProductLocations = async () => {
         const { data } = await supabase
@@ -134,7 +217,6 @@ const VendorProductForm = () => {
         if (data && data.length > 0) {
           setSelectedLocationIds(data.map(pl => pl.location_id));
         } else if (existingProduct.location_id) {
-          // Fallback to legacy location_id
           setSelectedLocationIds([existingProduct.location_id]);
         }
       };
@@ -151,8 +233,11 @@ const VendorProductForm = () => {
         const firstPlan = plans[0];
         const lastPlan = plans[plans.length - 1];
 
-        // Detect if manual slab: more than 2 plans means manual
-        if (plans.length > 2) {
+        // Detect if manual slab: more than 2 plans AND no matching factor tenures
+        const factorTenures = new Set(TENURE_OPTIONS);
+        const allMatchFactor = plans.every((p: any) => factorTenures.has(p.duration_months));
+        
+        if (!allMatchFactor && plans.length > 2) {
           setPricingMode('manual');
           const slabs: Record<number, number> = {};
           plans.forEach((p: any) => { slabs[p.duration_months] = p.monthly_rent; });
@@ -165,22 +250,11 @@ const VendorProductForm = () => {
           }));
         } else {
           setPricingMode('auto');
-          const baseRent = firstPlan.monthly_rent;
-          const maxDur = lastPlan.duration_months;
-          
-          let discountPerMonth = 0;
-          if (plans.length > 1 && baseRent > 0 && maxDur > 1) {
-            const totalDiscountPercent = ((baseRent - lastPlan.monthly_rent) / baseRent) * 100;
-            discountPerMonth = Math.round((totalDiscountPercent / (maxDur - 1)) * 10) / 10;
-          }
-
-          setPricing({
-            baseMonthlyRent: baseRent,
+          setPricing(prev => ({
+            ...prev,
             deliveryFee: firstPlan.delivery_fee || 500,
             installationFee: firstPlan.installation_fee || 0,
-            maxDuration: maxDur,
-            discountPerMonth: Math.max(0, discountPerMonth),
-          });
+          }));
         }
 
         // Load variations
@@ -215,10 +289,9 @@ const VendorProductForm = () => {
   });
 
   // Generate rental plan rows from pricing config
-  // Deposit = monthly rent for that plan (auto-calculated)
   const generateRentalPlans = (productIdForPlans: string) => {
     if (pricingMode === 'manual') {
-      // Manual mode: create a plan for each month the vendor defined
+      // Manual mode: unchanged
       const entries = Object.entries(manualSlabs)
         .map(([m, p]) => ({ month: Number(m), price: Number(p) }))
         .filter(e => e.price > 0)
@@ -229,37 +302,22 @@ const VendorProductForm = () => {
         label: `${month} ${month === 1 ? 'Month' : 'Months'}`,
         duration_months: month,
         monthly_rent: price,
-        security_deposit: price, // Deposit = monthly rent for this plan
+        security_deposit: price,
         delivery_fee: pricing.deliveryFee,
         installation_fee: pricing.installationFee,
       }));
     }
 
-    // Auto mode: existing logic
-    const plans = [];
-    const baseRent = pricing.baseMonthlyRent;
-    plans.push({
+    // Auto mode: use pricing factors
+    return autoSlabPreview.map(({ tenure, monthlyRent, installationFee }) => ({
       product_id: productIdForPlans,
-      label: '1 Month',
-      duration_months: 1,
-      monthly_rent: baseRent,
-      security_deposit: baseRent,
+      label: `${tenure} ${tenure === 1 ? 'Month' : 'Months'}`,
+      duration_months: tenure,
+      monthly_rent: monthlyRent,
+      security_deposit: monthlyRent,
       delivery_fee: pricing.deliveryFee,
-      installation_fee: pricing.installationFee,
-    });
-    if (pricing.maxDuration > 1) {
-      const maxRent = getPriceForMonth(pricing.maxDuration);
-      plans.push({
-        product_id: productIdForPlans,
-        label: `${pricing.maxDuration} Months`,
-        duration_months: pricing.maxDuration,
-        monthly_rent: maxRent,
-        security_deposit: maxRent,
-        delivery_fee: pricing.deliveryFee,
-        installation_fee: pricing.installationFee,
-      });
-    }
-    return plans;
+      installation_fee: installationFee,
+    }));
   };
 
   const createProductMutation = useMutation({
@@ -276,7 +334,7 @@ const VendorProductForm = () => {
           brand: formData.brand || null,
           description: formData.description || null,
           category_id: formData.category_id || null,
-          location_id: selectedLocationIds[0] || null, // Keep first location for backward compatibility
+          location_id: selectedLocationIds[0] || null,
           features: formData.features.filter(f => f.trim()),
           images: formData.images.filter(i => i.trim()),
           specifications: formData.specifications,
@@ -288,6 +346,10 @@ const VendorProductForm = () => {
           advance_discount_percent: formData.advance_discount_percent ? Number(formData.advance_discount_percent) : 0,
           delivery_tat: formData.delivery_tat,
           installation_tat: formData.installation_tat,
+          landing_cost: costBreakdown.landingCost,
+          transport_cost: costBreakdown.transportCost,
+          maintenance_reserve: costBreakdown.maintenanceReserve,
+          installation_charge_visible: installationChargeVisible,
         } as any)
         .select()
         .single();
@@ -313,7 +375,7 @@ const VendorProductForm = () => {
         }
       }
 
-      // Save product locations (many-to-many)
+      // Save product locations
       if (selectedLocationIds.length > 0) {
         const locationRows = selectedLocationIds.map(locId => ({
           product_id: product.id,
@@ -342,15 +404,13 @@ const VendorProductForm = () => {
 
       const slug = formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-');
       
-      // Don't reset status to pending - keep current status
-      // Admin re-approval only needed for new products
       const updatePayload: Record<string, any> = {
         name: formData.name,
         slug,
         brand: formData.brand || null,
         description: formData.description || null,
         category_id: formData.category_id || null,
-        location_id: selectedLocationIds[0] || null, // Keep first location for backward compatibility
+        location_id: selectedLocationIds[0] || null,
         features: formData.features.filter(f => f.trim()),
         images: formData.images.filter(i => i.trim()),
         specifications: formData.specifications,
@@ -361,6 +421,10 @@ const VendorProductForm = () => {
         advance_discount_percent: formData.advance_discount_percent ? Number(formData.advance_discount_percent) : 0,
         delivery_tat: formData.delivery_tat,
         installation_tat: formData.installation_tat,
+        landing_cost: costBreakdown.landingCost,
+        transport_cost: costBreakdown.transportCost,
+        maintenance_reserve: costBreakdown.maintenanceReserve,
+        installation_charge_visible: installationChargeVisible,
       };
 
       const { error: productError } = await supabase
@@ -371,7 +435,7 @@ const VendorProductForm = () => {
 
       if (productError) throw productError;
 
-      // Soft-delete existing rental plans (deactivate) to preserve order references
+      // Soft-delete existing rental plans
       const { error: deactivateError } = await supabase
         .from('rental_plans')
         .update({ is_active: false })
@@ -398,22 +462,16 @@ const VendorProductForm = () => {
         }
       }
 
-      // Update product locations - delete old and insert new
+      // Update product locations
       const { error: delLocError } = await supabase.from('product_locations').delete().eq('product_id', productId);
-      if (delLocError) {
-        console.error('[updateProduct] Failed to delete old locations:', delLocError);
-        throw delLocError;
-      }
+      if (delLocError) throw delLocError;
       if (selectedLocationIds.length > 0) {
         const locationRows = selectedLocationIds.map(locId => ({
           product_id: productId,
           location_id: locId,
         }));
         const { error: insLocError } = await supabase.from('product_locations').insert(locationRows);
-        if (insLocError) {
-          console.error('[updateProduct] Failed to insert locations:', insLocError);
-          throw insLocError;
-        }
+        if (insLocError) throw insLocError;
       }
     },
     onSuccess: () => {
@@ -437,8 +495,8 @@ const VendorProductForm = () => {
       return;
     }
 
-    if (pricingMode === 'auto' && pricing.baseMonthlyRent <= 0) {
-      toast.error('Base monthly rent is required');
+    if (pricingMode === 'auto' && totalCost <= 0) {
+      toast.error('Please enter cost breakdown fields (Total Cost must be > 0)');
       return;
     }
 
@@ -805,87 +863,147 @@ const VendorProductForm = () => {
 
               {pricingMode === 'auto' ? (
                 <>
-                  <p className="text-xs text-muted-foreground">System automatically calculates lower prices for longer rental durations.</p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <p className="text-xs text-muted-foreground">
+                    Enter your product costs below. Rent is auto-calculated using predefined pricing factors for each tenure.
+                  </p>
+
+                  {/* Cost Breakdown Inputs */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
-                      <Label>Base Monthly Rent (₹) *</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={pricing.baseMonthlyRent || ''}
-                        onChange={(e) => setPricing({ ...pricing, baseMonthlyRent: Number(e.target.value) })}
-                        placeholder="e.g., 900"
-                      />
-                      <p className="text-xs text-muted-foreground">Price for 1 month rental</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Discount % per Month</Label>
+                      <Label>Buying / Landing Cost (₹) *</Label>
                       <Input
                         type="number"
                         min="0"
-                        max="20"
-                        step="0.5"
-                        value={pricing.discountPerMonth}
-                        onChange={(e) => setPricing({ ...pricing, discountPerMonth: Number(e.target.value) })}
-                        placeholder="e.g., 2"
+                        value={costBreakdown.landingCost || ''}
+                        onChange={(e) => setCostBreakdown({ ...costBreakdown, landingCost: Number(e.target.value) })}
+                        placeholder="e.g., 23600"
                       />
-                      <p className="text-xs text-muted-foreground">Each extra month reduces price by this %</p>
                     </div>
                     <div className="space-y-2">
-                      <Label>Max Rental Duration</Label>
-                      <Select 
-                        value={String(pricing.maxDuration)} 
-                        onValueChange={(v) => setPricing({ ...pricing, maxDuration: Number(v) })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[3, 6, 12, 18, 24, 36].map(m => (
-                            <SelectItem key={m} value={String(m)}>{m} Months</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label>Transport Cost (₹)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={costBreakdown.transportCost || ''}
+                        onChange={(e) => setCostBreakdown({ ...costBreakdown, transportCost: Number(e.target.value) })}
+                        placeholder="e.g., 500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Installation Cost (₹)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={costBreakdown.installationCost || ''}
+                        onChange={(e) => setCostBreakdown({ ...costBreakdown, installationCost: Number(e.target.value) })}
+                        placeholder="e.g., 500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Maintenance Reserve (₹)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={costBreakdown.maintenanceReserve || ''}
+                        onChange={(e) => setCostBreakdown({ ...costBreakdown, maintenanceReserve: Number(e.target.value) })}
+                        placeholder="e.g., 1000"
+                      />
                     </div>
                   </div>
 
-                  {/* Auto-calculated deposit info */}
-                  {pricing.baseMonthlyRent > 0 && (
-                    <div className="p-3 bg-muted/50 rounded-lg text-sm flex items-center gap-2">
+                  {/* Total Cost Display */}
+                  {totalCost > 0 && (
+                    <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg text-sm flex items-center gap-2">
                       <Info className="h-4 w-4 text-primary shrink-0" />
-                      <span>Security Deposit: <strong>₹{pricing.baseMonthlyRent.toLocaleString()}</strong> (auto-calculated = monthly rent)</span>
+                      <span>
+                        Total Cost (C) = ₹{costBreakdown.landingCost.toLocaleString()} + ₹{costBreakdown.transportCost.toLocaleString()} + ₹{costBreakdown.installationCost.toLocaleString()} + ₹{costBreakdown.maintenanceReserve.toLocaleString()} = <strong>₹{totalCost.toLocaleString()}</strong>
+                      </span>
                     </div>
                   )}
 
-                  {/* Pricing Preview */}
-                  {pricingPreview.length > 0 && (
+                  {/* Installation Charge Visible Toggle */}
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">Installation Charge Visible</p>
+                        <p className="text-xs text-muted-foreground">
+                          {installationChargeVisible
+                            ? 'Installation charges will be shown separately on the product page (requires admin approval).'
+                            : 'Installation cost will be distributed into the monthly rent. Customer sees only rent.'}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={installationChargeVisible}
+                        onCheckedChange={setInstallationChargeVisible}
+                      />
+                    </div>
+                    {!installationChargeVisible && costBreakdown.installationCost > 0 && (
+                      <div className="p-2 bg-muted rounded text-xs text-muted-foreground flex items-center gap-2">
+                        <Info className="h-3.5 w-3.5 shrink-0" />
+                        <span>
+                          Installation cost of ₹{costBreakdown.installationCost.toLocaleString()} will be divided by tenure and added to monthly rent.
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delivery Fee */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Delivery Fee (₹)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={pricing.deliveryFee || ''}
+                        onChange={(e) => setPricing({ ...pricing, deliveryFee: Number(e.target.value) })}
+                        placeholder="500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Auto Slab Pricing Preview */}
+                  {autoSlabPreview.length > 0 && (
                     <div className="border rounded-lg overflow-hidden">
                       <div className="p-3 bg-muted flex items-center gap-2">
                         <Info className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">Pricing Preview</span>
+                        <span className="text-sm font-medium">Auto Slab Pricing Preview</span>
                       </div>
                       <div className="divide-y">
-                        {pricingPreview.map(({ month, price }) => (
-                          <div key={month} className="flex justify-between p-3 text-sm">
+                        <div className="grid grid-cols-4 gap-2 p-3 text-xs font-medium text-muted-foreground bg-muted/50">
+                          <span>Tenure</span>
+                          <span>Factor</span>
+                          <span>Monthly Rent</span>
+                          <span>{installationChargeVisible ? 'Installation' : 'Incl. Install'}</span>
+                        </div>
+                        {autoSlabPreview.map(({ tenure, factor, monthlyRent, installationFee }) => (
+                          <div key={tenure} className="grid grid-cols-4 gap-2 p-3 text-sm">
                             <span className="text-muted-foreground">
-                              {month} {month === 1 ? 'Month' : 'Months'}
+                              {tenure} {tenure === 1 ? 'Month' : 'Months'}
                             </span>
-                            <div className="text-right">
-                              <span className="font-semibold">₹{price.toLocaleString()}/mo</span>
-                              {month > 1 && (
-                                <span className="text-xs text-primary ml-2">
-                                  ({Math.round(((pricing.baseMonthlyRent - price) / pricing.baseMonthlyRent) * 100)}% off)
-                                </span>
-                              )}
-                            </div>
+                            <span className="text-muted-foreground">{factor}</span>
+                            <span className="font-semibold">₹{monthlyRent.toLocaleString()}/mo</span>
+                            <span className="text-muted-foreground">
+                              {installationChargeVisible
+                                ? `₹${installationFee.toLocaleString()}`
+                                : 'Included'}
+                            </span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
+
+                  {/* Security Deposit Info */}
+                  {totalCost > 0 && (
+                    <div className="p-3 bg-muted/50 rounded-lg text-sm flex items-center gap-2">
+                      <Info className="h-4 w-4 text-primary shrink-0" />
+                      <span>Security Deposit = Monthly rent of selected plan (auto-calculated)</span>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
+                  {/* Manual Slab — UNCHANGED */}
                   <p className="text-xs text-muted-foreground">Enter custom pricing for each month duration manually.</p>
                   <div className="space-y-2">
                     <Label>Max Duration</Label>
@@ -953,34 +1071,34 @@ const VendorProductForm = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* Common fields for manual: Delivery/Installation fees */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Delivery Fee (₹)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={pricing.deliveryFee || ''}
+                        onChange={(e) => setPricing({ ...pricing, deliveryFee: Number(e.target.value) })}
+                        placeholder="500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Installation Fee (₹)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={pricing.installationFee || ''}
+                        onChange={(e) => setPricing({ ...pricing, installationFee: Number(e.target.value) })}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
                 </>
               )}
 
-              {/* Common fields: Delivery/Installation fees */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Delivery Fee (₹)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={pricing.deliveryFee || ''}
-                    onChange={(e) => setPricing({ ...pricing, deliveryFee: Number(e.target.value) })}
-                    placeholder="500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Installation Fee (₹)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={pricing.installationFee || ''}
-                    onChange={(e) => setPricing({ ...pricing, installationFee: Number(e.target.value) })}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-
-              {/* Buy Price & Advance Discount */}
+              {/* Buy Price & Advance Discount — common for both modes */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Buy Price (₹)</Label>
@@ -1009,6 +1127,27 @@ const VendorProductForm = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Vendor Profit Highlight */}
+          {vendorEarnings24 > 0 && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-full">
+                    <TrendingUp className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-primary">
+                      📈 2-Year Earnings Estimate: ₹{vendorEarnings24.toLocaleString()}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Steady rental income + long-term value for your product.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Delivery & Installation TAT */}
           <Card>
