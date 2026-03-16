@@ -101,17 +101,15 @@ const HeroSlider = () => {
             >
               {/* Image-based slide */}
               {imgUrl ? (
-                <div className="relative w-full h-full">
+                <Link to={slide.cta_link} className="relative w-full h-full block cursor-pointer">
                   <img
                     src={imgUrl}
                     alt={slide.title || 'Promotional banner'}
                     className="w-full h-full object-cover object-center"
                   />
-                  {/* Overlay for text readability */}
                   {(slide.title || slide.subtitle) && (
                     <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-transparent" />
                   )}
-                  {/* Text overlay */}
                   {(slide.title || slide.subtitle) && (
                     <div className="absolute inset-0 flex items-center">
                       <div className="container mx-auto px-4">
@@ -126,20 +124,18 @@ const HeroSlider = () => {
                               {slide.subtitle}
                             </p>
                           )}
-                          <Link to={slide.cta_link}>
-                            <Button
-                              size="lg"
-                              className="bg-white text-foreground hover:bg-white/90 shadow-lg rounded-full gap-2 mt-1 font-semibold"
-                            >
-                              {slide.cta_text}
-                              <ArrowRight className="w-4 h-4" />
-                            </Button>
-                          </Link>
+                          <Button
+                            size="lg"
+                            className="bg-white text-foreground hover:bg-white/90 shadow-lg rounded-full gap-2 mt-1 font-semibold"
+                          >
+                            {slide.cta_text}
+                            <ArrowRight className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
                     </div>
                   )}
-                </div>
+                </Link>
               ) : (
                 /* Gradient fallback slide */
                 <div className={`w-full h-full flex items-center bg-gradient-to-br ${slide.gradient}`}>
