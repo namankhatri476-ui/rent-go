@@ -23,6 +23,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import LocationSelector from "@/components/LocationSelector";
+import MarqueeBanner from "@/components/MarqueeBanner";
 
 const Header = () => {
   const { itemCount } = useCart();
