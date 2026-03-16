@@ -192,6 +192,7 @@ const AdminProducts = () => {
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Protection</TableHead>
+                    <TableHead>Popular</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -213,6 +214,16 @@ const AdminProducts = () => {
                       <TableCell>{getStatusBadge(product.status)}</TableCell>
                       <TableCell>
                         <span className="text-sm">₹{(product as any).protection_plan_price ?? 99}/mo</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <Switch
+                            checked={!!(product as any).is_popular}
+                            onCheckedChange={(checked) => togglePopularMutation.mutate({ productId: product.id, isPopular: checked })}
+                            disabled={product.status !== 'approved'}
+                          />
+                          {(product as any).is_popular && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
+                        </div>
                       </TableCell>
                       <TableCell>{format(new Date(product.created_at), 'MMM dd, yyyy')}</TableCell>
                       <TableCell>
