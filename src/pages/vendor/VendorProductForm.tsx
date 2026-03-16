@@ -83,6 +83,9 @@ const VendorProductForm = () => {
   // Pricing mode: 'auto' or 'manual'
   const [pricingMode, setPricingMode] = useState<'auto' | 'manual'>('auto');
 
+  // Selected tenures for Auto Slab (vendor picks which ones to offer)
+  const [selectedTenures, setSelectedTenures] = useState<number[]>([]);
+
   // Manual slab prices: month -> price
   const [manualSlabs, setManualSlabs] = useState<Record<number, number>>({});
   const [manualMaxDuration, setManualMaxDuration] = useState(12);
