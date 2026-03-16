@@ -1,7 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, Search, Building2, Shield, LogOut, ChevronDown } from "lucide-react";
+import { ShoppingCart, User, Menu, X, Search, Building2, Shield, LogOut, ChevronDown, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,8 +32,22 @@ const Header = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
-
   const { selectedLocation } = useLocation();
+
+  // Fetch categories for nav
+  const { data: categories } = useQuery({
+    queryKey: ['header-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, slug')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Search products
   const { data: searchResults, isLoading: isSearching } = useQuery({
@@ -46,11 +59,9 @@ const Header = () => {
         .select('id, name, slug, brand, images, location_id')
         .eq('status', 'approved')
         .or(`name.ilike.%${searchQuery}%,brand.ilike.%${searchQuery}%`);
-      
       if (selectedLocation?.id) {
         query = query.eq('location_id', selectedLocation.id);
       }
-      
       const { data, error } = await query.limit(10);
       if (error) throw error;
       return data;
@@ -72,87 +83,89 @@ const Header = () => {
     navigate(`/product/${slug}`);
   };
 
+  // Show up to 5 categories + "& More"
+  const visibleCategories = categories?.slice(0, 5) || [];
+  const hasMore = (categories?.length || 0) > 5;
+
   return (
     <>
-      {/* Top announcement bar */}
-      <div className="bg-primary text-primary-foreground text-xs py-1.5 text-center font-medium tracking-wide">
-        Free Delivery & Installation on all orders • 100% Refundable Deposit
-      </div>
-
-      <header className="sticky top-0 z-50 bg-card border-b border-border/60 shadow-sm">
+      <header className="sticky top-0 z-50 bg-foreground text-primary-foreground shadow-md">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-[60px]">
+          <div className="flex items-center justify-between h-14">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2.5 shrink-0">
+            <Link to="/" className="flex items-center gap-2 shrink-0">
               {settings.logoUrl ? (
                 <img
                   src={settings.logoUrl}
                   alt={settings.platformName}
-                  className="h-9 w-auto object-contain max-w-[160px]"
+                  className="h-8 w-auto object-contain max-w-[140px]"
                 />
               ) : (
-                <span className="text-lg font-extrabold tracking-tight text-foreground">
-                  {settings.platformName.includes("Rent") ? (
-                    <>
-                      {settings.platformName.slice(0, 4)}
-                      <span className="text-primary">{settings.platformName.slice(4)}</span>
-                    </>
-                  ) : (
-                    <span className="text-primary">{settings.platformName}</span>
-                  )}
-                </span>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                    <span className="text-primary-foreground font-bold text-sm">R</span>
+                  </div>
+                  <span className="text-lg font-extrabold tracking-tight text-white">
+                    {settings.platformName}
+                  </span>
+                </div>
               )}
             </Link>
 
-            {/* Location Selector */}
-            <div className="hidden md:block">
-              <LocationSelector />
-            </div>
-
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-1">
-              <Link to="/" className="px-3 py-2 text-sm font-medium text-foreground/70 hover:text-foreground rounded-md hover:bg-muted transition-colors">
-                Home
-              </Link>
-              <Link to="/products" className="px-3 py-2 text-sm font-medium text-foreground/70 hover:text-foreground rounded-md hover:bg-muted transition-colors">
-                Products
-              </Link>
-              <Link to="/how-it-works" className="px-3 py-2 text-sm font-medium text-foreground/70 hover:text-foreground rounded-md hover:bg-muted transition-colors">
-                How It Works
-              </Link>
+            {/* Desktop Category Nav */}
+            <nav className="hidden lg:flex items-center gap-1 mx-4 flex-1 justify-center">
+              {visibleCategories.map((cat) => (
+                <Link
+                  key={cat.id}
+                  to={`/products?category=${cat.slug}`}
+                  className="px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white whitespace-nowrap transition-colors"
+                >
+                  {cat.name}
+                </Link>
+              ))}
+              {hasMore && (
+                <Link
+                  to="/products"
+                  className="px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white whitespace-nowrap transition-colors"
+                >
+                  & More
+                </Link>
+              )}
             </nav>
 
-            {/* Desktop Actions */}
-            <div className="hidden md:flex items-center gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-foreground/60 hover:text-foreground"
+            {/* Right Actions */}
+            <div className="hidden md:flex items-center gap-2 shrink-0">
+              {/* Location */}
+              <LocationSelector />
+
+              {/* Search */}
+              <button
                 onClick={() => setSearchOpen(true)}
+                className="p-2 text-white/70 hover:text-white transition-colors"
               >
                 <Search className="w-[18px] h-[18px]" />
-              </Button>
-              <Link to="/cart" className="relative">
-                <Button variant="ghost" size="icon" className="text-foreground/60 hover:text-foreground">
-                  <ShoppingCart className="w-[18px] h-[18px]" />
-                </Button>
+              </button>
+
+              {/* Cart */}
+              <Link to="/cart" className="relative p-2 text-white/70 hover:text-white transition-colors">
+                <ShoppingCart className="w-[18px] h-[18px]" />
                 {itemCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">
+                  <span className="absolute -top-0.5 right-0 w-[18px] h-[18px] rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">
                     {itemCount}
                   </span>
                 )}
               </Link>
-              
+
+              {/* User */}
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="gap-1.5 ml-1 text-foreground/70 hover:text-foreground">
-                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="w-3.5 h-3.5 text-primary" />
+                    <button className="flex items-center gap-1.5 p-2 text-white/70 hover:text-white transition-colors">
+                      <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+                        <User className="w-3.5 h-3.5 text-white" />
                       </div>
-                      <span className="text-sm font-medium">{profile?.full_name?.split(' ')[0] || 'Account'}</span>
                       <ChevronDown className="w-3 h-3" />
-                    </Button>
+                    </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     {isAdmin && (
@@ -186,7 +199,7 @@ const Header = () => {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={signOut}
                       className="flex items-center gap-2 cursor-pointer text-destructive"
                     >
@@ -197,7 +210,7 @@ const Header = () => {
                 </DropdownMenu>
               ) : (
                 <Link to="/auth">
-                  <Button size="sm" className="ml-1 h-9 px-4 rounded-full">
+                  <Button size="sm" className="h-8 px-4 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold">
                     Login / Register
                   </Button>
                 </Link>
@@ -206,96 +219,89 @@ const Header = () => {
 
             {/* Mobile Actions */}
             <div className="flex items-center gap-1 md:hidden">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-foreground/60"
+              <button
                 onClick={() => setSearchOpen(true)}
+                className="p-2 text-white/70 hover:text-white"
               >
                 <Search className="w-[18px] h-[18px]" />
-              </Button>
-              <Link to="/cart" className="relative">
-                <Button variant="ghost" size="icon" className="text-foreground/60">
-                  <ShoppingCart className="w-[18px] h-[18px]" />
-                </Button>
+              </button>
+              <Link to="/cart" className="relative p-2 text-white/70 hover:text-white">
+                <ShoppingCart className="w-[18px] h-[18px]" />
                 {itemCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">
+                  <span className="absolute -top-0.5 right-0 w-[18px] h-[18px] rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">
                     {itemCount}
                   </span>
                 )}
               </Link>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 text-white/70 hover:text-white"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </Button>
+              </button>
             </div>
           </div>
 
           {/* Mobile Menu */}
           {mobileMenuOpen && (
-            <div className="md:hidden py-4 border-t border-border/50 animate-fade-in">
+            <div className="md:hidden py-4 border-t border-white/10 animate-fade-in">
               <div className="mb-3">
                 <LocationSelector />
               </div>
               <nav className="flex flex-col gap-1">
-                <Link 
-                  to="/" 
-                  className="px-3 py-2.5 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Home
-                </Link>
-                <Link 
-                  to="/products" 
-                  className="px-3 py-2.5 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Products
-                </Link>
-                <Link 
-                  to="/how-it-works" 
-                  className="px-3 py-2.5 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  How It Works
-                </Link>
-                
-                <div className="border-t border-border/50 my-2" />
-                
+                {visibleCategories.map((cat) => (
+                  <Link
+                    key={cat.id}
+                    to={`/products?category=${cat.slug}`}
+                    className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
+                {hasMore && (
+                  <Link
+                    to="/products"
+                    className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    & More
+                  </Link>
+                )}
+
+                <div className="border-t border-white/10 my-2" />
+
                 {user ? (
                   <>
                     {isAdmin && (
-                      <Link 
-                        to="/admin" 
-                        className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-muted rounded-lg transition-colors"
+                      <Link
+                        to="/admin"
+                        className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-white/10 rounded-lg transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Admin Dashboard
                       </Link>
                     )}
                     {isVendor && (
-                      <Link 
-                        to="/vendor" 
-                        className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-muted rounded-lg transition-colors"
+                      <Link
+                        to="/vendor"
+                        className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-white/10 rounded-lg transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Vendor Dashboard
                       </Link>
                     )}
                     {!isVendor && (
-                      <Link 
-                        to="/vendor/register" 
-                        className="px-3 py-2.5 text-sm font-medium text-foreground/70 hover:bg-muted rounded-lg transition-colors"
+                      <Link
+                        to="/vendor/register"
+                        className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Become a Vendor
                       </Link>
                     )}
                     <button
-                      className="px-3 py-2.5 text-sm font-medium text-destructive hover:bg-muted rounded-lg transition-colors text-left flex items-center gap-2"
+                      className="px-3 py-2.5 text-sm font-medium text-destructive hover:bg-white/10 rounded-lg transition-colors text-left flex items-center gap-2"
                       onClick={() => {
                         signOut();
                         setMobileMenuOpen(false);
@@ -335,8 +341,7 @@ const Header = () => {
                 autoFocus
               />
             </div>
-            
-            {/* Search Results */}
+
             {searchQuery.length >= 2 && (
               <div className="max-h-64 overflow-y-auto">
                 {isSearching ? (
