@@ -633,9 +633,12 @@ export type Database = {
           id: string
           images: string[] | null
           in_stock: boolean
+          installation_charge_visible: boolean | null
           installation_tat: number | null
           is_popular: boolean | null
+          landing_cost: number | null
           location_id: string | null
+          maintenance_reserve: number | null
           name: string
           protection_plan_price: number | null
           protection_value: number | null
@@ -647,6 +650,7 @@ export type Database = {
           status: Database["public"]["Enums"]["product_status"]
           stock_quantity: number | null
           tags: string[] | null
+          transport_cost: number | null
           updated_at: string
           vendor_id: string
         }
@@ -664,9 +668,12 @@ export type Database = {
           id?: string
           images?: string[] | null
           in_stock?: boolean
+          installation_charge_visible?: boolean | null
           installation_tat?: number | null
           is_popular?: boolean | null
+          landing_cost?: number | null
           location_id?: string | null
+          maintenance_reserve?: number | null
           name: string
           protection_plan_price?: number | null
           protection_value?: number | null
@@ -678,6 +685,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["product_status"]
           stock_quantity?: number | null
           tags?: string[] | null
+          transport_cost?: number | null
           updated_at?: string
           vendor_id: string
         }
@@ -695,9 +703,12 @@ export type Database = {
           id?: string
           images?: string[] | null
           in_stock?: boolean
+          installation_charge_visible?: boolean | null
           installation_tat?: number | null
           is_popular?: boolean | null
+          landing_cost?: number | null
           location_id?: string | null
+          maintenance_reserve?: number | null
           name?: string
           protection_plan_price?: number | null
           protection_value?: number | null
@@ -709,6 +720,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["product_status"]
           stock_quantity?: number | null
           tags?: string[] | null
+          transport_cost?: number | null
           updated_at?: string
           vendor_id?: string
         }
