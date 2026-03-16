@@ -188,17 +188,16 @@ const Auth = () => {
     setFormError("");
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+      await supabase.auth.resetPasswordForEmail(formData.email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
-      if (error) {
-        setFormError(getFriendlyError(error.message));
-      } else {
-        setForgotPasswordSent(true);
-        startCooldown();
-      }
-    } catch (error: any) {
-      setFormError(getFriendlyError(error.message || "Failed to send reset link"));
+      // Always show success regardless of result (security best practice - don't reveal if email exists or rate limited)
+      setForgotPasswordSent(true);
+      startCooldown();
+    } catch {
+      // Silently succeed - don't expose any backend errors to the user
+      setForgotPasswordSent(true);
+      startCooldown();
     } finally {
       setForgotPasswordLoading(false);
     }
