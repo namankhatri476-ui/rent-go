@@ -218,8 +218,8 @@ const Auth = () => {
       <Dialog open={signupDialogOpen} onOpenChange={(open) => { if (!open) handleSignupDialogClose(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="text-center items-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+              <CheckCircle2 className="h-8 w-8 text-primary" />
             </div>
             <DialogTitle className="text-xl">Account Created Successfully!</DialogTitle>
             <DialogDescription className="text-center mt-2">
