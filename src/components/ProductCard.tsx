@@ -16,7 +16,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
   return (
     <div className="product-card group">
       {/* Image Container */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+      <div className="relative aspect-[4/3] overflow-hidden bg-white">
         <img
           src={product.images[0]}
           alt={product.name}
