@@ -253,10 +253,10 @@ const Auth = () => {
 
           {/* Forgot Password Success Message */}
           {forgotPasswordSent && mode === "login" && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3 animate-fade-in">
-              <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+            <div className="mb-6 p-4 bg-accent/20 border border-accent/40 rounded-xl flex items-start gap-3 animate-fade-in">
+              <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
               <div>
-                <p className="font-semibold text-green-700 text-sm">Password reset link sent!</p>
+                <p className="font-semibold text-foreground text-sm">Password reset link sent!</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Please check your inbox for <strong>{formData.email}</strong>. If you don't see it, check your spam folder.
                 </p>
