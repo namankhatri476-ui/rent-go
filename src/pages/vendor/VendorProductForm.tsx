@@ -54,6 +54,13 @@ const VendorProductForm = () => {
   // Variations state
   const [variations, setVariations] = useState<{ variation_type: string; variation_value: string; price_adjustment: number }[]>([]);
 
+  // Pricing mode: 'auto' or 'manual'
+  const [pricingMode, setPricingMode] = useState<'auto' | 'manual'>('auto');
+
+  // Manual slab prices: month -> price
+  const [manualSlabs, setManualSlabs] = useState<Record<number, number>>({});
+  const [manualMaxDuration, setManualMaxDuration] = useState(12);
+
   // New simplified pricing model - deposit auto-calculated from baseMonthlyRent
   const [pricing, setPricing] = useState({
     baseMonthlyRent: 0,
@@ -144,23 +151,37 @@ const VendorProductForm = () => {
         const firstPlan = plans[0];
         const lastPlan = plans[plans.length - 1];
 
-        const baseRent = firstPlan.monthly_rent;
-        const maxDur = lastPlan.duration_months;
-        
-        // Calculate discount % per month from first and last plan
-        let discountPerMonth = 0;
-        if (plans.length > 1 && baseRent > 0 && maxDur > 1) {
-          const totalDiscountPercent = ((baseRent - lastPlan.monthly_rent) / baseRent) * 100;
-          discountPerMonth = Math.round((totalDiscountPercent / (maxDur - 1)) * 10) / 10;
-        }
+        // Detect if manual slab: more than 2 plans means manual
+        if (plans.length > 2) {
+          setPricingMode('manual');
+          const slabs: Record<number, number> = {};
+          plans.forEach((p: any) => { slabs[p.duration_months] = p.monthly_rent; });
+          setManualSlabs(slabs);
+          setManualMaxDuration(lastPlan.duration_months);
+          setPricing(prev => ({
+            ...prev,
+            deliveryFee: firstPlan.delivery_fee || 500,
+            installationFee: firstPlan.installation_fee || 0,
+          }));
+        } else {
+          setPricingMode('auto');
+          const baseRent = firstPlan.monthly_rent;
+          const maxDur = lastPlan.duration_months;
+          
+          let discountPerMonth = 0;
+          if (plans.length > 1 && baseRent > 0 && maxDur > 1) {
+            const totalDiscountPercent = ((baseRent - lastPlan.monthly_rent) / baseRent) * 100;
+            discountPerMonth = Math.round((totalDiscountPercent / (maxDur - 1)) * 10) / 10;
+          }
 
-        setPricing({
-          baseMonthlyRent: baseRent,
-          deliveryFee: firstPlan.delivery_fee || 500,
-          installationFee: firstPlan.installation_fee || 0,
-          maxDuration: maxDur,
-          discountPerMonth: Math.max(0, discountPerMonth),
-        });
+          setPricing({
+            baseMonthlyRent: baseRent,
+            deliveryFee: firstPlan.delivery_fee || 500,
+            installationFee: firstPlan.installation_fee || 0,
+            maxDuration: maxDur,
+            discountPerMonth: Math.max(0, discountPerMonth),
+          });
+        }
 
         // Load variations
         const existingVariations = ((existingProduct as any).product_variations || [])
@@ -194,8 +215,27 @@ const VendorProductForm = () => {
   });
 
   // Generate rental plan rows from pricing config
-  // Deposit = base monthly rent (auto-calculated)
+  // Deposit = monthly rent for that plan (auto-calculated)
   const generateRentalPlans = (productIdForPlans: string) => {
+    if (pricingMode === 'manual') {
+      // Manual mode: create a plan for each month the vendor defined
+      const entries = Object.entries(manualSlabs)
+        .map(([m, p]) => ({ month: Number(m), price: Number(p) }))
+        .filter(e => e.price > 0)
+        .sort((a, b) => a.month - b.month);
+      
+      return entries.map(({ month, price }) => ({
+        product_id: productIdForPlans,
+        label: `${month} ${month === 1 ? 'Month' : 'Months'}`,
+        duration_months: month,
+        monthly_rent: price,
+        security_deposit: price, // Deposit = monthly rent for this plan
+        delivery_fee: pricing.deliveryFee,
+        installation_fee: pricing.installationFee,
+      }));
+    }
+
+    // Auto mode: existing logic
     const plans = [];
     const baseRent = pricing.baseMonthlyRent;
     plans.push({
@@ -203,7 +243,7 @@ const VendorProductForm = () => {
       label: '1 Month',
       duration_months: 1,
       monthly_rent: baseRent,
-      security_deposit: baseRent, // Deposit = monthly rent for this plan
+      security_deposit: baseRent,
       delivery_fee: pricing.deliveryFee,
       installation_fee: pricing.installationFee,
     });
@@ -214,7 +254,7 @@ const VendorProductForm = () => {
         label: `${pricing.maxDuration} Months`,
         duration_months: pricing.maxDuration,
         monthly_rent: maxRent,
-        security_deposit: maxRent, // Deposit = monthly rent for this plan
+        security_deposit: maxRent,
         delivery_fee: pricing.deliveryFee,
         installation_fee: pricing.installationFee,
       });
@@ -397,9 +437,17 @@ const VendorProductForm = () => {
       return;
     }
 
-    if (pricing.baseMonthlyRent <= 0) {
+    if (pricingMode === 'auto' && pricing.baseMonthlyRent <= 0) {
       toast.error('Base monthly rent is required');
       return;
+    }
+
+    if (pricingMode === 'manual') {
+      const validSlabs = Object.values(manualSlabs).filter(p => p > 0);
+      if (validSlabs.length === 0) {
+        toast.error('Please enter at least one monthly price');
+        return;
+      }
     }
 
     if (isEditMode) {
@@ -733,53 +781,182 @@ const VendorProductForm = () => {
             <CardHeader>
               <CardTitle>Rental Pricing *</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Set a base monthly rent and a discount percentage. The system will automatically calculate lower prices for longer rental durations.
+                Choose how you want to set rental pricing for this product.
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Base Monthly Rent (₹) *</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={pricing.baseMonthlyRent || ''}
-                    onChange={(e) => setPricing({ ...pricing, baseMonthlyRent: Number(e.target.value) })}
-                    placeholder="e.g., 900"
-                  />
-                  <p className="text-xs text-muted-foreground">Price for 1 month rental</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Discount % per Month</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.5"
-                    value={pricing.discountPerMonth}
-                    onChange={(e) => setPricing({ ...pricing, discountPerMonth: Number(e.target.value) })}
-                    placeholder="e.g., 2"
-                  />
-                  <p className="text-xs text-muted-foreground">Each extra month reduces price by this %</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Max Rental Duration</Label>
-                  <Select 
-                    value={String(pricing.maxDuration)} 
-                    onValueChange={(v) => setPricing({ ...pricing, maxDuration: Number(v) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[3, 6, 12, 18, 24, 36].map(m => (
-                        <SelectItem key={m} value={String(m)}>{m} Months</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Pricing Mode Toggle */}
+              <div className="flex gap-2 p-1 bg-muted rounded-lg w-fit">
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${pricingMode === 'auto' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  onClick={() => setPricingMode('auto')}
+                >
+                  Auto Slab
+                </button>
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${pricingMode === 'manual' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  onClick={() => setPricingMode('manual')}
+                >
+                  Manual Slab
+                </button>
               </div>
 
+              {pricingMode === 'auto' ? (
+                <>
+                  <p className="text-xs text-muted-foreground">System automatically calculates lower prices for longer rental durations.</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Base Monthly Rent (₹) *</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={pricing.baseMonthlyRent || ''}
+                        onChange={(e) => setPricing({ ...pricing, baseMonthlyRent: Number(e.target.value) })}
+                        placeholder="e.g., 900"
+                      />
+                      <p className="text-xs text-muted-foreground">Price for 1 month rental</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Discount % per Month</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="20"
+                        step="0.5"
+                        value={pricing.discountPerMonth}
+                        onChange={(e) => setPricing({ ...pricing, discountPerMonth: Number(e.target.value) })}
+                        placeholder="e.g., 2"
+                      />
+                      <p className="text-xs text-muted-foreground">Each extra month reduces price by this %</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Max Rental Duration</Label>
+                      <Select 
+                        value={String(pricing.maxDuration)} 
+                        onValueChange={(v) => setPricing({ ...pricing, maxDuration: Number(v) })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[3, 6, 12, 18, 24, 36].map(m => (
+                            <SelectItem key={m} value={String(m)}>{m} Months</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Auto-calculated deposit info */}
+                  {pricing.baseMonthlyRent > 0 && (
+                    <div className="p-3 bg-muted/50 rounded-lg text-sm flex items-center gap-2">
+                      <Info className="h-4 w-4 text-primary shrink-0" />
+                      <span>Security Deposit: <strong>₹{pricing.baseMonthlyRent.toLocaleString()}</strong> (auto-calculated = monthly rent)</span>
+                    </div>
+                  )}
+
+                  {/* Pricing Preview */}
+                  {pricingPreview.length > 0 && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="p-3 bg-muted flex items-center gap-2">
+                        <Info className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">Pricing Preview</span>
+                      </div>
+                      <div className="divide-y">
+                        {pricingPreview.map(({ month, price }) => (
+                          <div key={month} className="flex justify-between p-3 text-sm">
+                            <span className="text-muted-foreground">
+                              {month} {month === 1 ? 'Month' : 'Months'}
+                            </span>
+                            <div className="text-right">
+                              <span className="font-semibold">₹{price.toLocaleString()}/mo</span>
+                              {month > 1 && (
+                                <span className="text-xs text-primary ml-2">
+                                  ({Math.round(((pricing.baseMonthlyRent - price) / pricing.baseMonthlyRent) * 100)}% off)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">Enter custom pricing for each month duration manually.</p>
+                  <div className="space-y-2">
+                    <Label>Max Duration</Label>
+                    <Select
+                      value={String(manualMaxDuration)}
+                      onValueChange={(v) => setManualMaxDuration(Number(v))}
+                    >
+                      <SelectTrigger className="w-40">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[3, 6, 12, 18, 24, 36].map(m => (
+                          <SelectItem key={m} value={String(m)}>{m} Months</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {Array.from({ length: manualMaxDuration }, (_, i) => i + 1).map(month => (
+                      <div key={month} className="space-y-1">
+                        <Label className="text-xs">{month} {month === 1 ? 'Month' : 'Months'} (₹/mo)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={manualSlabs[month] || ''}
+                          onChange={(e) => setManualSlabs({ ...manualSlabs, [month]: Number(e.target.value) })}
+                          placeholder="₹"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Manual slab deposit info */}
+                  {Object.values(manualSlabs).some(p => p > 0) && (
+                    <div className="p-3 bg-muted/50 rounded-lg text-sm flex items-center gap-2">
+                      <Info className="h-4 w-4 text-primary shrink-0" />
+                      <span>Security Deposit is auto-calculated = monthly rent of selected plan</span>
+                    </div>
+                  )}
+
+                  {/* Manual Pricing Preview */}
+                  {Object.entries(manualSlabs).filter(([, p]) => p > 0).length > 0 && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="p-3 bg-muted flex items-center gap-2">
+                        <Info className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">Manual Pricing Preview</span>
+                      </div>
+                      <div className="divide-y">
+                        {Object.entries(manualSlabs)
+                          .filter(([, p]) => p > 0)
+                          .sort(([a], [b]) => Number(a) - Number(b))
+                          .map(([month, price]) => (
+                            <div key={month} className="flex justify-between p-3 text-sm">
+                              <span className="text-muted-foreground">
+                                {month} {Number(month) === 1 ? 'Month' : 'Months'}
+                              </span>
+                              <div className="text-right">
+                                <span className="font-semibold">₹{price.toLocaleString()}/mo</span>
+                                <span className="text-xs text-muted-foreground ml-2">
+                                  (Deposit: ₹{price.toLocaleString()})
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Common fields: Delivery/Installation fees */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Delivery Fee (₹)</Label>
@@ -800,16 +977,8 @@ const VendorProductForm = () => {
                     onChange={(e) => setPricing({ ...pricing, installationFee: Number(e.target.value) })}
                     placeholder="0"
                   />
-                 </div>
-               </div>
-
-              {/* Auto-calculated deposit info */}
-              {pricing.baseMonthlyRent > 0 && (
-                <div className="p-3 bg-muted/50 rounded-lg text-sm flex items-center gap-2">
-                  <Info className="h-4 w-4 text-primary shrink-0" />
-                  <span>Security Deposit: <strong>₹{pricing.baseMonthlyRent.toLocaleString()}</strong> (auto-calculated = monthly rent)</span>
                 </div>
-              )}
+              </div>
 
               {/* Buy Price & Advance Discount */}
               <div className="grid grid-cols-2 gap-4">
@@ -838,32 +1007,6 @@ const VendorProductForm = () => {
                   <p className="text-xs text-muted-foreground">Discount when customer pays all months upfront</p>
                 </div>
               </div>
-              {/* Pricing Preview */}
-              {pricingPreview.length > 0 && (
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="p-3 bg-muted flex items-center gap-2">
-                    <Info className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">Pricing Preview</span>
-                  </div>
-                  <div className="divide-y">
-                    {pricingPreview.map(({ month, price }) => (
-                      <div key={month} className="flex justify-between p-3 text-sm">
-                        <span className="text-muted-foreground">
-                          {month} {month === 1 ? 'Month' : 'Months'}
-                        </span>
-                        <div className="text-right">
-                          <span className="font-semibold">₹{price.toLocaleString()}/mo</span>
-                          {month > 1 && (
-                            <span className="text-xs text-primary ml-2">
-                              ({Math.round(((pricing.baseMonthlyRent - price) / pricing.baseMonthlyRent) * 100)}% off)
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
 

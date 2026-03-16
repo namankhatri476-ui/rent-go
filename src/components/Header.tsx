@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, Search, Shield, LogOut, ChevronDown, MapPin } from "lucide-react";
+import { ShoppingCart, User, Menu, X, Search, Shield, LogOut, ChevronDown, MapPin, Store, Package, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/CartContext";
@@ -26,7 +26,7 @@ import LocationSelector from "@/components/LocationSelector";
 
 const Header = () => {
   const { itemCount } = useCart();
-  const { user, profile, isAdmin, signOut } = useAuth();
+  const { user, profile, isAdmin, isVendor, isApprovedVendor, signOut } = useAuth();
   const { settings } = usePlatformSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -147,12 +147,36 @@ const Header = () => {
                         </Link>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem asChild>
-                      <Link to="/my-account" className="flex items-center gap-2 cursor-pointer">
-                        <User className="w-4 h-4" />
-                        My Account
-                      </Link>
-                    </DropdownMenuItem>
+                    {isVendor && (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link to="/vendor/dashboard" className="flex items-center gap-2 cursor-pointer">
+                            <Store className="w-4 h-4" />
+                            Vendor Dashboard
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/vendor/products" className="flex items-center gap-2 cursor-pointer">
+                            <Package className="w-4 h-4" />
+                            My Products
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/vendor/orders" className="flex items-center gap-2 cursor-pointer">
+                            <ShoppingBag className="w-4 h-4" />
+                            Orders
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {!isVendor && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/my-account" className="flex items-center gap-2 cursor-pointer">
+                          <User className="w-4 h-4" />
+                          My Account
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer text-destructive">
                       <LogOut className="w-4 h-4" />
@@ -209,9 +233,24 @@ const Header = () => {
                         Admin Dashboard
                       </Link>
                     )}
-                    <Link to="/my-account" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
-                      My Account
-                    </Link>
+                    {isVendor && (
+                      <>
+                        <Link to="/vendor/dashboard" className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                          Vendor Dashboard
+                        </Link>
+                        <Link to="/vendor/products" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                          My Products
+                        </Link>
+                        <Link to="/vendor/orders" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                          Orders
+                        </Link>
+                      </>
+                    )}
+                    {!isVendor && (
+                      <Link to="/my-account" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                        My Account
+                      </Link>
+                    )}
                     <button className="px-3 py-2.5 text-sm font-medium text-destructive hover:bg-white/10 rounded-lg transition-colors text-left flex items-center gap-2" onClick={() => { signOut(); setMobileMenuOpen(false); }}>
                       <LogOut className="w-4 h-4" />
                       Sign Out
