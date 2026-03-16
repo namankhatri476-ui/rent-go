@@ -54,6 +54,13 @@ const VendorProductForm = () => {
   // Variations state
   const [variations, setVariations] = useState<{ variation_type: string; variation_value: string; price_adjustment: number }[]>([]);
 
+  // Pricing mode: 'auto' or 'manual'
+  const [pricingMode, setPricingMode] = useState<'auto' | 'manual'>('auto');
+
+  // Manual slab prices: month -> price
+  const [manualSlabs, setManualSlabs] = useState<Record<number, number>>({});
+  const [manualMaxDuration, setManualMaxDuration] = useState(12);
+
   // New simplified pricing model - deposit auto-calculated from baseMonthlyRent
   const [pricing, setPricing] = useState({
     baseMonthlyRent: 0,
