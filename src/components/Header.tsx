@@ -150,7 +150,7 @@ const Header = () => {
                     {isVendor && (
                       <>
                         <DropdownMenuItem asChild>
-                          <Link to="/vendor/dashboard" className="flex items-center gap-2 cursor-pointer">
+                          <Link to="/vendor" className="flex items-center gap-2 cursor-pointer">
                             <Store className="w-4 h-4" />
                             Vendor Dashboard
                           </Link>
