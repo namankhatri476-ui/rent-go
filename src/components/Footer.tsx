@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import rentprLogo from "@/assets/rentpr-logo.png";
 import { Mail, Phone, MapPin, Building2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
