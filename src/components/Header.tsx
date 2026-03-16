@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, Search, Building2, Shield, LogOut, ChevronDown, MapPin } from "lucide-react";
+import { ShoppingCart, User, Menu, X, Search, Shield, LogOut, ChevronDown, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/CartContext";
@@ -26,7 +26,7 @@ import LocationSelector from "@/components/LocationSelector";
 
 const Header = () => {
   const { itemCount } = useCart();
-  const { user, profile, isVendor, isAdmin, signOut } = useAuth();
+  const { user, profile, isAdmin, signOut } = useAuth();
   const { settings } = usePlatformSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -34,7 +34,6 @@ const Header = () => {
   const navigate = useNavigate();
   const { selectedLocation } = useLocation();
 
-  // Fetch categories for nav
   const { data: categories } = useQuery({
     queryKey: ['header-categories'],
     queryFn: async () => {
@@ -49,7 +48,6 @@ const Header = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Search products
   const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ['search-products', searchQuery, selectedLocation?.id],
     enabled: searchQuery.length >= 2,
@@ -59,9 +57,7 @@ const Header = () => {
         .select('id, name, slug, brand, images, location_id')
         .eq('status', 'approved')
         .or(`name.ilike.%${searchQuery}%,brand.ilike.%${searchQuery}%`);
-      if (selectedLocation?.id) {
-        query = query.eq('location_id', selectedLocation.id);
-      }
+      if (selectedLocation?.id) query = query.eq('location_id', selectedLocation.id);
       const { data, error } = await query.limit(10);
       if (error) throw error;
       return data;
@@ -83,7 +79,6 @@ const Header = () => {
     navigate(`/product/${slug}`);
   };
 
-  // Show up to 5 categories + "& More"
   const visibleCategories = categories?.slice(0, 5) || [];
   const hasMore = (categories?.length || 0) > 5;
 
@@ -95,19 +90,13 @@ const Header = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 shrink-0">
               {settings.logoUrl ? (
-                <img
-                  src={settings.logoUrl}
-                  alt={settings.platformName}
-                  className="h-8 w-auto object-contain max-w-[140px]"
-                />
+                <img src={settings.logoUrl} alt={settings.platformName} className="h-8 w-auto object-contain max-w-[140px]" />
               ) : (
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                     <span className="text-primary-foreground font-bold text-sm">R</span>
                   </div>
-                  <span className="text-lg font-extrabold tracking-tight text-white">
-                    {settings.platformName}
-                  </span>
+                  <span className="text-lg font-extrabold tracking-tight text-white">{settings.platformName}</span>
                 </div>
               )}
             </Link>
@@ -115,19 +104,12 @@ const Header = () => {
             {/* Desktop Category Nav */}
             <nav className="hidden lg:flex items-center gap-1 mx-4 flex-1 justify-center">
               {visibleCategories.map((cat) => (
-                <Link
-                  key={cat.id}
-                  to={`/products?category=${cat.slug}`}
-                  className="px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white whitespace-nowrap transition-colors"
-                >
+                <Link key={cat.id} to={`/products?category=${cat.slug}`} className="px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white whitespace-nowrap transition-colors">
                   {cat.name}
                 </Link>
               ))}
               {hasMore && (
-                <Link
-                  to="/products"
-                  className="px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white whitespace-nowrap transition-colors"
-                >
+                <Link to="/products" className="px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white whitespace-nowrap transition-colors">
                   & More
                 </Link>
               )}
@@ -135,28 +117,17 @@ const Header = () => {
 
             {/* Right Actions */}
             <div className="hidden md:flex items-center gap-2 shrink-0">
-              {/* Location */}
               <LocationSelector />
-
-              {/* Search */}
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="p-2 text-white/70 hover:text-white transition-colors"
-              >
+              <button onClick={() => setSearchOpen(true)} className="p-2 text-white/70 hover:text-white transition-colors">
                 <Search className="w-[18px] h-[18px]" />
               </button>
-
-              {/* Cart */}
               <Link to="/cart" className="relative p-2 text-white/70 hover:text-white transition-colors">
                 <ShoppingCart className="w-[18px] h-[18px]" />
                 {itemCount > 0 && (
-                  <span className="absolute -top-0.5 right-0 w-[18px] h-[18px] rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">
-                    {itemCount}
-                  </span>
+                  <span className="absolute -top-0.5 right-0 w-[18px] h-[18px] rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">{itemCount}</span>
                 )}
               </Link>
 
-              {/* User */}
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -176,22 +147,6 @@ const Header = () => {
                         </Link>
                       </DropdownMenuItem>
                     )}
-                    {isVendor && (
-                      <DropdownMenuItem asChild>
-                        <Link to="/vendor" className="flex items-center gap-2 cursor-pointer">
-                          <Building2 className="w-4 h-4" />
-                          Vendor Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-                    {!isVendor && (
-                      <DropdownMenuItem asChild>
-                        <Link to="/vendor/register" className="flex items-center gap-2 cursor-pointer">
-                          <Building2 className="w-4 h-4" />
-                          Become a Vendor
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
                     <DropdownMenuItem asChild>
                       <Link to="/my-account" className="flex items-center gap-2 cursor-pointer">
                         <User className="w-4 h-4" />
@@ -199,10 +154,7 @@ const Header = () => {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={signOut}
-                      className="flex items-center gap-2 cursor-pointer text-destructive"
-                    >
+                    <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer text-destructive">
                       <LogOut className="w-4 h-4" />
                       Sign Out
                     </DropdownMenuItem>
@@ -219,24 +171,16 @@ const Header = () => {
 
             {/* Mobile Actions */}
             <div className="flex items-center gap-1 md:hidden">
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="p-2 text-white/70 hover:text-white"
-              >
+              <button onClick={() => setSearchOpen(true)} className="p-2 text-white/70 hover:text-white">
                 <Search className="w-[18px] h-[18px]" />
               </button>
               <Link to="/cart" className="relative p-2 text-white/70 hover:text-white">
                 <ShoppingCart className="w-[18px] h-[18px]" />
                 {itemCount > 0 && (
-                  <span className="absolute -top-0.5 right-0 w-[18px] h-[18px] rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">
-                    {itemCount}
-                  </span>
+                  <span className="absolute -top-0.5 right-0 w-[18px] h-[18px] rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">{itemCount}</span>
                 )}
               </Link>
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-white/70 hover:text-white"
-              >
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-white/70 hover:text-white">
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
             </div>
@@ -245,77 +189,37 @@ const Header = () => {
           {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="md:hidden py-4 border-t border-white/10 animate-fade-in">
-              <div className="mb-3">
-                <LocationSelector />
-              </div>
+              <div className="mb-3"><LocationSelector /></div>
               <nav className="flex flex-col gap-1">
                 {visibleCategories.map((cat) => (
-                  <Link
-                    key={cat.id}
-                    to={`/products?category=${cat.slug}`}
-                    className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
+                  <Link key={cat.id} to={`/products?category=${cat.slug}`} className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
                     {cat.name}
                   </Link>
                 ))}
                 {hasMore && (
-                  <Link
-                    to="/products"
-                    className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
+                  <Link to="/products" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
                     & More
                   </Link>
                 )}
-
                 <div className="border-t border-white/10 my-2" />
-
                 {user ? (
                   <>
                     {isAdmin && (
-                      <Link
-                        to="/admin"
-                        className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-white/10 rounded-lg transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
+                      <Link to="/admin" className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
                         Admin Dashboard
                       </Link>
                     )}
-                    {isVendor && (
-                      <Link
-                        to="/vendor"
-                        className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-white/10 rounded-lg transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Vendor Dashboard
-                      </Link>
-                    )}
-                    {!isVendor && (
-                      <Link
-                        to="/vendor/register"
-                        className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Become a Vendor
-                      </Link>
-                    )}
-                    <button
-                      className="px-3 py-2.5 text-sm font-medium text-destructive hover:bg-white/10 rounded-lg transition-colors text-left flex items-center gap-2"
-                      onClick={() => {
-                        signOut();
-                        setMobileMenuOpen(false);
-                      }}
-                    >
+                    <Link to="/my-account" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                      My Account
+                    </Link>
+                    <button className="px-3 py-2.5 text-sm font-medium text-destructive hover:bg-white/10 rounded-lg transition-colors text-left flex items-center gap-2" onClick={() => { signOut(); setMobileMenuOpen(false); }}>
                       <LogOut className="w-4 h-4" />
                       Sign Out
                     </button>
                   </>
                 ) : (
                   <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                    <Button className="w-full rounded-full">
-                      Login / Register
-                    </Button>
+                    <Button className="w-full rounded-full">Login / Register</Button>
                   </Link>
                 )}
               </nav>
@@ -327,21 +231,12 @@ const Header = () => {
       {/* Search Dialog */}
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
         <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-lg">Search Products</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="text-lg">Search Products</DialogTitle></DialogHeader>
           <form onSubmit={handleSearch} className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by product name or brand..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-11 rounded-xl"
-                autoFocus
-              />
+              <Input placeholder="Search by product name or brand..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-11 rounded-xl" autoFocus />
             </div>
-
             {searchQuery.length >= 2 && (
               <div className="max-h-64 overflow-y-auto">
                 {isSearching ? (
@@ -351,19 +246,8 @@ const Header = () => {
                 ) : (
                   <div className="space-y-1">
                     {searchResults?.map((product) => (
-                      <button
-                        key={product.id}
-                        type="button"
-                        onClick={() => handleProductClick(product.slug)}
-                        className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted transition-colors text-left"
-                      >
-                        {product.images?.[0] && (
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="w-11 h-11 object-cover rounded-lg"
-                          />
-                        )}
+                      <button key={product.id} type="button" onClick={() => handleProductClick(product.slug)} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted transition-colors text-left">
+                        {product.images?.[0] && <img src={product.images[0]} alt={product.name} className="w-11 h-11 object-cover rounded-lg" />}
                         <div>
                           <p className="font-medium text-sm">{product.name}</p>
                           <p className="text-xs text-muted-foreground">{product.brand}</p>
@@ -374,15 +258,9 @@ const Header = () => {
                 )}
               </div>
             )}
-
             <div className="flex gap-2">
-              <Button type="submit" className="flex-1 rounded-xl">
-                <Search className="w-4 h-4 mr-2" />
-                Search
-              </Button>
-              <Button type="button" variant="outline" className="rounded-xl" onClick={() => setSearchOpen(false)}>
-                Cancel
-              </Button>
+              <Button type="submit" className="flex-1 rounded-xl"><Search className="w-4 h-4 mr-2" />Search</Button>
+              <Button type="button" variant="outline" className="rounded-xl" onClick={() => setSearchOpen(false)}>Cancel</Button>
             </div>
           </form>
         </DialogContent>
