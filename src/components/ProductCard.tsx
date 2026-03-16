@@ -20,7 +20,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
         <img
           src={product.images[0]}
           alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
         />
         {/* Tags */}
         <div className="absolute top-3 left-3 flex flex-wrap gap-2">
