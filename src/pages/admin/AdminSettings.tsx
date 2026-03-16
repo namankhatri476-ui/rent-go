@@ -113,6 +113,7 @@ const AdminSettings = () => {
       setFooterLogoUploading(false);
     }
   };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const updates = [
