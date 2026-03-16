@@ -28,10 +28,13 @@ const AdminSettings = () => {
     },
   });
 
+  const [footerLogoUploading, setFooterLogoUploading] = useState(false);
+
   const [settings, setSettings] = useState({
     platformName: 'RentPR',
     supportEmail: 'support@rentpr.in',
     logoUrl: '' as string,
+    footerLogoUrl: '' as string,
     marqueeText: 'Free Delivery & Installation on all orders • 100% Refundable Deposit',
     marqueeEnabled: true,
     defaultCommission: 30,
