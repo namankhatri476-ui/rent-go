@@ -51,6 +51,8 @@ const AdminSettings = () => {
         platformName: dbSettings.general?.platformName || 'RentPR',
         supportEmail: dbSettings.general?.supportEmail || 'support@rentpr.in',
         logoUrl: dbSettings.general?.logoUrl || '',
+        marqueeText: dbSettings.general?.marqueeText || 'Free Delivery & Installation on all orders • 100% Refundable Deposit',
+        marqueeEnabled: dbSettings.general?.marqueeEnabled !== undefined ? dbSettings.general.marqueeEnabled : true,
         maintenanceMode: dbSettings.general?.maintenanceMode || false,
         defaultCommission: dbSettings.pricing?.defaultCommission || 30,
         gstRate: dbSettings.pricing?.gstRate || 18,
