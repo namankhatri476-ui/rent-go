@@ -32,6 +32,8 @@ const AdminSettings = () => {
     platformName: 'RentPR',
     supportEmail: 'support@rentpr.in',
     logoUrl: '' as string,
+    marqueeText: 'Free Delivery & Installation on all orders • 100% Refundable Deposit',
+    marqueeEnabled: true,
     defaultCommission: 30,
     gstRate: 18,
     minRentalDuration: 3,
@@ -49,6 +51,8 @@ const AdminSettings = () => {
         platformName: dbSettings.general?.platformName || 'RentPR',
         supportEmail: dbSettings.general?.supportEmail || 'support@rentpr.in',
         logoUrl: dbSettings.general?.logoUrl || '',
+        marqueeText: dbSettings.general?.marqueeText || 'Free Delivery & Installation on all orders • 100% Refundable Deposit',
+        marqueeEnabled: dbSettings.general?.marqueeEnabled !== undefined ? dbSettings.general.marqueeEnabled : true,
         maintenanceMode: dbSettings.general?.maintenanceMode || false,
         defaultCommission: dbSettings.pricing?.defaultCommission || 30,
         gstRate: dbSettings.pricing?.gstRate || 18,
@@ -88,7 +92,7 @@ const AdminSettings = () => {
   const saveMutation = useMutation({
     mutationFn: async () => {
       const updates = [
-        { key: 'general', value: { platformName: settings.platformName, supportEmail: settings.supportEmail, maintenanceMode: settings.maintenanceMode, logoUrl: settings.logoUrl } },
+        { key: 'general', value: { platformName: settings.platformName, supportEmail: settings.supportEmail, maintenanceMode: settings.maintenanceMode, logoUrl: settings.logoUrl, marqueeText: settings.marqueeText, marqueeEnabled: settings.marqueeEnabled } },
         { key: 'pricing', value: { defaultCommission: settings.defaultCommission, gstRate: settings.gstRate, protectionPlanFee: settings.protectionPlanFee } },
         { key: 'rentals', value: { minRentalDuration: settings.minRentalDuration, maxRentalDuration: settings.maxRentalDuration } },
         { key: 'approvals', value: { autoApproveVendors: settings.autoApproveVendors, autoApproveProducts: settings.autoApproveProducts, requireEmailVerification: settings.requireEmailVerification } },
@@ -187,6 +191,23 @@ const AdminSettings = () => {
                     </label>
                   </div>
                   <p className="text-xs text-muted-foreground">Recommended: PNG or SVG, transparent background, max height 60px</p>
+                </div>
+
+                {/* Marquee Banner */}
+                <div className="space-y-3 p-4 bg-muted rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Marquee Banner</p>
+                      <p className="text-sm text-muted-foreground">Running text strip at the top of the header</p>
+                    </div>
+                    <Switch checked={settings.marqueeEnabled} onCheckedChange={(checked) => setSettings({ ...settings, marqueeEnabled: checked })} />
+                  </div>
+                  {settings.marqueeEnabled && (
+                    <div className="space-y-2">
+                      <Label htmlFor="marqueeText">Marquee Text</Label>
+                      <Input id="marqueeText" value={settings.marqueeText} onChange={(e) => setSettings({ ...settings, marqueeText: e.target.value })} placeholder="Free Delivery & Installation on all orders • 100% Refundable Deposit" />
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">

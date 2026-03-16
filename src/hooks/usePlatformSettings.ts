@@ -6,6 +6,8 @@ export interface PlatformSettings {
   supportEmail: string;
   maintenanceMode: boolean;
   logoUrl: string | null;
+  marqueeText: string;
+  marqueeEnabled: boolean;
 }
 
 const defaults: PlatformSettings = {
@@ -13,6 +15,8 @@ const defaults: PlatformSettings = {
   supportEmail: "support@rentpr.in",
   maintenanceMode: false,
   logoUrl: null,
+  marqueeText: "Free Delivery & Installation on all orders • 100% Refundable Deposit",
+  marqueeEnabled: true,
 };
 
 export const usePlatformSettings = () => {
@@ -32,6 +36,8 @@ export const usePlatformSettings = () => {
         supportEmail: val.supportEmail || defaults.supportEmail,
         maintenanceMode: val.maintenanceMode || false,
         logoUrl: val.logoUrl || null,
+        marqueeText: val.marqueeText || defaults.marqueeText,
+        marqueeEnabled: val.marqueeEnabled !== undefined ? val.marqueeEnabled : true,
       } as PlatformSettings;
     },
     staleTime: 5 * 60 * 1000,
