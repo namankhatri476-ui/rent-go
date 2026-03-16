@@ -56,15 +56,12 @@ const Footer = () => {
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
-              {settings.logoUrl ? (
+              {settings.footerLogoUrl ? (
+                <img src={settings.footerLogoUrl} alt={settings.platformName} className="h-8 w-auto object-contain" />
+              ) : settings.logoUrl ? (
                 <img src={settings.logoUrl} alt={settings.platformName} className="h-8 w-auto object-contain" />
               ) : (
-                <>
-                  <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold">R</span>
-                  </div>
-                  <span className="text-lg font-extrabold text-white">{brand.name}</span>
-                </>
+                <span className="text-lg font-extrabold text-white">{brand.name}</span>
               )}
             </Link>
             <p className="text-sm leading-relaxed">{brand.description}</p>

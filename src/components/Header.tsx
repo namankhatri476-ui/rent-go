@@ -94,12 +94,7 @@ const Header = () => {
               {settings.logoUrl ? (
                 <img src={settings.logoUrl} alt={settings.platformName} className="h-8 w-auto object-contain max-w-[140px]" />
               ) : (
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-sm">R</span>
-                  </div>
-                  <span className="text-lg font-extrabold tracking-tight text-white">{settings.platformName}</span>
-                </div>
+                <span className="text-lg font-extrabold tracking-tight text-white">{settings.platformName}</span>
               )}
             </Link>
 
