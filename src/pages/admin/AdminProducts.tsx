@@ -15,7 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Search, CheckCircle, XCircle, Eye, Package, Shield } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Eye, Package, Shield, Star } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 
 type ProductStatus = 'pending' | 'approved' | 'rejected' | 'inactive';
@@ -76,6 +77,18 @@ const AdminProducts = () => {
       toast.error('Failed to update product status');
       console.error(error);
     },
+  });
+
+  const togglePopularMutation = useMutation({
+    mutationFn: async ({ productId, isPopular }: { productId: string; isPopular: boolean }) => {
+      const { error } = await supabase.from('products').update({ is_popular: isPopular } as any).eq('id', productId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      toast.success('Popular status updated');
+    },
+    onError: () => toast.error('Failed to update popular status'),
   });
 
   const updateProtectionMutation = useMutation({
@@ -179,6 +192,7 @@ const AdminProducts = () => {
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Protection</TableHead>
+                    <TableHead>Popular</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -200,6 +214,16 @@ const AdminProducts = () => {
                       <TableCell>{getStatusBadge(product.status)}</TableCell>
                       <TableCell>
                         <span className="text-sm">₹{(product as any).protection_plan_price ?? 99}/mo</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <Switch
+                            checked={!!(product as any).is_popular}
+                            onCheckedChange={(checked) => togglePopularMutation.mutate({ productId: product.id, isPopular: checked })}
+                            disabled={product.status !== 'approved'}
+                          />
+                          {(product as any).is_popular && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
+                        </div>
                       </TableCell>
                       <TableCell>{format(new Date(product.created_at), 'MMM dd, yyyy')}</TableCell>
                       <TableCell>

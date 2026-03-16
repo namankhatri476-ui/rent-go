@@ -43,22 +43,39 @@ const Index = () => {
   const { data: featuredProducts } = useQuery({
     queryKey: ['featured-products', selectedLocation?.id],
     queryFn: async () => {
+      // First try to get admin-marked popular products
       let query = supabase
         .from('products')
         .select(`*, categories (name), rental_plans (*)`)
         .eq('status', 'approved')
-        .eq('in_stock', true);
-      const { data, error } = await query.order('created_at', { ascending: false }).limit(20);
-      if (error) throw error;
-      
-      // Filter by location using product_locations junction table
+        .eq('in_stock', true)
+        .eq('is_popular', true)
+        .order('updated_at', { ascending: false })
+        .limit(4);
+      const { data: popularData, error: popularError } = await query;
+      if (popularError) throw popularError;
+
+      // If no popular products marked, fall back to latest approved
+      let data = popularData && popularData.length > 0 ? popularData : null;
+      if (!data) {
+        const { data: fallback, error: fallbackError } = await supabase
+          .from('products')
+          .select(`*, categories (name), rental_plans (*)`)
+          .eq('status', 'approved')
+          .eq('in_stock', true)
+          .order('created_at', { ascending: false })
+          .limit(4);
+        if (fallbackError) throw fallbackError;
+        data = fallback;
+      }
+
+      // Filter by location
       if (selectedLocation?.id && data) {
         const { data: plData } = await supabase
           .from('product_locations')
           .select('product_id')
           .eq('location_id', selectedLocation.id);
         const locationProductIds = new Set((plData || []).map(pl => pl.product_id));
-        
         const filtered = data.filter(product => {
           if (locationProductIds.has(product.id)) return true;
           return product.location_id === selectedLocation.id;

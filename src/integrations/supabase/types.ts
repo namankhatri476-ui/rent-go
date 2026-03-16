@@ -634,6 +634,7 @@ export type Database = {
           images: string[] | null
           in_stock: boolean
           installation_tat: number | null
+          is_popular: boolean | null
           location_id: string | null
           name: string
           protection_plan_price: number | null
@@ -664,6 +665,7 @@ export type Database = {
           images?: string[] | null
           in_stock?: boolean
           installation_tat?: number | null
+          is_popular?: boolean | null
           location_id?: string | null
           name: string
           protection_plan_price?: number | null
@@ -694,6 +696,7 @@ export type Database = {
           images?: string[] | null
           in_stock?: boolean
           installation_tat?: number | null
+          is_popular?: boolean | null
           location_id?: string | null
           name?: string
           protection_plan_price?: number | null
