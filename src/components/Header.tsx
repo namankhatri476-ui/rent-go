@@ -235,7 +235,7 @@ const Header = () => {
                     )}
                     {isVendor && (
                       <>
-                        <Link to="/vendor/dashboard" className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                        <Link to="/vendor" className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
                           Vendor Dashboard
                         </Link>
                         <Link to="/vendor/products" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
