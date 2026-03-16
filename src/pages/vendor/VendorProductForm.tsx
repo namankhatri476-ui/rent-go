@@ -318,6 +318,8 @@ const VendorProductForm = () => {
         stock_quantity: formData.stock_quantity,
         buy_price: formData.buy_price ? Number(formData.buy_price) : null,
         advance_discount_percent: formData.advance_discount_percent ? Number(formData.advance_discount_percent) : 0,
+        delivery_tat: formData.delivery_tat,
+        installation_tat: formData.installation_tat,
       };
 
       const { error: productError } = await supabase
