@@ -15,6 +15,8 @@ const defaults: PlatformSettings = {
   supportEmail: "support@rentpr.in",
   maintenanceMode: false,
   logoUrl: null,
+  marqueeText: "Free Delivery & Installation on all orders • 100% Refundable Deposit",
+  marqueeEnabled: true,
 };
 
 export const usePlatformSettings = () => {
