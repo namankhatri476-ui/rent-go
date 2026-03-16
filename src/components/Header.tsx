@@ -189,16 +189,16 @@ const Header = () => {
 
             {/* Mobile Actions */}
             <div className="flex items-center gap-1 md:hidden">
-              <button onClick={() => setSearchOpen(true)} className="p-2 text-white/70 hover:text-white">
+              <button onClick={() => setSearchOpen(true)} className="p-2 text-muted-foreground hover:text-foreground">
                 <Search className="w-[18px] h-[18px]" />
               </button>
-              <Link to="/cart" className="relative p-2 text-white/70 hover:text-white">
+              <Link to="/cart" className="relative p-2 text-muted-foreground hover:text-foreground">
                 <ShoppingCart className="w-[18px] h-[18px]" />
                 {itemCount > 0 && (
                   <span className="absolute -top-0.5 right-0 w-[18px] h-[18px] rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">{itemCount}</span>
                 )}
               </Link>
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-white/70 hover:text-white">
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-muted-foreground hover:text-foreground">
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
             </div>
