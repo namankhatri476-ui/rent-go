@@ -112,10 +112,10 @@ const Header = () => {
             {/* Right Actions */}
             <div className="hidden md:flex items-center gap-2 shrink-0">
               <LocationSelector />
-              <button onClick={() => setSearchOpen(true)} className="p-2 text-white/70 hover:text-white transition-colors">
+              <button onClick={() => setSearchOpen(true)} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
                 <Search className="w-[18px] h-[18px]" />
               </button>
-              <Link to="/cart" className="relative p-2 text-white/70 hover:text-white transition-colors">
+              <Link to="/cart" className="relative p-2 text-muted-foreground hover:text-foreground transition-colors">
                 <ShoppingCart className="w-[18px] h-[18px]" />
                 {itemCount > 0 && (
                   <span className="absolute -top-0.5 right-0 w-[18px] h-[18px] rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">{itemCount}</span>
@@ -125,9 +125,9 @@ const Header = () => {
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1.5 p-2 text-white/70 hover:text-white transition-colors">
-                      <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
-                        <User className="w-3.5 h-3.5 text-white" />
+                    <button className="flex items-center gap-1.5 p-2 text-muted-foreground hover:text-foreground transition-colors">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="w-3.5 h-3.5 text-primary" />
                       </div>
                       <ChevronDown className="w-3 h-3" />
                     </button>
