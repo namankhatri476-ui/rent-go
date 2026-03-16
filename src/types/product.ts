@@ -31,6 +31,7 @@ export interface CartItem {
   selectedPlan: RentalPlan;
   quantity: number;
   addProtectionPlan: boolean;
+  protectionPlanPrice: number;
   mode: 'rent' | 'buy';
   buyPrice?: number;
   payAdvance?: boolean;
