@@ -57,13 +57,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
-              {settings.footerLogoUrl ? (
-                <img src={settings.footerLogoUrl} alt={settings.platformName} className="h-8 w-auto object-contain" />
-              ) : settings.logoUrl ? (
-                <img src={settings.logoUrl} alt={settings.platformName} className="h-8 w-auto object-contain" />
-              ) : (
-                <span className="text-lg font-extrabold text-white">{brand.name}</span>
-              )}
+              <img src={settings.footerLogoUrl || settings.logoUrl || rentprLogo} alt={settings.platformName} className="h-8 w-auto object-contain" />
             </Link>
             <p className="text-sm leading-relaxed">{brand.description}</p>
           </div>
