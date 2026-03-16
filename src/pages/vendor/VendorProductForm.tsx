@@ -866,6 +866,44 @@ const VendorProductForm = () => {
             </CardContent>
           </Card>
 
+          {/* Delivery & Installation TAT */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Delivery & Installation Time</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Specify turnaround time for delivery and installation
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Delivery TAT (days) *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={formData.delivery_tat}
+                    onChange={(e) => setFormData({ ...formData, delivery_tat: Number(e.target.value) || 1 })}
+                    placeholder="2"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Installation TAT (days) *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={formData.installation_tat}
+                    onChange={(e) => setFormData({ ...formData, installation_tat: Number(e.target.value) || 0 })}
+                    placeholder="1"
+                  />
+                </div>
+              </div>
+              <div className="p-3 bg-accent/5 border border-accent/15 rounded-lg text-xs text-muted-foreground flex items-start gap-2">
+                <Info className="w-4 h-4 text-accent mt-0.5 shrink-0" />
+                <span><strong>Tip:</strong> Faster delivery (less than 2 days) increases your chances of getting more orders.</span>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Stock */}
           <Card>
             <CardHeader>
