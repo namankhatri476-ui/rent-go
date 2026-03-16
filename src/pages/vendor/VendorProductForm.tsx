@@ -114,6 +114,8 @@ const VendorProductForm = () => {
         stock_quantity: existingProduct.stock_quantity ?? 10,
         buy_price: (existingProduct as any).buy_price ?? '',
         advance_discount_percent: (existingProduct as any).advance_discount_percent ?? '',
+        delivery_tat: (existingProduct as any).delivery_tat ?? 2,
+        installation_tat: (existingProduct as any).installation_tat ?? 1,
       });
 
       // Load existing product locations
