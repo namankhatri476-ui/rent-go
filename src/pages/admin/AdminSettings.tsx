@@ -193,6 +193,23 @@ const AdminSettings = () => {
                   <p className="text-xs text-muted-foreground">Recommended: PNG or SVG, transparent background, max height 60px</p>
                 </div>
 
+                {/* Marquee Banner */}
+                <div className="space-y-3 p-4 bg-muted rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Marquee Banner</p>
+                      <p className="text-sm text-muted-foreground">Running text strip at the top of the header</p>
+                    </div>
+                    <Switch checked={settings.marqueeEnabled} onCheckedChange={(checked) => setSettings({ ...settings, marqueeEnabled: checked })} />
+                  </div>
+                  {settings.marqueeEnabled && (
+                    <div className="space-y-2">
+                      <Label htmlFor="marqueeText">Marquee Text</Label>
+                      <Input id="marqueeText" value={settings.marqueeText} onChange={(e) => setSettings({ ...settings, marqueeText: e.target.value })} placeholder="Free Delivery & Installation on all orders • 100% Refundable Deposit" />
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="platformName">Platform Name</Label>
