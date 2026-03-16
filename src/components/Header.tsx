@@ -233,9 +233,24 @@ const Header = () => {
                         Admin Dashboard
                       </Link>
                     )}
-                    <Link to="/my-account" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
-                      My Account
-                    </Link>
+                    {isVendor && (
+                      <>
+                        <Link to="/vendor/dashboard" className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                          Vendor Dashboard
+                        </Link>
+                        <Link to="/vendor/products" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                          My Products
+                        </Link>
+                        <Link to="/vendor/orders" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                          Orders
+                        </Link>
+                      </>
+                    )}
+                    {!isVendor && (
+                      <Link to="/my-account" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                        My Account
+                      </Link>
+                    )}
                     <button className="px-3 py-2.5 text-sm font-medium text-destructive hover:bg-white/10 rounded-lg transition-colors text-left flex items-center gap-2" onClick={() => { signOut(); setMobileMenuOpen(false); }}>
                       <LogOut className="w-4 h-4" />
                       Sign Out
