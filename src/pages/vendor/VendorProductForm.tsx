@@ -506,6 +506,11 @@ const VendorProductForm = () => {
       return;
     }
 
+    if (pricingMode === 'auto' && selectedTenures.length === 0) {
+      toast.error('Please select at least one rental tenure');
+      return;
+    }
+
     if (pricingMode === 'manual') {
       const validSlabs = Object.values(manualSlabs).filter(p => p > 0);
       if (validSlabs.length === 0) {
