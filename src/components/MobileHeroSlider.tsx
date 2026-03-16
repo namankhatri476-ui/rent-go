@@ -78,7 +78,7 @@ const MobileHeroSlider = () => {
               i === current ? "opacity-100 scale-100" : "opacity-0 scale-105"
             }`}
           >
-            <div className="relative w-full h-full">
+            <Link to={slide.cta_link} className="relative w-full h-full block cursor-pointer">
               <img
                 src={slide.image_url}
                 alt={slide.title || 'Promotional banner'}
@@ -101,20 +101,18 @@ const MobileHeroSlider = () => {
                           {slide.subtitle}
                         </p>
                       )}
-                      <Link to={slide.cta_link}>
-                        <Button
-                          size="sm"
-                          className="bg-white text-foreground hover:bg-white/90 shadow-lg rounded-full gap-2 mt-1 font-semibold"
-                        >
-                          {slide.cta_text}
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </Button>
-                      </Link>
+                      <Button
+                        size="sm"
+                        className="bg-white text-foreground hover:bg-white/90 shadow-lg rounded-full gap-2 mt-1 font-semibold"
+                      >
+                        {slide.cta_text}
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   </div>
                 </div>
               )}
-            </div>
+            </Link>
           </div>
         ))}
       </div>
