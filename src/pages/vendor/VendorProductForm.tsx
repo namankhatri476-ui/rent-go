@@ -156,7 +156,6 @@ const VendorProductForm = () => {
 
         setPricing({
           baseMonthlyRent: baseRent,
-          securityDeposit: firstPlan.security_deposit,
           deliveryFee: firstPlan.delivery_fee || 500,
           installationFee: firstPlan.installation_fee || 0,
           maxDuration: maxDur,
