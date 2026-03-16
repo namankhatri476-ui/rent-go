@@ -206,46 +206,46 @@ const Header = () => {
 
           {/* Mobile Menu */}
           {mobileMenuOpen && (
-            <div className="md:hidden py-4 border-t border-white/10 animate-fade-in">
+            <div className="md:hidden py-4 border-t border-border animate-fade-in">
               <div className="mb-3"><LocationSelector /></div>
               <nav className="flex flex-col gap-1">
                 {visibleCategories.map((cat) => (
-                  <Link key={cat.id} to={`/products?category=${cat.slug}`} className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                  <Link key={cat.id} to={`/products?category=${cat.slug}`} className="px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
                     {cat.name}
                   </Link>
                 ))}
                 {hasMore && (
-                  <Link to="/products" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                  <Link to="/products" className="px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
                     & More
                   </Link>
                 )}
-                <div className="border-t border-white/10 my-2" />
+                <div className="border-t border-border my-2" />
                 {user ? (
                   <>
                     {isAdmin && (
-                      <Link to="/admin" className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                      <Link to="/admin" className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-muted rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
                         Admin Dashboard
                       </Link>
                     )}
                     {isVendor && (
                       <>
-                        <Link to="/vendor" className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                        <Link to="/vendor" className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-muted rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
                           Vendor Dashboard
                         </Link>
-                        <Link to="/vendor/products" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                        <Link to="/vendor/products" className="px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
                           My Products
                         </Link>
-                        <Link to="/vendor/orders" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                        <Link to="/vendor/orders" className="px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
                           Orders
                         </Link>
                       </>
                     )}
                     {!isVendor && (
-                      <Link to="/my-account" className="px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                      <Link to="/my-account" className="px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>
                         My Account
                       </Link>
                     )}
-                    <button className="px-3 py-2.5 text-sm font-medium text-destructive hover:bg-white/10 rounded-lg transition-colors text-left flex items-center gap-2" onClick={() => { signOut(); setMobileMenuOpen(false); }}>
+                    <button className="px-3 py-2.5 text-sm font-medium text-destructive hover:bg-muted rounded-lg transition-colors text-left flex items-center gap-2" onClick={() => { signOut(); setMobileMenuOpen(false); }}>
                       <LogOut className="w-4 h-4" />
                       Sign Out
                     </button>
