@@ -6,6 +6,7 @@ interface AddToCartOptions {
   buyPrice?: number;
   payAdvance?: boolean;
   advanceDiscountPercent?: number;
+  protectionPlanPrice?: number;
 }
 
 interface CartContextType {
