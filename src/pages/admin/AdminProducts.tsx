@@ -15,7 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Search, CheckCircle, XCircle, Eye, Package, Shield } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Eye, Package, Shield, Star } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 
 type ProductStatus = 'pending' | 'approved' | 'rejected' | 'inactive';
