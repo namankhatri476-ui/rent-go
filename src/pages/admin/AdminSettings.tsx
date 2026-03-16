@@ -93,7 +93,26 @@ const AdminSettings = () => {
     }
   };
 
-  const saveMutation = useMutation({
+  const handleFooterLogoUpload = async (file: File) => {
+    setFooterLogoUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `footer-logo.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('site-assets')
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage
+        .from('site-assets')
+        .getPublicUrl(path);
+      setSettings(prev => ({ ...prev, footerLogoUrl: urlData.publicUrl }));
+      toast.success('Footer logo uploaded');
+    } catch (e: any) {
+      toast.error(e.message || 'Footer logo upload failed');
+    } finally {
+      setFooterLogoUploading(false);
+    }
+  };
     mutationFn: async () => {
       const updates = [
         { key: 'general', value: { platformName: settings.platformName, supportEmail: settings.supportEmail, maintenanceMode: settings.maintenanceMode, logoUrl: settings.logoUrl, marqueeText: settings.marqueeText, marqueeEnabled: settings.marqueeEnabled } },
