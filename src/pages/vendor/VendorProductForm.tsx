@@ -196,24 +196,25 @@ const VendorProductForm = () => {
   // Generate rental plan rows from pricing config
   // Deposit = base monthly rent (auto-calculated)
   const generateRentalPlans = (productIdForPlans: string) => {
-    const securityDeposit = pricing.baseMonthlyRent; // Auto-calc: deposit = monthly rent
     const plans = [];
+    const baseRent = pricing.baseMonthlyRent;
     plans.push({
       product_id: productIdForPlans,
       label: '1 Month',
       duration_months: 1,
-      monthly_rent: pricing.baseMonthlyRent,
-      security_deposit: securityDeposit,
+      monthly_rent: baseRent,
+      security_deposit: baseRent, // Deposit = monthly rent for this plan
       delivery_fee: pricing.deliveryFee,
       installation_fee: pricing.installationFee,
     });
     if (pricing.maxDuration > 1) {
+      const maxRent = getPriceForMonth(pricing.maxDuration);
       plans.push({
         product_id: productIdForPlans,
         label: `${pricing.maxDuration} Months`,
         duration_months: pricing.maxDuration,
-        monthly_rent: getPriceForMonth(pricing.maxDuration),
-        security_deposit: securityDeposit,
+        monthly_rent: maxRent,
+        security_deposit: maxRent, // Deposit = monthly rent for this plan
         delivery_fee: pricing.deliveryFee,
         installation_fee: pricing.installationFee,
       });

@@ -86,7 +86,7 @@ const ProductDetail = () => {
   const deliveryTat = (product as any)?.delivery_tat ?? 2;
   const installationTat = (product as any)?.installation_tat ?? 1;
   const protectionValue = (product as any)?.protection_value ?? null;
-
+  const protectionPlanPrice = (product as any)?.protection_plan_price ?? 99;
   const rentalPlans = (product?.rental_plans || [])
     .filter((p: any) => p.is_active !== false)
     .sort((a: RentalPlan, b: RentalPlan) => a.duration_months - b.duration_months);
@@ -106,16 +106,17 @@ const ProductDetail = () => {
     if (rentalPlans.length === 0) return { monthlyRent: 0, securityDeposit: 0, deliveryFee: 0, installationFee: 0 };
     const basePlan = rentalPlans[0];
     const baseRent = basePlan.monthly_rent + variationAdjustment;
-    const securityDeposit = basePlan.monthly_rent; // Auto: deposit = monthly rent
     const deliveryFee = basePlan.delivery_fee || 0;
     const installationFee = basePlan.installation_fee || 0;
-    if (rentalPlans.length === 1 || duration <= 1) return { monthlyRent: baseRent, securityDeposit, deliveryFee, installationFee };
+    if (rentalPlans.length === 1 || duration <= 1) {
+      return { monthlyRent: baseRent, securityDeposit: baseRent, deliveryFee, installationFee };
+    }
     const lastPlan = rentalPlans[rentalPlans.length - 1];
     const discountPerMonth = basePlan.monthly_rent > 0 && lastPlan.duration_months > 1
       ? ((basePlan.monthly_rent - lastPlan.monthly_rent) / basePlan.monthly_rent * 100) / (lastPlan.duration_months - 1) : 0;
     const totalDiscount = Math.min(discountPerMonth * (duration - 1), 80);
     const monthlyRent = Math.round((basePlan.monthly_rent * (1 - totalDiscount / 100)) + variationAdjustment);
-    return { monthlyRent, securityDeposit, deliveryFee, installationFee };
+    return { monthlyRent, securityDeposit: monthlyRent, deliveryFee, installationFee };
   };
 
   const interpolatedPrice = useMemo(() => getDiscountedPrice(currentDuration), [currentDuration, rentalPlans, variationAdjustment]);
@@ -192,7 +193,7 @@ const ProductDetail = () => {
         deliveryFee: interpolatedPrice.deliveryFee, installationFee: interpolatedPrice.installationFee,
         rating: product.rating || 0, reviewCount: product.review_count || 0, inStock: product.in_stock, tags: product.tags || [],
       };
-      addToCart(cartProduct, cartPlan, { mode: 'rent', payAdvance, advanceDiscountPercent: payAdvance ? advanceDiscountPercent : 0 });
+      addToCart(cartProduct, cartPlan, { mode: 'rent', payAdvance, advanceDiscountPercent: payAdvance ? advanceDiscountPercent : 0, protectionPlanPrice });
       toast.success("Added to cart!", { description: `${product.name} with ${currentDuration} month plan${payAdvance ? ' (advance payment)' : ''}` });
     }
   };
@@ -315,7 +316,7 @@ const ProductDetail = () => {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1.5 ml-6">
-                      ₹99/mo damage cover · Covers accidental damage & repairs
+                      ₹{protectionPlanPrice}/mo damage cover · Covers accidental damage & repairs
                       {protectionValue && ` · Protection value: ₹${Number(protectionValue).toLocaleString()}`}
                     </p>
                   </div>
@@ -388,7 +389,7 @@ const ProductDetail = () => {
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between"><span className="text-muted-foreground">Monthly Rent</span><span className="font-medium">₹{interpolatedPrice.monthlyRent.toLocaleString()}/mo</span></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Security Deposit (refundable)</span><span className="font-medium">₹{interpolatedPrice.securityDeposit.toLocaleString()}</span></div>
-                      {protectionPlan && <div className="flex justify-between"><span className="text-muted-foreground">Protection Plan</span><span className="font-medium">₹99/mo</span></div>}
+                      {protectionPlan && <div className="flex justify-between"><span className="text-muted-foreground">Protection Plan</span><span className="font-medium">₹{protectionPlanPrice}/mo</span></div>}
                       <div className="flex justify-between"><span className="text-muted-foreground">GST (18%)</span><span className="font-medium">₹{Math.round(interpolatedPrice.monthlyRent * 0.18).toLocaleString()}/mo</span></div>
                     </div>
                   </div>

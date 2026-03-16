@@ -636,6 +636,7 @@ export type Database = {
           installation_tat: number | null
           location_id: string | null
           name: string
+          protection_plan_price: number | null
           protection_value: number | null
           rating: number | null
           rejection_reason: string | null
@@ -665,6 +666,7 @@ export type Database = {
           installation_tat?: number | null
           location_id?: string | null
           name: string
+          protection_plan_price?: number | null
           protection_value?: number | null
           rating?: number | null
           rejection_reason?: string | null
@@ -694,6 +696,7 @@ export type Database = {
           installation_tat?: number | null
           location_id?: string | null
           name?: string
+          protection_plan_price?: number | null
           protection_value?: number | null
           rating?: number | null
           rejection_reason?: string | null

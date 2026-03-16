@@ -6,6 +6,7 @@ interface AddToCartOptions {
   buyPrice?: number;
   payAdvance?: boolean;
   advanceDiscountPercent?: number;
+  protectionPlanPrice?: number;
 }
 
 interface CartContextType {
@@ -30,7 +31,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         product,
         selectedPlan: plan,
         quantity: 1,
-        addProtectionPlan: false,
+        addProtectionPlan: true,
+        protectionPlanPrice: options?.protectionPlanPrice ?? PROTECTION_PLAN_MONTHLY,
         mode: options?.mode || 'rent',
         buyPrice: options?.buyPrice,
         payAdvance: options?.payAdvance,
@@ -82,7 +84,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const monthlyRent = monthlyRentItems.reduce((sum, item) => sum + item.selectedPlan.monthlyRent, 0);
-    const protectionPlan = rentItems.reduce((sum, item) => item.addProtectionPlan ? sum + PROTECTION_PLAN_MONTHLY : sum, 0);
+    const protectionPlan = rentItems.reduce((sum, item) => item.addProtectionPlan ? sum + item.protectionPlanPrice : sum, 0);
     
     const gst = Math.round((monthlyRent + protectionPlan) * GST_RATE);
     const payableNow = securityDeposit + deliveryFee + installationFee + buyTotal + advanceRent;

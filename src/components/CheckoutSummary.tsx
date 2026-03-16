@@ -1,11 +1,19 @@
-import { Shield, Check, Info, CreditCard, Package } from "lucide-react";
+import { useState } from "react";
+import { Shield, Check, Info, CreditCard, Package, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
-import { PROTECTION_PLAN_MONTHLY } from "@/types/product";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const CheckoutSummary = () => {
   const { items, getBreakdown, updateProtectionPlan } = useCart();
   const breakdown = getBreakdown();
+  const [warningProductId, setWarningProductId] = useState<string | null>(null);
 
   const buyItems = items.filter(i => i.mode === 'buy');
   const rentItems = items.filter(i => i.mode === 'rent');
@@ -13,6 +21,14 @@ const CheckoutSummary = () => {
   const monthlyItems = rentItems.filter(i => !i.payAdvance);
 
   if (items.length === 0) return null;
+
+  const handleProtectionToggle = (productId: string, checked: boolean) => {
+    if (!checked) {
+      setWarningProductId(productId);
+    } else {
+      updateProtectionPlan(productId, true);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -26,7 +42,6 @@ const CheckoutSummary = () => {
         </div>
 
         <div className="space-y-3">
-          {/* Buy items */}
           {buyItems.map(item => (
             <div key={item.product.id} className="flex justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1">
@@ -37,7 +52,6 @@ const CheckoutSummary = () => {
             </div>
           ))}
 
-          {/* Security deposit for rent items */}
           {rentItems.length > 0 && breakdown.securityDeposit > 0 && (
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Refundable Deposit</span>
@@ -45,13 +59,11 @@ const CheckoutSummary = () => {
             </div>
           )}
 
-          {/* Advance rent payment */}
           {advanceItems.length > 0 && (
             <>
               {advanceItems.map(item => {
                 const totalRent = item.selectedPlan.monthlyRent * item.selectedPlan.duration;
                 const discount = Math.round(totalRent * (item.advanceDiscountPercent || 0) / 100);
-                const advanceAmount = totalRent - discount;
                 return (
                   <div key={`advance-${item.product.id}`} className="space-y-1">
                     <div className="flex justify-between text-sm">
@@ -95,7 +107,6 @@ const CheckoutSummary = () => {
           </div>
         </div>
 
-        {/* Coupon Section */}
         <div className="mt-4 p-3 bg-muted rounded-lg">
           <div className="flex items-center gap-2">
             <input
@@ -110,7 +121,7 @@ const CheckoutSummary = () => {
         </div>
       </div>
 
-      {/* Monthly Payable Section — only show if there are monthly rent items */}
+      {/* Monthly Payable Section */}
       {monthlyItems.length > 0 && (
         <div className="checkout-section border-accent/30 bg-accent/5">
           <div className="flex items-center gap-2 mb-4">
@@ -137,7 +148,7 @@ const CheckoutSummary = () => {
                   type="checkbox"
                   id={`protection-${item.product.id}`}
                   checked={item.addProtectionPlan}
-                  onChange={(e) => updateProtectionPlan(item.product.id, e.target.checked)}
+                  onChange={(e) => handleProtectionToggle(item.product.id, e.target.checked)}
                   className="mt-1 accent-accent"
                 />
                 <label htmlFor={`protection-${item.product.id}`} className="flex-1 cursor-pointer">
@@ -147,7 +158,7 @@ const CheckoutSummary = () => {
                       Damage Protection
                     </span>
                     <span className="text-sm text-green-600 font-semibold">
-                      +₹{PROTECTION_PLAN_MONTHLY}/mo
+                      +₹{item.protectionPlanPrice}/mo
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -174,7 +185,6 @@ const CheckoutSummary = () => {
             </div>
           </div>
 
-          {/* Note about monthly billing */}
           <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <p className="text-xs text-green-700 dark:text-green-400 font-medium flex items-start gap-2">
               <Check className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -184,7 +194,6 @@ const CheckoutSummary = () => {
         </div>
       )}
 
-      {/* Advance payment savings note */}
       {breakdown.advanceDiscount > 0 && (
         <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
           <p className="text-xs text-green-700 dark:text-green-400 font-medium flex items-start gap-2">
@@ -193,6 +202,45 @@ const CheckoutSummary = () => {
           </p>
         </div>
       )}
+
+      {/* Protection Plan Warning Dialog */}
+      <Dialog open={!!warningProductId} onOpenChange={() => setWarningProductId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Protection Plan Disabled
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              By opting out of the Protection Plan, you may be responsible for damages, repairs, or replacement costs during the rental period.
+            </p>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              variant="default"
+              className="flex-1"
+              onClick={() => {
+                if (warningProductId) updateProtectionPlan(warningProductId, true);
+                setWarningProductId(null);
+              }}
+            >
+              Keep Protection Plan
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                if (warningProductId) updateProtectionPlan(warningProductId, false);
+                setWarningProductId(null);
+              }}
+            >
+              Continue Without Protection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
