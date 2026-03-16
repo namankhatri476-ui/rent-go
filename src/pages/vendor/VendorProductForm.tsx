@@ -44,6 +44,8 @@ const VendorProductForm = () => {
     stock_quantity: 10,
     buy_price: '' as string | number,
     advance_discount_percent: '' as string | number,
+    delivery_tat: 2,
+    installation_tat: 1,
   });
 
   // Multi-location selection state
