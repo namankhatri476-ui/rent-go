@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { Printer, Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin, Building2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 
 interface FooterData {
   brand: { name: string; description: string };
@@ -17,6 +18,8 @@ interface FooterData {
 }
 
 const Footer = () => {
+  const { settings } = usePlatformSettings();
+
   const { data: footerData } = useQuery({
     queryKey: ['footer-settings'],
     queryFn: async () => {
@@ -31,14 +34,14 @@ const Footer = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const brand = footerData?.brand || { name: "RentPR", description: "India's trusted rental platform. Rent printers, electronics, and more with flexible plans and hassle-free delivery." };
+  const brand = footerData?.brand || { name: settings.platformName, description: "India's trusted rental platform. Rent electronics, appliances, and more with flexible plans and hassle-free delivery." };
   const contact = footerData?.contact || { address: "Tower B, Sector 44, Gurugram, Haryana 122003", phone: "+91 98765 43210", email: "hello@rentpr.in" };
   const links = footerData?.links || {
     quick_links: [{ to: "/", label: "Home" }, { to: "/products", label: "All Products" }, { to: "/how-it-works", label: "How It Works" }],
-    categories: [{ to: "/products", label: "Printers" }, { label: "Electronics (Coming Soon)", disabled: true }, { label: "Furniture (Coming Soon)", disabled: true }, { label: "Appliances (Coming Soon)", disabled: true }],
+    categories: [{ to: "/products", label: "All Products" }],
   };
   const legal = footerData?.legal || {
-    copyright: "© {year} RentPR. All rights reserved.",
+    copyright: `© {year} ${settings.platformName}. All rights reserved.`,
     policies: [
       { label: "Privacy Policy", href: "/legal/privacy-policy" },
       { label: "Terms of Service", href: "/legal/terms-of-service" },
@@ -53,12 +56,16 @@ const Footer = () => {
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-                <Printer className="w-[18px] h-[18px] text-primary-foreground" />
-              </div>
-              <span className="text-lg font-extrabold text-white">
-                {brand.name}
-              </span>
+              {settings.logoUrl ? (
+                <img src={settings.logoUrl} alt={settings.platformName} className="h-8 w-auto object-contain" />
+              ) : (
+                <>
+                  <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+                    <span className="text-primary-foreground font-bold">R</span>
+                  </div>
+                  <span className="text-lg font-extrabold text-white">{brand.name}</span>
+                </>
+              )}
             </Link>
             <p className="text-sm leading-relaxed">{brand.description}</p>
           </div>
@@ -69,11 +76,16 @@ const Footer = () => {
             <ul className="space-y-2.5">
               {links.quick_links.map(link => (
                 <li key={link.to}>
-                  <Link to={link.to} className="text-sm hover:text-white transition-colors">
-                    {link.label}
-                  </Link>
+                  <Link to={link.to} className="text-sm hover:text-white transition-colors">{link.label}</Link>
                 </li>
               ))}
+              {/* Become a Vendor link in footer */}
+              <li>
+                <Link to="/vendor/register" className="text-sm hover:text-white transition-colors flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5" />
+                  Become a Vendor
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -86,9 +98,7 @@ const Footer = () => {
                   {cat.disabled ? (
                     <span className="text-sm text-white/30">{cat.label}</span>
                   ) : (
-                    <Link to={cat.to || "/products"} className="text-sm hover:text-white transition-colors">
-                      {cat.label}
-                    </Link>
+                    <Link to={cat.to || "/products"} className="text-sm hover:text-white transition-colors">{cat.label}</Link>
                   )}
                 </li>
               ))}
@@ -121,9 +131,7 @@ const Footer = () => {
           </p>
           <div className="flex gap-6">
             {legal.policies.map(policy => (
-              <Link key={policy.label} to={policy.href} className="text-xs text-white/40 hover:text-white/70 transition-colors">
-                {policy.label}
-              </Link>
+              <Link key={policy.label} to={policy.href} className="text-xs text-white/40 hover:text-white/70 transition-colors">{policy.label}</Link>
             ))}
           </div>
         </div>

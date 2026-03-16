@@ -44,6 +44,8 @@ const VendorProductForm = () => {
     stock_quantity: 10,
     buy_price: '' as string | number,
     advance_discount_percent: '' as string | number,
+    delivery_tat: 2,
+    installation_tat: 1,
   });
 
   // Multi-location selection state
@@ -52,10 +54,9 @@ const VendorProductForm = () => {
   // Variations state
   const [variations, setVariations] = useState<{ variation_type: string; variation_value: string; price_adjustment: number }[]>([]);
 
-  // New simplified pricing model
+  // New simplified pricing model - deposit auto-calculated from baseMonthlyRent
   const [pricing, setPricing] = useState({
     baseMonthlyRent: 0,
-    securityDeposit: 0,
     deliveryFee: 500,
     installationFee: 0,
     maxDuration: 12,
@@ -113,6 +114,8 @@ const VendorProductForm = () => {
         stock_quantity: existingProduct.stock_quantity ?? 10,
         buy_price: (existingProduct as any).buy_price ?? '',
         advance_discount_percent: (existingProduct as any).advance_discount_percent ?? '',
+        delivery_tat: (existingProduct as any).delivery_tat ?? 2,
+        installation_tat: (existingProduct as any).installation_tat ?? 1,
       });
 
       // Load existing product locations
@@ -153,7 +156,6 @@ const VendorProductForm = () => {
 
         setPricing({
           baseMonthlyRent: baseRent,
-          securityDeposit: firstPlan.security_deposit,
           deliveryFee: firstPlan.delivery_fee || 500,
           installationFee: firstPlan.installation_fee || 0,
           maxDuration: maxDur,
@@ -192,26 +194,26 @@ const VendorProductForm = () => {
   });
 
   // Generate rental plan rows from pricing config
+  // Deposit = base monthly rent (auto-calculated)
   const generateRentalPlans = (productIdForPlans: string) => {
+    const securityDeposit = pricing.baseMonthlyRent; // Auto-calc: deposit = monthly rent
     const plans = [];
-    // Create plan for month 1
     plans.push({
       product_id: productIdForPlans,
       label: '1 Month',
       duration_months: 1,
       monthly_rent: pricing.baseMonthlyRent,
-      security_deposit: pricing.securityDeposit,
+      security_deposit: securityDeposit,
       delivery_fee: pricing.deliveryFee,
       installation_fee: pricing.installationFee,
     });
-    // Create plan for max duration
     if (pricing.maxDuration > 1) {
       plans.push({
         product_id: productIdForPlans,
         label: `${pricing.maxDuration} Months`,
         duration_months: pricing.maxDuration,
         monthly_rent: getPriceForMonth(pricing.maxDuration),
-        security_deposit: pricing.securityDeposit,
+        security_deposit: securityDeposit,
         delivery_fee: pricing.deliveryFee,
         installation_fee: pricing.installationFee,
       });
@@ -243,6 +245,8 @@ const VendorProductForm = () => {
           status: 'pending',
           buy_price: formData.buy_price ? Number(formData.buy_price) : null,
           advance_discount_percent: formData.advance_discount_percent ? Number(formData.advance_discount_percent) : 0,
+          delivery_tat: formData.delivery_tat,
+          installation_tat: formData.installation_tat,
         } as any)
         .select()
         .single();
@@ -314,6 +318,8 @@ const VendorProductForm = () => {
         stock_quantity: formData.stock_quantity,
         buy_price: formData.buy_price ? Number(formData.buy_price) : null,
         advance_discount_percent: formData.advance_discount_percent ? Number(formData.advance_discount_percent) : 0,
+        delivery_tat: formData.delivery_tat,
+        installation_tat: formData.installation_tat,
       };
 
       const { error: productError } = await supabase
@@ -773,17 +779,7 @@ const VendorProductForm = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Security Deposit (₹)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={pricing.securityDeposit || ''}
-                    onChange={(e) => setPricing({ ...pricing, securityDeposit: Number(e.target.value) })}
-                    placeholder="0"
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Delivery Fee (₹)</Label>
                   <Input
@@ -805,6 +801,14 @@ const VendorProductForm = () => {
                   />
                  </div>
                </div>
+
+              {/* Auto-calculated deposit info */}
+              {pricing.baseMonthlyRent > 0 && (
+                <div className="p-3 bg-muted/50 rounded-lg text-sm flex items-center gap-2">
+                  <Info className="h-4 w-4 text-primary shrink-0" />
+                  <span>Security Deposit: <strong>₹{pricing.baseMonthlyRent.toLocaleString()}</strong> (auto-calculated = monthly rent)</span>
+                </div>
+              )}
 
               {/* Buy Price & Advance Discount */}
               <div className="grid grid-cols-2 gap-4">
@@ -859,6 +863,44 @@ const VendorProductForm = () => {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Delivery & Installation TAT */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Delivery & Installation Time</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Specify turnaround time for delivery and installation
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Delivery TAT (days) *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={formData.delivery_tat}
+                    onChange={(e) => setFormData({ ...formData, delivery_tat: Number(e.target.value) || 1 })}
+                    placeholder="2"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Installation TAT (days) *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={formData.installation_tat}
+                    onChange={(e) => setFormData({ ...formData, installation_tat: Number(e.target.value) || 0 })}
+                    placeholder="1"
+                  />
+                </div>
+              </div>
+              <div className="p-3 bg-accent/5 border border-accent/15 rounded-lg text-xs text-muted-foreground flex items-start gap-2">
+                <Info className="w-4 h-4 text-accent mt-0.5 shrink-0" />
+                <span><strong>Tip:</strong> Faster delivery (less than 2 days) increases your chances of getting more orders.</span>
+              </div>
             </CardContent>
           </Card>
 

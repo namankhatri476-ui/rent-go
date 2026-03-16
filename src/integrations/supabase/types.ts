@@ -627,13 +627,16 @@ export type Database = {
           buy_price: number | null
           category_id: string | null
           created_at: string
+          delivery_tat: number | null
           description: string | null
           features: string[] | null
           id: string
           images: string[] | null
           in_stock: boolean
+          installation_tat: number | null
           location_id: string | null
           name: string
+          protection_value: number | null
           rating: number | null
           rejection_reason: string | null
           review_count: number | null
@@ -653,13 +656,16 @@ export type Database = {
           buy_price?: number | null
           category_id?: string | null
           created_at?: string
+          delivery_tat?: number | null
           description?: string | null
           features?: string[] | null
           id?: string
           images?: string[] | null
           in_stock?: boolean
+          installation_tat?: number | null
           location_id?: string | null
           name: string
+          protection_value?: number | null
           rating?: number | null
           rejection_reason?: string | null
           review_count?: number | null
@@ -679,13 +685,16 @@ export type Database = {
           buy_price?: number | null
           category_id?: string | null
           created_at?: string
+          delivery_tat?: number | null
           description?: string | null
           features?: string[] | null
           id?: string
           images?: string[] | null
           in_stock?: boolean
+          installation_tat?: number | null
           location_id?: string | null
           name?: string
+          protection_value?: number | null
           rating?: number | null
           rejection_reason?: string | null
           review_count?: number | null
