@@ -98,12 +98,12 @@ const Header = () => {
             {/* Desktop Category Nav */}
             <nav className="hidden lg:flex items-center gap-1 mx-4 flex-1 justify-center">
               {visibleCategories.map((cat) => (
-                <Link key={cat.id} to={`/products?category=${cat.slug}`} className="px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white whitespace-nowrap transition-colors">
+                <Link key={cat.id} to={`/products?category=${cat.slug}`} className="px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground whitespace-nowrap transition-colors">
                   {cat.name}
                 </Link>
               ))}
               {hasMore && (
-                <Link to="/products" className="px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white whitespace-nowrap transition-colors">
+                <Link to="/products" className="px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground whitespace-nowrap transition-colors">
                   & More
                 </Link>
               )}
