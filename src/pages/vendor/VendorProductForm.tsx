@@ -958,6 +958,43 @@ const VendorProductForm = () => {
                     )}
                   </div>
 
+                  {/* Tenure Selection (Auto Slab only) */}
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <p className="font-medium text-sm">Select Rental Tenure(s) *</p>
+                    <p className="text-xs text-muted-foreground">
+                      Choose which tenure options to offer. Rent is calculated only for selected tenures.
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {TENURE_OPTIONS.map(tenure => (
+                        <div key={tenure} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`tenure-${tenure}`}
+                            checked={selectedTenures.includes(tenure)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedTenures([...selectedTenures, tenure]);
+                              } else {
+                                setSelectedTenures(selectedTenures.filter(t => t !== tenure));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`tenure-${tenure}`} className="text-sm cursor-pointer font-normal">
+                            {tenure} {tenure === 1 ? 'Month' : 'Months'}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedTenures.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedTenures.sort((a, b) => a - b).map(t => (
+                          <Badge key={t} variant="secondary" className="text-xs">
+                            {t} {t === 1 ? 'Mo' : 'Mos'}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Delivery Fee */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
