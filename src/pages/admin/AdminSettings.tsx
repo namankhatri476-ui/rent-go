@@ -217,7 +217,43 @@ const AdminSettings = () => {
                   <p className="text-xs text-muted-foreground">Recommended: PNG or SVG, transparent background, max height 60px</p>
                 </div>
 
-                {/* Marquee Banner */}
+                {/* Footer Logo Upload */}
+                <div className="space-y-3">
+                  <Label>Footer Logo</Label>
+                  <p className="text-xs text-muted-foreground">If not set, the header logo will be used in the footer</p>
+                  <div className="flex items-center gap-4">
+                    {settings.footerLogoUrl ? (
+                      <div className="relative">
+                        <img src={settings.footerLogoUrl} alt="Footer Logo" className="h-12 w-auto max-w-[200px] object-contain border rounded-lg p-1" />
+                        <button
+                          onClick={() => setSettings(prev => ({ ...prev, footerLogoUrl: '' }))}
+                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="h-12 w-32 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
+                        <Image className="w-5 h-5" />
+                      </div>
+                    )}
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleFooterLogoUpload(f);
+                        }}
+                      />
+                      <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none" tabIndex={-1}>
+                        {footerLogoUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                        {settings.footerLogoUrl ? 'Change' : 'Upload'}
+                      </Button>
+                    </label>
+                  </div>
+                </div>
                 <div className="space-y-3 p-4 bg-muted rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
