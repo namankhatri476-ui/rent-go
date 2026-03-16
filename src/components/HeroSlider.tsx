@@ -101,17 +101,15 @@ const HeroSlider = () => {
             >
               {/* Image-based slide */}
               {imgUrl ? (
-                <div className="relative w-full h-full">
+                <Link to={slide.cta_link} className="relative w-full h-full block cursor-pointer">
                   <img
                     src={imgUrl}
                     alt={slide.title || 'Promotional banner'}
                     className="w-full h-full object-cover object-center"
                   />
-                  {/* Overlay for text readability */}
                   {(slide.title || slide.subtitle) && (
                     <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-transparent" />
                   )}
-                  {/* Text overlay */}
                   {(slide.title || slide.subtitle) && (
                     <div className="absolute inset-0 flex items-center">
                       <div className="container mx-auto px-4">
@@ -126,23 +124,21 @@ const HeroSlider = () => {
                               {slide.subtitle}
                             </p>
                           )}
-                          <Link to={slide.cta_link}>
-                            <Button
-                              size="lg"
-                              className="bg-white text-foreground hover:bg-white/90 shadow-lg rounded-full gap-2 mt-1 font-semibold"
-                            >
-                              {slide.cta_text}
-                              <ArrowRight className="w-4 h-4" />
-                            </Button>
-                          </Link>
+                          <Button
+                            size="lg"
+                            className="bg-white text-foreground hover:bg-white/90 shadow-lg rounded-full gap-2 mt-1 font-semibold"
+                          >
+                            {slide.cta_text}
+                            <ArrowRight className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
                     </div>
                   )}
-                </div>
+                </Link>
               ) : (
                 /* Gradient fallback slide */
-                <div className={`w-full h-full flex items-center bg-gradient-to-br ${slide.gradient}`}>
+                <Link to={slide.cta_link} className={`w-full h-full flex items-center bg-gradient-to-br ${slide.gradient} cursor-pointer`}>
                   <div className="absolute right-[-5%] top-[-10%] w-[40%] h-[120%] rounded-full bg-white/[0.04]" />
                   <div className="absolute right-[10%] bottom-[-20%] w-[25%] h-[80%] rounded-full bg-white/[0.03]" />
                   <div className="container mx-auto px-4 relative z-10">
@@ -157,18 +153,16 @@ const HeroSlider = () => {
                           {slide.subtitle}
                         </p>
                       )}
-                      <Link to={slide.cta_link}>
-                        <Button
-                          size="lg"
-                          className="bg-white text-foreground hover:bg-white/90 shadow-lg rounded-full gap-2 mt-1 font-semibold"
-                        >
-                          {slide.cta_text}
-                          <ArrowRight className="w-4 h-4" />
-                        </Button>
-                      </Link>
+                      <Button
+                        size="lg"
+                        className="bg-white text-foreground hover:bg-white/90 shadow-lg rounded-full gap-2 mt-1 font-semibold"
+                      >
+                        {slide.cta_text}
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                </div>
+                </Link>
               )}
             </div>
           );
