@@ -193,7 +193,7 @@ const ProductDetail = () => {
         deliveryFee: interpolatedPrice.deliveryFee, installationFee: interpolatedPrice.installationFee,
         rating: product.rating || 0, reviewCount: product.review_count || 0, inStock: product.in_stock, tags: product.tags || [],
       };
-      addToCart(cartProduct, cartPlan, { mode: 'rent', payAdvance, advanceDiscountPercent: payAdvance ? advanceDiscountPercent : 0 });
+      addToCart(cartProduct, cartPlan, { mode: 'rent', payAdvance, advanceDiscountPercent: payAdvance ? advanceDiscountPercent : 0, protectionPlanPrice });
       toast.success("Added to cart!", { description: `${product.name} with ${currentDuration} month plan${payAdvance ? ' (advance payment)' : ''}` });
     }
   };
