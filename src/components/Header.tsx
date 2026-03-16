@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import rentprLogo from "@/assets/rentpr-logo.png";
 import { ShoppingCart, User, Menu, X, Search, Shield, LogOut, ChevronDown, MapPin, Store, Package, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,11 +92,7 @@ const Header = () => {
           <div className="flex items-center justify-between h-14">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 shrink-0">
-              {settings.logoUrl ? (
-                <img src={settings.logoUrl} alt={settings.platformName} className="h-8 w-auto object-contain max-w-[140px]" />
-              ) : (
-                <span className="text-lg font-extrabold tracking-tight text-white">{settings.platformName}</span>
-              )}
+              <img src={settings.logoUrl || rentprLogo} alt={settings.platformName} className="h-8 w-auto object-contain max-w-[140px]" />
             </Link>
 
             {/* Desktop Category Nav */}
