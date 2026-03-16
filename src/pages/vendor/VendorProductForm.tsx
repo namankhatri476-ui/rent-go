@@ -83,6 +83,9 @@ const VendorProductForm = () => {
   // Pricing mode: 'auto' or 'manual'
   const [pricingMode, setPricingMode] = useState<'auto' | 'manual'>('auto');
 
+  // Selected tenures for Auto Slab (vendor picks which ones to offer)
+  const [selectedTenures, setSelectedTenures] = useState<number[]>([]);
+
   // Manual slab prices: month -> price
   const [manualSlabs, setManualSlabs] = useState<Record<number, number>>({});
   const [manualMaxDuration, setManualMaxDuration] = useState(12);
@@ -104,32 +107,32 @@ const VendorProductForm = () => {
     return costBreakdown.landingCost + costBreakdown.transportCost + costBreakdown.installationCost + costBreakdown.maintenanceReserve;
   }, [costBreakdown]);
 
-  // Auto Slab pricing preview using factors
+  // Auto Slab pricing preview using factors — only for selected tenures
   const autoSlabPreview = useMemo(() => {
-    if (totalCost <= 0) return [];
-    return TENURE_OPTIONS.map(tenure => {
-      const factor = PRICING_FACTORS[tenure];
-      let baseRent = roundToNearest50(totalCost * factor);
-      let installFeeForPlan = 0;
+    if (totalCost <= 0 || selectedTenures.length === 0) return [];
+    return selectedTenures
+      .sort((a, b) => a - b)
+      .map(tenure => {
+        const factor = PRICING_FACTORS[tenure];
+        let baseRent = roundToNearest50(totalCost * factor);
+        let installFeeForPlan = 0;
 
-      if (installationChargeVisible) {
-        // Show installation charge separately
-        installFeeForPlan = costBreakdown.installationCost;
-      } else {
-        // Distribute installation cost into monthly rent
-        const extraPerMonth = Math.round(costBreakdown.installationCost / tenure);
-        baseRent = roundToNearest50(totalCost * factor + extraPerMonth);
-        installFeeForPlan = 0;
-      }
+        if (installationChargeVisible) {
+          installFeeForPlan = costBreakdown.installationCost;
+        } else {
+          const extraPerMonth = Math.round(costBreakdown.installationCost / tenure);
+          baseRent = roundToNearest50(totalCost * factor + extraPerMonth);
+          installFeeForPlan = 0;
+        }
 
-      return {
-        tenure,
-        factor,
-        monthlyRent: baseRent,
-        installationFee: installFeeForPlan,
-      };
-    });
-  }, [totalCost, costBreakdown.installationCost, installationChargeVisible]);
+        return {
+          tenure,
+          factor,
+          monthlyRent: baseRent,
+          installationFee: installFeeForPlan,
+        };
+      });
+  }, [totalCost, costBreakdown.installationCost, installationChargeVisible, selectedTenures]);
 
   // 2-year (24 months) vendor earnings estimate
   const vendorEarnings24 = useMemo(() => {
@@ -250,6 +253,9 @@ const VendorProductForm = () => {
           }));
         } else {
           setPricingMode('auto');
+          // Populate selected tenures from existing plans
+          const existingTenures = plans.map((p: any) => p.duration_months as number);
+          setSelectedTenures(existingTenures.filter((t: number) => TENURE_OPTIONS.includes(t)));
           setPricing(prev => ({
             ...prev,
             deliveryFee: firstPlan.delivery_fee || 500,
@@ -497,6 +503,11 @@ const VendorProductForm = () => {
 
     if (pricingMode === 'auto' && totalCost <= 0) {
       toast.error('Please enter cost breakdown fields (Total Cost must be > 0)');
+      return;
+    }
+
+    if (pricingMode === 'auto' && selectedTenures.length === 0) {
+      toast.error('Please select at least one rental tenure');
       return;
     }
 
@@ -943,6 +954,43 @@ const VendorProductForm = () => {
                         <span>
                           Installation cost of ₹{costBreakdown.installationCost.toLocaleString()} will be divided by tenure and added to monthly rent.
                         </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tenure Selection (Auto Slab only) */}
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <p className="font-medium text-sm">Select Rental Tenure(s) *</p>
+                    <p className="text-xs text-muted-foreground">
+                      Choose which tenure options to offer. Rent is calculated only for selected tenures.
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {TENURE_OPTIONS.map(tenure => (
+                        <div key={tenure} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`tenure-${tenure}`}
+                            checked={selectedTenures.includes(tenure)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedTenures([...selectedTenures, tenure]);
+                              } else {
+                                setSelectedTenures(selectedTenures.filter(t => t !== tenure));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`tenure-${tenure}`} className="text-sm cursor-pointer font-normal">
+                            {tenure} {tenure === 1 ? 'Month' : 'Months'}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedTenures.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedTenures.sort((a, b) => a - b).map(t => (
+                          <Badge key={t} variant="secondary" className="text-xs">
+                            {t} {t === 1 ? 'Mo' : 'Mos'}
+                          </Badge>
+                        ))}
                       </div>
                     )}
                   </div>
