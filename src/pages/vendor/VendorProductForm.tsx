@@ -151,23 +151,37 @@ const VendorProductForm = () => {
         const firstPlan = plans[0];
         const lastPlan = plans[plans.length - 1];
 
-        const baseRent = firstPlan.monthly_rent;
-        const maxDur = lastPlan.duration_months;
-        
-        // Calculate discount % per month from first and last plan
-        let discountPerMonth = 0;
-        if (plans.length > 1 && baseRent > 0 && maxDur > 1) {
-          const totalDiscountPercent = ((baseRent - lastPlan.monthly_rent) / baseRent) * 100;
-          discountPerMonth = Math.round((totalDiscountPercent / (maxDur - 1)) * 10) / 10;
-        }
+        // Detect if manual slab: more than 2 plans means manual
+        if (plans.length > 2) {
+          setPricingMode('manual');
+          const slabs: Record<number, number> = {};
+          plans.forEach((p: any) => { slabs[p.duration_months] = p.monthly_rent; });
+          setManualSlabs(slabs);
+          setManualMaxDuration(lastPlan.duration_months);
+          setPricing(prev => ({
+            ...prev,
+            deliveryFee: firstPlan.delivery_fee || 500,
+            installationFee: firstPlan.installation_fee || 0,
+          }));
+        } else {
+          setPricingMode('auto');
+          const baseRent = firstPlan.monthly_rent;
+          const maxDur = lastPlan.duration_months;
+          
+          let discountPerMonth = 0;
+          if (plans.length > 1 && baseRent > 0 && maxDur > 1) {
+            const totalDiscountPercent = ((baseRent - lastPlan.monthly_rent) / baseRent) * 100;
+            discountPerMonth = Math.round((totalDiscountPercent / (maxDur - 1)) * 10) / 10;
+          }
 
-        setPricing({
-          baseMonthlyRent: baseRent,
-          deliveryFee: firstPlan.delivery_fee || 500,
-          installationFee: firstPlan.installation_fee || 0,
-          maxDuration: maxDur,
-          discountPerMonth: Math.max(0, discountPerMonth),
-        });
+          setPricing({
+            baseMonthlyRent: baseRent,
+            deliveryFee: firstPlan.delivery_fee || 500,
+            installationFee: firstPlan.installation_fee || 0,
+            maxDuration: maxDur,
+            discountPerMonth: Math.max(0, discountPerMonth),
+          });
+        }
 
         // Load variations
         const existingVariations = ((existingProduct as any).product_variations || [])
