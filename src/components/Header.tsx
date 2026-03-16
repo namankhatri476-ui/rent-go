@@ -26,7 +26,7 @@ import LocationSelector from "@/components/LocationSelector";
 
 const Header = () => {
   const { itemCount } = useCart();
-  const { user, profile, isAdmin, signOut } = useAuth();
+  const { user, profile, isAdmin, isVendor, isApprovedVendor, signOut } = useAuth();
   const { settings } = usePlatformSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
