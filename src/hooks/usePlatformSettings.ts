@@ -6,6 +6,8 @@ export interface PlatformSettings {
   supportEmail: string;
   maintenanceMode: boolean;
   logoUrl: string | null;
+  marqueeText: string;
+  marqueeEnabled: boolean;
 }
 
 const defaults: PlatformSettings = {
