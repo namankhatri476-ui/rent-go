@@ -316,7 +316,7 @@ const ProductDetail = () => {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1.5 ml-6">
-                      ₹99/mo damage cover · Covers accidental damage & repairs
+                      ₹{protectionPlanPrice}/mo damage cover · Covers accidental damage & repairs
                       {protectionValue && ` · Protection value: ₹${Number(protectionValue).toLocaleString()}`}
                     </p>
                   </div>
