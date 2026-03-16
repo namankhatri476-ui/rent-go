@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, Search, Shield, LogOut, ChevronDown, MapPin } from "lucide-react";
+import { ShoppingCart, User, Menu, X, Search, Shield, LogOut, ChevronDown, MapPin, Store, Package, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/CartContext";
