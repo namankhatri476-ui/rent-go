@@ -423,9 +423,17 @@ const VendorProductForm = () => {
       return;
     }
 
-    if (pricing.baseMonthlyRent <= 0) {
+    if (pricingMode === 'auto' && pricing.baseMonthlyRent <= 0) {
       toast.error('Base monthly rent is required');
       return;
+    }
+
+    if (pricingMode === 'manual') {
+      const validSlabs = Object.values(manualSlabs).filter(p => p > 0);
+      if (validSlabs.length === 0) {
+        toast.error('Please enter at least one monthly price');
+        return;
+      }
     }
 
     if (isEditMode) {
