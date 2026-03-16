@@ -389,7 +389,7 @@ const ProductDetail = () => {
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between"><span className="text-muted-foreground">Monthly Rent</span><span className="font-medium">₹{interpolatedPrice.monthlyRent.toLocaleString()}/mo</span></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Security Deposit (refundable)</span><span className="font-medium">₹{interpolatedPrice.securityDeposit.toLocaleString()}</span></div>
-                      {protectionPlan && <div className="flex justify-between"><span className="text-muted-foreground">Protection Plan</span><span className="font-medium">₹99/mo</span></div>}
+                      {protectionPlan && <div className="flex justify-between"><span className="text-muted-foreground">Protection Plan</span><span className="font-medium">₹{protectionPlanPrice}/mo</span></div>}
                       <div className="flex justify-between"><span className="text-muted-foreground">GST (18%)</span><span className="font-medium">₹{Math.round(interpolatedPrice.monthlyRent * 0.18).toLocaleString()}/mo</span></div>
                     </div>
                   </div>
