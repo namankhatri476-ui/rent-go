@@ -201,8 +201,27 @@ const VendorProductForm = () => {
   });
 
   // Generate rental plan rows from pricing config
-  // Deposit = base monthly rent (auto-calculated)
+  // Deposit = monthly rent for that plan (auto-calculated)
   const generateRentalPlans = (productIdForPlans: string) => {
+    if (pricingMode === 'manual') {
+      // Manual mode: create a plan for each month the vendor defined
+      const entries = Object.entries(manualSlabs)
+        .map(([m, p]) => ({ month: Number(m), price: Number(p) }))
+        .filter(e => e.price > 0)
+        .sort((a, b) => a.month - b.month);
+      
+      return entries.map(({ month, price }) => ({
+        product_id: productIdForPlans,
+        label: `${month} ${month === 1 ? 'Month' : 'Months'}`,
+        duration_months: month,
+        monthly_rent: price,
+        security_deposit: price, // Deposit = monthly rent for this plan
+        delivery_fee: pricing.deliveryFee,
+        installation_fee: pricing.installationFee,
+      }));
+    }
+
+    // Auto mode: existing logic
     const plans = [];
     const baseRent = pricing.baseMonthlyRent;
     plans.push({
@@ -210,7 +229,7 @@ const VendorProductForm = () => {
       label: '1 Month',
       duration_months: 1,
       monthly_rent: baseRent,
-      security_deposit: baseRent, // Deposit = monthly rent for this plan
+      security_deposit: baseRent,
       delivery_fee: pricing.deliveryFee,
       installation_fee: pricing.installationFee,
     });
@@ -221,7 +240,7 @@ const VendorProductForm = () => {
         label: `${pricing.maxDuration} Months`,
         duration_months: pricing.maxDuration,
         monthly_rent: maxRent,
-        security_deposit: maxRent, // Deposit = monthly rent for this plan
+        security_deposit: maxRent,
         delivery_fee: pricing.deliveryFee,
         installation_fee: pricing.installationFee,
       });
