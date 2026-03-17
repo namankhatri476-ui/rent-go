@@ -105,14 +105,14 @@ const RentalDurationTimeline = ({
           );
         })}
 
-        {/* Invisible range slider for smooth dragging */}
+        {/* Invisible range slider for smooth dragging across allowed tenures */}
         <input
           type="range"
-          min={1}
-          max={maxDuration}
+          min={0}
+          max={months.length - 1}
           step={1}
-          value={currentDuration}
-          onChange={(e) => onDurationChange(Number(e.target.value))}
+          value={months.indexOf(currentDuration) !== -1 ? months.indexOf(currentDuration) : 0}
+          onChange={(e) => onDurationChange(months[Number(e.target.value)])}
           className="absolute inset-0 w-full opacity-0 cursor-pointer"
           style={{ top: "4px", height: "24px" }}
         />
