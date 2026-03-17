@@ -1063,7 +1063,7 @@ const VendorProductForm = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {[3, 6, 12, 18, 24, 36].map(m => (
+                        {TENURE_OPTIONS.filter(m => m >= 3).map(m => (
                           <SelectItem key={m} value={String(m)}>{m} Months</SelectItem>
                         ))}
                       </SelectContent>
