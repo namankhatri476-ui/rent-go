@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Building2, ArrowRight, Mail, Lock, User, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import rentprLogo from '@/assets/rentpr-logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -211,11 +212,7 @@ const VendorRegister = () => {
 
       <div className="relative w-full max-w-lg mx-4 z-10 py-8">
         <div className="text-center mb-8">
-          {settings.logoUrl ? (
-            <img src={settings.logoUrl} alt={settings.platformName} className="h-10 w-auto mx-auto object-contain mb-4" />
-          ) : (
-            <h1 className="text-3xl font-bold text-primary mb-4">{settings.platformName}</h1>
-          )}
+          <img src={settings.logoUrl || rentprLogo} alt={settings.platformName} className="h-10 w-auto mx-auto object-contain mb-4" />
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Building2 className="w-8 h-8 text-primary" />
           </div>
