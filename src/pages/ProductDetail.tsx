@@ -92,11 +92,7 @@ const ProductDetail = () => {
     .sort((a: RentalPlan, b: RentalPlan) => a.duration_months - b.duration_months);
 
   const maxDuration = rentalPlans.length > 0 ? Math.max(...rentalPlans.map((p: RentalPlan) => p.duration_months)) : 12;
-  
-  // Default to the first available plan duration, or fallback
-  const availableDurations = rentalPlans.map((p: RentalPlan) => p.duration_months).sort((a: number, b: number) => a - b);
-  const defaultDuration = availableDurations.find((d: number) => d >= 6) || availableDurations[0] || 6;
-  const currentDuration = selectedDuration ?? defaultDuration;
+  const currentDuration = selectedDuration ?? Math.min(6, maxDuration);
 
   const variations = ((product as any)?.product_variations || []).filter((v: any) => v.is_active !== false);
   const selectedVar = variations.find((v: any) => v.id === selectedVariation);
@@ -106,19 +102,24 @@ const ProductDetail = () => {
   const advanceDiscountPercent = (product as any)?.advance_discount_percent || 0;
   const hasBuyOption = buyPrice && buyPrice > 0;
 
-  // Get exact price from the matching rental plan for the selected duration
-  const getExactPlanPrice = (duration: number) => {
+  const getDiscountedPrice = (duration: number) => {
     if (rentalPlans.length === 0) return { monthlyRent: 0, securityDeposit: 0, deliveryFee: 0, installationFee: 0 };
-    // Find the exact matching plan
-    const exactPlan = rentalPlans.find((p: RentalPlan) => p.duration_months === duration);
-    const plan = exactPlan || rentalPlans[0];
-    const monthlyRent = plan.monthly_rent + variationAdjustment;
-    const deliveryFee = plan.delivery_fee || 0;
-    const installationFee = plan.installation_fee || 0;
+    const basePlan = rentalPlans[0];
+    const baseRent = basePlan.monthly_rent + variationAdjustment;
+    const deliveryFee = basePlan.delivery_fee || 0;
+    const installationFee = basePlan.installation_fee || 0;
+    if (rentalPlans.length === 1 || duration <= 1) {
+      return { monthlyRent: baseRent, securityDeposit: baseRent, deliveryFee, installationFee };
+    }
+    const lastPlan = rentalPlans[rentalPlans.length - 1];
+    const discountPerMonth = basePlan.monthly_rent > 0 && lastPlan.duration_months > 1
+      ? ((basePlan.monthly_rent - lastPlan.monthly_rent) / basePlan.monthly_rent * 100) / (lastPlan.duration_months - 1) : 0;
+    const totalDiscount = Math.min(discountPerMonth * (duration - 1), 80);
+    const monthlyRent = Math.round((basePlan.monthly_rent * (1 - totalDiscount / 100)) + variationAdjustment);
     return { monthlyRent, securityDeposit: monthlyRent, deliveryFee, installationFee };
   };
 
-  const interpolatedPrice = useMemo(() => getExactPlanPrice(currentDuration), [currentDuration, rentalPlans, variationAdjustment]);
+  const interpolatedPrice = useMemo(() => getDiscountedPrice(currentDuration), [currentDuration, rentalPlans, variationAdjustment]);
 
   const totalRentWithoutDiscount = interpolatedPrice.monthlyRent * currentDuration;
   const advanceDiscount = payAdvance ? Math.round(totalRentWithoutDiscount * advanceDiscountPercent / 100) : 0;

@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { cn } from "@/lib/utils";
 
 interface RentalDurationTimelineProps {
   maxDuration: number;
@@ -8,105 +7,102 @@ interface RentalDurationTimelineProps {
   rentalPlans: { duration_months: number; monthly_rent: number }[];
 }
 
-const STANDARD_TENURES = [1, 3, 6, 11, 12, 24, 36];
-
 const RentalDurationTimeline = ({
   maxDuration,
   currentDuration,
   onDurationChange,
   rentalPlans,
 }: RentalDurationTimelineProps) => {
-  // Get available tenures from rental plans, filtered to standard options
-  const availableTenures = useMemo(() => {
-    const planDurations = rentalPlans.map((p) => p.duration_months);
-    // Show only tenures that exist in the vendor's rental plans
-    const tenures = STANDARD_TENURES.filter((t) => planDurations.includes(t));
-    // If vendor has custom tenures not in standard list, include them too
-    planDurations.forEach((d) => {
-      if (!tenures.includes(d)) tenures.push(d);
-    });
-    return tenures.sort((a, b) => a - b);
-  }, [rentalPlans]);
+  // Create dots for every month from 1 to maxDuration
+  const months = useMemo(() => {
+    const arr: number[] = [];
+    for (let i = 1; i <= maxDuration; i++) arr.push(i);
+    return arr;
+  }, [maxDuration]);
 
-  // Find the rent for a given tenure
-  const getRentForTenure = (months: number) => {
-    const plan = rentalPlans.find((p) => p.duration_months === months);
-    return plan?.monthly_rent ?? 0;
-  };
+  const getPosition = (month: number) =>
+    ((month - 1) / (maxDuration - 1)) * 100;
 
-  // Find savings compared to shortest tenure
-  const baseRent = availableTenures.length > 0 ? getRentForTenure(availableTenures[0]) : 0;
-
-  if (availableTenures.length === 0) return null;
+  const filledWidth = maxDuration > 1 ? getPosition(currentDuration) : 100;
 
   return (
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-foreground">Choose Tenure</span>
-        <span className="text-sm font-bold text-primary">
+        <span className="text-sm font-semibold text-foreground">Choose tenure</span>
+        <span className="text-sm font-bold text-foreground">
           {currentDuration} {currentDuration === 1 ? "month" : "months"}
         </span>
       </div>
 
-      {/* Tenure Options Grid */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-        {availableTenures.map((months) => {
-          const isSelected = months === currentDuration;
-          const rent = getRentForTenure(months);
-          const savingsPercent =
-            baseRent > 0 && rent < baseRent
-              ? Math.round(((baseRent - rent) / baseRent) * 100)
-              : 0;
+      {/* Timeline Track */}
+      <div className="relative pt-3 pb-8 px-1">
+        {/* Background track */}
+        <div className="relative h-2 bg-muted rounded-full">
+          {/* Filled track */}
+          <div
+            className="absolute h-full bg-primary rounded-full transition-all duration-300 ease-out"
+            style={{ width: `${Math.max(0, Math.min(filledWidth, 100))}%` }}
+          />
+        </div>
+
+        {/* Month dots */}
+        {months.map((month) => {
+          const pos = getPosition(month);
+          const isActive = month <= currentDuration;
+          const isCurrent = month === currentDuration;
 
           return (
             <button
-              key={months}
+              key={month}
               type="button"
-              onClick={() => onDurationChange(months)}
-              className={cn(
-                "relative flex flex-col items-center justify-center py-3 px-2 rounded-xl border-2 transition-all duration-200",
-                isSelected
-                  ? "border-primary bg-primary/10 shadow-sm"
-                  : "border-border/60 bg-card hover:border-primary/40 hover:bg-muted/50"
-              )}
+              onClick={() => onDurationChange(month)}
+              className="absolute -translate-x-1/2 group"
+              style={{ left: `${pos}%`, top: "4px" }}
             >
-              {/* Savings badge */}
-              {savingsPercent > 0 && (
-                <span className="absolute -top-2 right-1 text-[9px] font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full leading-none">
-                  {savingsPercent}% off
-                </span>
-              )}
-
+              {/* Circle dot */}
+              <div
+                className={`
+                  w-5 h-5 rounded-full border-[3px] transition-all duration-200
+                  ${
+                    isCurrent
+                      ? "bg-card border-primary scale-110 shadow-md"
+                      : isActive
+                      ? "bg-card border-primary"
+                      : "bg-card border-muted-foreground/30 hover:border-muted-foreground/50 hover:scale-105"
+                  }
+                `}
+              />
+              {/* Label */}
               <span
-                className={cn(
-                  "text-base font-bold",
-                  isSelected ? "text-primary" : "text-foreground"
-                )}
+                className={`
+                  absolute top-7 left-1/2 -translate-x-1/2 text-xs whitespace-nowrap transition-colors font-medium
+                  ${
+                    isCurrent
+                      ? "text-primary font-bold"
+                      : isActive
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                  }
+                `}
               >
-                {months}
-              </span>
-              <span
-                className={cn(
-                  "text-[10px] mt-0.5",
-                  isSelected
-                    ? "text-primary font-medium"
-                    : "text-muted-foreground"
-                )}
-              >
-                {months === 1 ? "month" : "months"}
-              </span>
-              <span
-                className={cn(
-                  "text-[10px] mt-1 font-semibold",
-                  isSelected ? "text-primary" : "text-muted-foreground"
-                )}
-              >
-                ₹{rent.toLocaleString()}/mo
+                {month}
               </span>
             </button>
           );
         })}
+
+        {/* Invisible range slider for smooth dragging */}
+        <input
+          type="range"
+          min={1}
+          max={maxDuration}
+          step={1}
+          value={currentDuration}
+          onChange={(e) => onDurationChange(Number(e.target.value))}
+          className="absolute inset-0 w-full opacity-0 cursor-pointer"
+          style={{ top: "4px", height: "24px" }}
+        />
       </div>
     </div>
   );
