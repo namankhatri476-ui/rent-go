@@ -1063,14 +1063,14 @@ const VendorProductForm = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {[3, 6, 12, 18, 24, 36].map(m => (
+                        {TENURE_OPTIONS.filter(m => m >= 3).map(m => (
                           <SelectItem key={m} value={String(m)}>{m} Months</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {Array.from({ length: manualMaxDuration }, (_, i) => i + 1).map(month => (
+                    {TENURE_OPTIONS.filter(m => m <= manualMaxDuration).map(month => (
                       <div key={month} className="space-y-1">
                         <Label className="text-xs">{month} {month === 1 ? 'Month' : 'Months'} (₹/mo)</Label>
                         <Input

@@ -107,19 +107,30 @@ const ProductDetail = () => {
 
   const getDiscountedPrice = (duration: number) => {
     if (rentalPlans.length === 0) return { monthlyRent: 0, securityDeposit: 0, deliveryFee: 0, installationFee: 0 };
-    const basePlan = rentalPlans[0];
-    const baseRent = basePlan.monthly_rent + variationAdjustment;
-    const deliveryFee = basePlan.delivery_fee || 0;
-    const installationFee = basePlan.installation_fee || 0;
-    if (rentalPlans.length === 1 || duration <= 1) {
-      return { monthlyRent: baseRent, securityDeposit: baseRent, deliveryFee, installationFee };
+    
+    // Find exact matching plan for the selected duration
+    const exactPlan = rentalPlans.find((p: RentalPlan) => p.duration_months === duration);
+    if (exactPlan) {
+      const monthlyRent = exactPlan.monthly_rent + variationAdjustment;
+      return {
+        monthlyRent,
+        securityDeposit: monthlyRent,
+        deliveryFee: exactPlan.delivery_fee || 0,
+        installationFee: exactPlan.installation_fee || 0,
+      };
     }
-    const lastPlan = rentalPlans[rentalPlans.length - 1];
-    const discountPerMonth = basePlan.monthly_rent > 0 && lastPlan.duration_months > 1
-      ? ((basePlan.monthly_rent - lastPlan.monthly_rent) / basePlan.monthly_rent * 100) / (lastPlan.duration_months - 1) : 0;
-    const totalDiscount = Math.min(discountPerMonth * (duration - 1), 80);
-    const monthlyRent = Math.round((basePlan.monthly_rent * (1 - totalDiscount / 100)) + variationAdjustment);
-    return { monthlyRent, securityDeposit: monthlyRent, deliveryFee, installationFee };
+    
+    // Fallback: find the closest plan with duration <= selected duration
+    const closestPlan = [...rentalPlans]
+      .filter((p: RentalPlan) => p.duration_months <= duration)
+      .sort((a: RentalPlan, b: RentalPlan) => b.duration_months - a.duration_months)[0] || rentalPlans[0];
+    const monthlyRent = closestPlan.monthly_rent + variationAdjustment;
+    return {
+      monthlyRent,
+      securityDeposit: monthlyRent,
+      deliveryFee: closestPlan.delivery_fee || 0,
+      installationFee: closestPlan.installation_fee || 0,
+    };
   };
 
   const interpolatedPrice = useMemo(() => getDiscountedPrice(currentDuration), [currentDuration, rentalPlans, variationAdjustment]);
