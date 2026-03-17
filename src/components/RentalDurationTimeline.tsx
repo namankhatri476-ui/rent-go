@@ -20,10 +20,23 @@ const RentalDurationTimeline = ({
     return ALLOWED_TENURES.filter(m => m <= maxDuration);
   }, [maxDuration]);
 
-  const getPosition = (month: number) =>
-    ((month - 1) / (maxDuration - 1)) * 100;
+  const getPosition = (month: number) => {
+    const idx = months.indexOf(month);
+    if (idx === -1) {
+      // For currentDuration not exactly on a dot, interpolate
+      let lower = 0, upper = months.length - 1;
+      for (let i = 0; i < months.length; i++) {
+        if (months[i] <= month) lower = i;
+        if (months[i] >= month && upper === months.length - 1) upper = i;
+      }
+      if (lower === upper) return (lower / Math.max(months.length - 1, 1)) * 100;
+      const ratio = (month - months[lower]) / (months[upper] - months[lower]);
+      return ((lower + ratio) / Math.max(months.length - 1, 1)) * 100;
+    }
+    return months.length > 1 ? (idx / (months.length - 1)) * 100 : 100;
+  };
 
-  const filledWidth = maxDuration > 1 ? getPosition(currentDuration) : 100;
+  const filledWidth = months.length > 1 ? getPosition(currentDuration) : 100;
 
   return (
     <div className="space-y-3">
