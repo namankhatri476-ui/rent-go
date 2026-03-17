@@ -13,11 +13,11 @@ const RentalDurationTimeline = ({
   onDurationChange,
   rentalPlans,
 }: RentalDurationTimelineProps) => {
-  // Create dots for every month from 1 to maxDuration
+  const ALLOWED_TENURES = [1, 3, 6, 11, 12, 24, 36];
+
+  // Only show allowed tenure options up to maxDuration
   const months = useMemo(() => {
-    const arr: number[] = [];
-    for (let i = 1; i <= maxDuration; i++) arr.push(i);
-    return arr;
+    return ALLOWED_TENURES.filter(m => m <= maxDuration);
   }, [maxDuration]);
 
   const getPosition = (month: number) =>
