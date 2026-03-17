@@ -243,11 +243,7 @@ const Auth = () => {
         <div className="relative w-full max-w-md mx-4 z-10">
           {/* Logo */}
           <div className="text-center mb-8">
-            {platformSettings.logoUrl ? (
-              <img src={platformSettings.logoUrl} alt={platformSettings.platformName} className="h-10 w-auto mx-auto object-contain" />
-            ) : (
-              <h1 className="text-3xl font-bold text-primary">{platformSettings.platformName}</h1>
-            )}
+            <img src={platformSettings.logoUrl || rentprLogo} alt={platformSettings.platformName} className="h-10 w-auto mx-auto object-contain" />
           </div>
 
           {/* Forgot Password Success Message */}

@@ -52,11 +52,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       <aside className="w-64 bg-card border-r border-border flex flex-col">
         <div className="p-4 border-b border-border flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2">
-            {settings.logoUrl ? (
-              <img src={settings.logoUrl} alt={settings.platformName} className="h-8 w-auto object-contain" />
-            ) : (
-              <span className="text-2xl font-bold text-primary">{settings.platformName}</span>
-            )}
+            <img src={settings.logoUrl || rentprLogo} alt={settings.platformName} className="h-8 w-auto object-contain" />
           </Link>
           <span className="text-xs text-destructive-foreground px-2 py-0.5 bg-destructive rounded">Admin</span>
         </div>
