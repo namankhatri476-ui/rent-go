@@ -94,7 +94,7 @@ const ProductDetail = () => {
   const maxDuration = rentalPlans.length > 0 ? Math.max(...rentalPlans.map((p: RentalPlan) => p.duration_months)) : 12;
   const ALLOWED_TENURES = [1, 3, 6, 11, 12, 24, 36];
   const allowedForProduct = ALLOWED_TENURES.filter(t => t <= maxDuration);
-  const defaultTenure = allowedForProduct.includes(6) ? 6 : allowedForProduct[allowedForProduct.length - 1] || 1;
+  const defaultTenure = allowedForProduct[allowedForProduct.length - 1] || 1;
   const currentDuration = selectedDuration ?? defaultTenure;
 
   const variations = ((product as any)?.product_variations || []).filter((v: any) => v.is_active !== false);
