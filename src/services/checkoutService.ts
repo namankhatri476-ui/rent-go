@@ -284,8 +284,8 @@ export async function createOrders(
                          item.product.deliveryFee + 
                          item.product.installationFee;
 
-      // Initiate PhonePe payment for one-time charges
-      const phonePeResult = await initiatePhonePePayment({
+      // Initiate Cashfree payment for one-time charges
+      const cashfreeResult = await initiateCashfreePayment({
         orderId: order.id,
         amount: payableNow,
         customerName: item.product.name,
@@ -301,9 +301,9 @@ export async function createOrders(
           order_id: order.id,
           amount: payableNow,
           payment_method: paymentMethod,
-          status: phonePeResult.success ? "pending" : "failed",
-          payment_gateway: "phonepe",
-          transaction_id: phonePeResult.transactionId || null,
+          status: cashfreeResult.success ? "pending" : "failed",
+          payment_gateway: "cashfree",
+          transaction_id: cashfreeResult.transactionId || null,
         });
 
       if (paymentError) throw paymentError;
