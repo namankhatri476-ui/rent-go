@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CartItem, CheckoutBreakdown, GST_RATE } from "@/types/product";
-import { initiatePhonePePayment, setupAutopaySubscription } from "@/services/phonepeService";
+import { initiateCashfreePayment, setupAutopaySubscription } from "@/services/cashfreeService";
 
 export interface CheckoutFormData {
   fullName: string;
@@ -284,8 +284,8 @@ export async function createOrders(
                          item.product.deliveryFee + 
                          item.product.installationFee;
 
-      // Initiate PhonePe payment for one-time charges
-      const phonePeResult = await initiatePhonePePayment({
+      // Initiate Cashfree payment for one-time charges
+      const cashfreeResult = await initiateCashfreePayment({
         orderId: order.id,
         amount: payableNow,
         customerName: item.product.name,
@@ -301,9 +301,9 @@ export async function createOrders(
           order_id: order.id,
           amount: payableNow,
           payment_method: paymentMethod,
-          status: phonePeResult.success ? "pending" : "failed",
-          payment_gateway: "phonepe",
-          transaction_id: phonePeResult.transactionId || null,
+          status: cashfreeResult.success ? "pending" : "failed",
+          payment_gateway: "cashfree",
+          transaction_id: cashfreeResult.transactionId || null,
         });
 
       if (paymentError) throw paymentError;
@@ -324,11 +324,11 @@ export async function createOrders(
         }
       }
 
-      // If PhonePe returned a redirect URL, we need to redirect the user
-      if (phonePeResult.success && phonePeResult.redirectUrl && phonePeResult.redirectUrl !== `${window.location.origin}/order-success?order=${order.order_number}`) {
+      // If Cashfree returned a redirect URL, we need to redirect the user
+      if (cashfreeResult.success && cashfreeResult.redirectUrl && cashfreeResult.redirectUrl !== `${window.location.origin}/order-success?order=${order.order_number}`) {
         // Store order numbers for post-redirect handling
         sessionStorage.setItem('pendingOrderNumbers', JSON.stringify([...orderNumbers, order.order_number]));
-        window.location.href = phonePeResult.redirectUrl;
+        window.location.href = cashfreeResult.redirectUrl;
         return { success: true, orderNumbers: [...orderNumbers, order.order_number] };
       }
     }
