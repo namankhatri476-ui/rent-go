@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CartItem, CheckoutBreakdown, GST_RATE } from "@/types/product";
-import { initiateCashfreePayment, setupAutopaySubscription } from "@/services/cashfreeService";
+import { initiateCashfreePayment, verifyCashfreePayment, confirmOrderAfterPayment } from "@/services/cashfreeService";
 
 export interface CheckoutFormData {
   fullName: string;
@@ -17,6 +17,7 @@ export interface OrderResult {
   success: boolean;
   orderNumbers: string[];
   error?: string;
+  pendingPayment?: boolean;
 }
 
 /**
@@ -27,7 +28,6 @@ export async function saveAddress(
   formData: CheckoutFormData
 ): Promise<{ addressId: string | null; error: string | null }> {
   try {
-    // Check if user has an existing default address
     const { data: existingAddress } = await supabase
       .from("addresses")
       .select("id")
@@ -36,7 +36,6 @@ export async function saveAddress(
       .maybeSingle();
 
     if (existingAddress) {
-      // Update existing address
       const { error } = await supabase
         .from("addresses")
         .update({
@@ -52,7 +51,6 @@ export async function saveAddress(
       if (error) throw error;
       return { addressId: existingAddress.id, error: null };
     } else {
-      // Create new address
       const { data, error } = await supabase
         .from("addresses")
         .insert({
@@ -79,7 +77,7 @@ export async function saveAddress(
 }
 
 /**
- * Ensure product exists in database, creating if needed for demo purposes
+ * Ensure product exists in database
  */
 async function ensureProductExists(
   userId: string,
@@ -87,7 +85,6 @@ async function ensureProductExists(
 ): Promise<{ productId: string; vendorId: string; rentalPlanId: string } | null> {
   const productSlug = item.product.slug;
   
-  // First, try to find the product by slug
   let { data: existingProduct } = await supabase
     .from("products")
     .select("id, vendor_id")
@@ -101,8 +98,6 @@ async function ensureProductExists(
     productId = existingProduct.id;
     vendorId = existingProduct.vendor_id;
   } else {
-    // Product doesn't exist - create a demo vendor and product
-    // First check if user has a vendor profile
     let { data: vendor } = await supabase
       .from("vendors")
       .select("id")
@@ -110,7 +105,6 @@ async function ensureProductExists(
       .maybeSingle();
 
     if (!vendor) {
-      // Check if any vendor exists
       const { data: anyVendor } = await supabase
         .from("vendors")
         .select("id")
@@ -120,7 +114,6 @@ async function ensureProductExists(
       if (anyVendor) {
         vendorId = anyVendor.id;
       } else {
-        // Create a demo vendor for this user
         const { data: newVendor, error: vendorError } = await supabase
           .from("vendors")
           .insert({
@@ -142,7 +135,6 @@ async function ensureProductExists(
       vendorId = vendor.id;
     }
 
-    // Create the product
     const { data: newProduct, error: productError } = await supabase
       .from("products")
       .insert({
@@ -171,7 +163,6 @@ async function ensureProductExists(
     productId = newProduct.id;
   }
 
-  // Now get or create the rental plan
   let { data: existingPlan } = await supabase
     .from("rental_plans")
     .select("id")
@@ -210,47 +201,55 @@ async function ensureProductExists(
 }
 
 /**
- * Create orders for all cart items
- * In rental model, each cart item becomes a separate order
+ * NEW FLOW: Payment first, then order creation
+ * 
+ * 1. Initiate Cashfree payment (get payment session)
+ * 2. Redirect user to Cashfree payment page
+ * 3. On return, verify payment and THEN create order
  */
-export async function createOrders(
+export async function initiatePaymentFirst(
   userId: string,
-  addressId: string,
   items: CartItem[],
   breakdown: CheckoutBreakdown,
-  paymentMethod: string,
+  formData: CheckoutFormData,
   termsVersion?: number
 ): Promise<OrderResult> {
-  const orderNumbers: string[] = [];
-  
   try {
+    // Save address first
+    const { addressId, error: addressError } = await saveAddress(userId, formData);
+    if (addressError || !addressId) {
+      return { success: false, orderNumbers: [], error: addressError || "Failed to save address" };
+    }
+
+    // Prepare order data for each item (but DON'T create orders yet)
+    const pendingOrders: Array<{
+      item: CartItem;
+      orderData: Record<string, unknown>;
+      payableNow: number;
+    }> = [];
+
     for (const item of items) {
       const monthlyRent = item.selectedPlan.monthlyRent;
       const gst = Math.round(monthlyRent * GST_RATE);
       const protectionFee = item.addProtectionPlan ? 99 : 0;
       const monthlyTotal = monthlyRent + gst + protectionFee;
-      
-      // Calculate platform commission (30% default)
       const commissionRate = 0.30;
       const platformCommission = Math.round(monthlyRent * commissionRate);
       const vendorPayout = monthlyRent - platformCommission;
 
-      // Ensure product exists in database (auto-create for static products)
       const productData = await ensureProductExists(userId, item);
-      
       if (!productData) {
         throw new Error(`Failed to process product: ${item.product.name}. Please try again.`);
       }
 
       const { productId, vendorId, rentalPlanId } = productData;
-
-      // Generate order number
+      const payableNow = item.selectedPlan.securityDeposit + item.product.deliveryFee + item.product.installationFee;
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-      // Create the order
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
+      pendingOrders.push({
+        item,
+        payableNow,
+        orderData: {
           order_number: orderNumber,
           customer_id: userId,
           vendor_id: vendorId,
@@ -261,7 +260,7 @@ export async function createOrders(
           security_deposit: item.selectedPlan.securityDeposit,
           delivery_fee: item.product.deliveryFee,
           installation_fee: item.product.installationFee,
-          payable_now_total: item.selectedPlan.securityDeposit + item.product.deliveryFee + item.product.installationFee,
+          payable_now_total: payableNow,
           monthly_rent: monthlyRent,
           monthly_gst: gst,
           protection_plan_fee: protectionFee,
@@ -269,79 +268,123 @@ export async function createOrders(
           rental_duration_months: item.selectedPlan.duration,
           platform_commission: platformCommission,
           vendor_payout: vendorPayout,
-          status: "pending",
+          status: "confirmed",
           terms_accepted_at: termsVersion ? new Date().toISOString() : null,
           terms_version: termsVersion || null,
-        })
-        .select("id, order_number")
-        .single();
-
-      if (orderError) throw orderError;
-      orderNumbers.push(order.order_number);
-
-      // Create initial payment record
-      const payableNow = item.selectedPlan.securityDeposit + 
-                         item.product.deliveryFee + 
-                         item.product.installationFee;
-
-      // Initiate Cashfree payment for one-time charges
-      const cashfreeResult = await initiateCashfreePayment({
-        orderId: order.id,
-        amount: payableNow,
-        customerName: item.product.name,
-        customerPhone: '',
-        customerEmail: '',
-        redirectUrl: `${window.location.origin}/order-success?order=${order.order_number}`,
+        },
       });
-
-      // Create payment record (pending until webhook confirms)
-      const { error: paymentError } = await supabase
-        .from("payments")
-        .insert({
-          order_id: order.id,
-          amount: payableNow,
-          payment_method: paymentMethod,
-          status: cashfreeResult.success ? "pending" : "failed",
-          payment_gateway: "cashfree",
-          transaction_id: cashfreeResult.transactionId || null,
-        });
-
-      if (paymentError) throw paymentError;
-
-      // Setup autopay subscription for monthly rent (for rent items not paying advance)
-      if (item.mode === 'rent' && !item.payAdvance) {
-        const autopayResult = await setupAutopaySubscription({
-          orderId: order.id,
-          subscriptionName: `Monthly Rent - ${item.product.name}`,
-          monthlyAmount: monthlyTotal,
-          customerPhone: '',
-          maxCycles: item.selectedPlan.duration,
-          redirectUrl: `${window.location.origin}/order-success?order=${order.order_number}`,
-        });
-
-        if (!autopayResult.success) {
-          console.warn("[Checkout] Autopay setup failed, rent will need manual collection:", autopayResult.error);
-        }
-      }
-
-      // If Cashfree returned a redirect URL, we need to redirect the user
-      if (cashfreeResult.success && cashfreeResult.redirectUrl && cashfreeResult.redirectUrl !== `${window.location.origin}/order-success?order=${order.order_number}`) {
-        // Store order numbers for post-redirect handling
-        sessionStorage.setItem('pendingOrderNumbers', JSON.stringify([...orderNumbers, order.order_number]));
-        window.location.href = cashfreeResult.redirectUrl;
-        return { success: true, orderNumbers: [...orderNumbers, order.order_number] };
-      }
     }
 
-    return { success: true, orderNumbers };
+    // Calculate total payable amount
+    const totalPayable = pendingOrders.reduce((sum, po) => sum + po.payableNow, 0);
+    const tempOrderId = `TEMP_${Date.now()}`;
+
+    // Initiate Cashfree payment
+    const returnUrl = `${window.location.origin}/order-success`;
+    const cashfreeResult = await initiateCashfreePayment({
+      orderId: tempOrderId,
+      amount: totalPayable,
+      customerName: formData.fullName,
+      customerPhone: formData.phone,
+      customerEmail: formData.email,
+      redirectUrl: returnUrl,
+    });
+
+    if (!cashfreeResult.success) {
+      return {
+        success: false,
+        orderNumbers: [],
+        error: cashfreeResult.error || "Failed to initiate payment. Please try again.",
+      };
+    }
+
+    // Store pending order data in sessionStorage for post-payment verification
+    sessionStorage.setItem("pendingCheckout", JSON.stringify({
+      transactionId: cashfreeResult.transactionId,
+      pendingOrders: pendingOrders.map(po => po.orderData),
+      paymentSessionId: cashfreeResult.paymentSessionId,
+      cfOrderId: cashfreeResult.cfOrderId,
+    }));
+
+    // If Cashfree provides a redirect URL, redirect user to payment page
+    if (cashfreeResult.redirectUrl) {
+      window.location.href = cashfreeResult.redirectUrl;
+      return { success: true, orderNumbers: [], pendingPayment: true };
+    }
+
+    // If no redirect URL but we have a payment session ID, 
+    // the frontend should use Cashfree JS SDK to open the checkout
+    // For now, return the session info so frontend can handle it
+    return {
+      success: true,
+      orderNumbers: [],
+      pendingPayment: true,
+      error: cashfreeResult.paymentSessionId
+        ? `PAYMENT_SESSION:${cashfreeResult.paymentSessionId}`
+        : "No payment URL received from gateway",
+    };
   } catch (error: any) {
-    console.error("Error creating orders:", error);
+    console.error("Error initiating payment:", error);
     return { success: false, orderNumbers: [], error: error.message };
   }
 }
 
 /**
- * Complete checkout process
+ * Verify payment and create orders (called after user returns from payment page)
+ */
+export async function verifyAndCreateOrders(): Promise<OrderResult> {
+  try {
+    const pendingData = sessionStorage.getItem("pendingCheckout");
+    if (!pendingData) {
+      return { success: false, orderNumbers: [], error: "No pending checkout found" };
+    }
+
+    const { transactionId, pendingOrders } = JSON.parse(pendingData);
+
+    // Verify payment with Cashfree
+    const verification = await verifyCashfreePayment(transactionId);
+    
+    if (!verification.verified) {
+      sessionStorage.removeItem("pendingCheckout");
+      return {
+        success: false,
+        orderNumbers: [],
+        error: `Payment not completed. Status: ${verification.status}`,
+      };
+    }
+
+    // Payment verified! Create orders via the secure edge function
+    const orderNumbers: string[] = [];
+
+    for (const orderData of pendingOrders) {
+      const result = await confirmOrderAfterPayment({
+        transactionId,
+        orderData,
+      });
+
+      if (result.success && result.orderNumber) {
+        orderNumbers.push(result.orderNumber);
+      } else {
+        console.error("Failed to confirm order:", result.error);
+      }
+    }
+
+    // Clean up
+    sessionStorage.removeItem("pendingCheckout");
+
+    if (orderNumbers.length === 0) {
+      return { success: false, orderNumbers: [], error: "Failed to create orders after payment" };
+    }
+
+    return { success: true, orderNumbers };
+  } catch (error: any) {
+    console.error("Error verifying and creating orders:", error);
+    return { success: false, orderNumbers: [], error: error.message };
+  }
+}
+
+/**
+ * Complete checkout process (payment-first flow)
  */
 export async function processCheckout(
   userId: string,
@@ -350,21 +393,5 @@ export async function processCheckout(
   formData: CheckoutFormData,
   termsVersion?: number
 ): Promise<OrderResult> {
-  // 1. Save address
-  const { addressId, error: addressError } = await saveAddress(userId, formData);
-  if (addressError || !addressId) {
-    return { success: false, orderNumbers: [], error: addressError || "Failed to save address" };
-  }
-
-  // 2. Create orders
-  const result = await createOrders(
-    userId,
-    addressId,
-    items,
-    breakdown,
-    formData.paymentMethod,
-    termsVersion
-  );
-
-  return result;
+  return initiatePaymentFirst(userId, items, breakdown, formData, termsVersion);
 }

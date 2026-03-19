@@ -2,7 +2,7 @@
  * Cashfree Payment Gateway - Integration
  * 
  * Calls the backend edge function for secure payment processing.
- * Supports one-time payments and autopay subscription setup.
+ * Supports one-time payments, autopay subscription setup, and order confirmation after payment.
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -42,8 +42,20 @@ export interface AutopaySetupResponse {
   error?: string;
 }
 
+export interface ConfirmOrderRequest {
+  transactionId: string;
+  orderData: Record<string, unknown>;
+}
+
+export interface ConfirmOrderResponse {
+  success: boolean;
+  orderId?: string;
+  orderNumber?: string;
+  error?: string;
+}
+
 /**
- * Initiate a one-time Cashfree payment (security deposit + delivery + installation)
+ * Initiate a Cashfree payment session (does NOT create an order yet)
  */
 export async function initiateCashfreePayment(
   request: CashfreePaymentRequest
@@ -75,6 +87,64 @@ export async function initiateCashfreePayment(
 }
 
 /**
+ * Verify Cashfree payment status
+ */
+export async function verifyCashfreePayment(
+  transactionId: string
+): Promise<{ verified: boolean; status: string }> {
+  console.log("[Cashfree] Verifying payment:", transactionId);
+
+  try {
+    const { data, error } = await supabase.functions.invoke("cashfree-payment/status", {
+      body: { transactionId },
+    });
+
+    if (error) {
+      console.error("[Cashfree] Verification error:", error);
+      return { verified: false, status: "ERROR" };
+    }
+
+    return {
+      verified: data.verified,
+      status: data.status,
+    };
+  } catch (err: any) {
+    console.error("[Cashfree] Verify network error:", err);
+    return { verified: false, status: "ERROR" };
+  }
+}
+
+/**
+ * Confirm order AFTER payment is verified (server-side verification + order creation)
+ */
+export async function confirmOrderAfterPayment(
+  request: ConfirmOrderRequest
+): Promise<ConfirmOrderResponse> {
+  console.log("[Cashfree] Confirming order after payment:", request.transactionId);
+
+  try {
+    const { data, error } = await supabase.functions.invoke("cashfree-payment/confirm-order", {
+      body: request,
+    });
+
+    if (error) {
+      console.error("[Cashfree] Confirm order error:", error);
+      return { success: false, error: error.message || "Order confirmation failed" };
+    }
+
+    return {
+      success: data.success,
+      orderId: data.orderId,
+      orderNumber: data.orderNumber,
+      error: data.error,
+    };
+  } catch (err: any) {
+    console.error("[Cashfree] Confirm order network error:", err);
+    return { success: false, error: err.message || "Network error" };
+  }
+}
+
+/**
  * Setup autopay subscription for monthly rent payments
  */
 export async function setupAutopaySubscription(
@@ -101,33 +171,5 @@ export async function setupAutopaySubscription(
   } catch (err: any) {
     console.error("[Cashfree] Autopay network error:", err);
     return { success: false, error: err.message || "Network error" };
-  }
-}
-
-/**
- * Verify Cashfree payment status
- */
-export async function verifyCashfreePayment(
-  transactionId: string
-): Promise<{ verified: boolean; status: string }> {
-  console.log("[Cashfree] Verifying payment:", transactionId);
-
-  try {
-    const { data, error } = await supabase.functions.invoke("cashfree-payment/status", {
-      body: { transactionId },
-    });
-
-    if (error) {
-      console.error("[Cashfree] Verification error:", error);
-      return { verified: false, status: "ERROR" };
-    }
-
-    return {
-      verified: data.verified,
-      status: data.status,
-    };
-  } catch (err: any) {
-    console.error("[Cashfree] Verify network error:", err);
-    return { verified: false, status: "ERROR" };
   }
 }
