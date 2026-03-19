@@ -2,3 +2,6 @@ project_id = "yhlruonnbtlxoihnjeaj"
 
 [functions.phonepe-payment]
 verify_jwt = false
+
+[functions.cashfree-payment]
+verify_jwt = false
