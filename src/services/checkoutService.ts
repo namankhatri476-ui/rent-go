@@ -324,11 +324,11 @@ export async function createOrders(
         }
       }
 
-      // If PhonePe returned a redirect URL, we need to redirect the user
-      if (phonePeResult.success && phonePeResult.redirectUrl && phonePeResult.redirectUrl !== `${window.location.origin}/order-success?order=${order.order_number}`) {
+      // If Cashfree returned a redirect URL, we need to redirect the user
+      if (cashfreeResult.success && cashfreeResult.redirectUrl && cashfreeResult.redirectUrl !== `${window.location.origin}/order-success?order=${order.order_number}`) {
         // Store order numbers for post-redirect handling
         sessionStorage.setItem('pendingOrderNumbers', JSON.stringify([...orderNumbers, order.order_number]));
-        window.location.href = phonePeResult.redirectUrl;
+        window.location.href = cashfreeResult.redirectUrl;
         return { success: true, orderNumbers: [...orderNumbers, order.order_number] };
       }
     }
