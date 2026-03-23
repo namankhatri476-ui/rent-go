@@ -14,8 +14,8 @@ const CASHFREE_SECRET_KEY = Deno.env.get("CASHFREE_SECRET_KEY") || "";
 const CASHFREE_PROD_URL = "https://api.cashfree.com/pg";
 const CASHFREE_SANDBOX_URL = "https://sandbox.cashfree.com/pg";
 
-// Switch to CASHFREE_PROD_URL when going live
-const API_BASE = CASHFREE_SANDBOX_URL;
+// Now using PRODUCTION URL
+const API_BASE = CASHFREE_PROD_URL;
 const API_VERSION = "2023-08-01";
 
 function jsonResponse(body: object, status = 200) {
