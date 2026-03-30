@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CartItem, CheckoutBreakdown, GST_RATE } from "@/types/product";
-import { initiateCashfreePayment, verifyCashfreePayment, confirmOrderAfterPayment } from "@/services/cashfreeService";
+import { createRazorpayOrder, openRazorpayCheckout, confirmOrderAfterPayment } from "@/services/razorpayService";
 
 export interface CheckoutFormData {
   fullName: string;
@@ -201,13 +201,12 @@ async function ensureProductExists(
 }
 
 /**
- * NEW FLOW: Payment first, then order creation
- * 
- * 1. Initiate Cashfree payment (get payment session)
- * 2. Redirect user to Cashfree payment page
- * 3. On return, verify payment and THEN create order
+ * Razorpay Payment Flow:
+ * 1. Create Razorpay order on backend
+ * 2. Open Razorpay Checkout on frontend (in-page popup)
+ * 3. On success, verify signature + create order on backend
  */
-export async function initiatePaymentFirst(
+export async function processCheckout(
   userId: string,
   items: CartItem[],
   breakdown: CheckoutBreakdown,
@@ -221,7 +220,7 @@ export async function initiatePaymentFirst(
       return { success: false, orderNumbers: [], error: addressError || "Failed to save address" };
     }
 
-    // Prepare order data for each item (but DON'T create orders yet)
+    // Prepare pending order data
     const pendingOrders: Array<{
       item: CartItem;
       orderData: Record<string, unknown>;
@@ -277,89 +276,43 @@ export async function initiatePaymentFirst(
 
     // Calculate total payable amount
     const totalPayable = pendingOrders.reduce((sum, po) => sum + po.payableNow, 0);
-    const tempOrderId = `TEMP_${Date.now()}`;
 
-    // Initiate Cashfree payment
-    const returnUrl = `${window.location.origin}/order-success`;
-    const cashfreeResult = await initiateCashfreePayment({
-      orderId: tempOrderId,
+    // Step 1: Create Razorpay order on backend
+    const razorpayOrder = await createRazorpayOrder({
       amount: totalPayable,
-      customerName: formData.fullName,
-      customerPhone: formData.phone,
-      customerEmail: formData.email,
-      redirectUrl: returnUrl,
+      receipt: `rcpt_${Date.now()}`,
+      notes: { userId, itemCount: String(items.length) },
     });
 
-    if (!cashfreeResult.success) {
+    if (!razorpayOrder.success || !razorpayOrder.orderId || !razorpayOrder.keyId) {
       return {
         success: false,
         orderNumbers: [],
-        error: cashfreeResult.error || "Failed to initiate payment. Please try again.",
+        error: razorpayOrder.error || "Failed to create payment order",
       };
     }
 
-    // Store pending order data in sessionStorage for post-payment verification
-    sessionStorage.setItem("pendingCheckout", JSON.stringify({
-      transactionId: cashfreeResult.transactionId,
-      pendingOrders: pendingOrders.map(po => po.orderData),
-      paymentSessionId: cashfreeResult.paymentSessionId,
-      cfOrderId: cashfreeResult.cfOrderId,
-    }));
+    // Step 2: Open Razorpay Checkout (in-page popup)
+    const paymentResult = await openRazorpayCheckout({
+      orderId: razorpayOrder.orderId,
+      amount: razorpayOrder.amount!,
+      currency: razorpayOrder.currency!,
+      keyId: razorpayOrder.keyId,
+      customerName: formData.fullName,
+      customerEmail: formData.email,
+      customerPhone: formData.phone,
+      description: `Rental Payment - ${items.length} item(s)`,
+    });
 
-    // If Cashfree provides a redirect URL, redirect user to payment page
-    if (cashfreeResult.redirectUrl) {
-      window.location.href = cashfreeResult.redirectUrl;
-      return { success: true, orderNumbers: [], pendingPayment: true };
-    }
-
-    // If no redirect URL but we have a payment session ID, 
-    // the frontend should use Cashfree JS SDK to open the checkout
-    // For now, return the session info so frontend can handle it
-    return {
-      success: true,
-      orderNumbers: [],
-      pendingPayment: true,
-      error: cashfreeResult.paymentSessionId
-        ? `PAYMENT_SESSION:${cashfreeResult.paymentSessionId}`
-        : "No payment URL received from gateway",
-    };
-  } catch (error: any) {
-    console.error("Error initiating payment:", error);
-    return { success: false, orderNumbers: [], error: error.message };
-  }
-}
-
-/**
- * Verify payment and create orders (called after user returns from payment page)
- */
-export async function verifyAndCreateOrders(): Promise<OrderResult> {
-  try {
-    const pendingData = sessionStorage.getItem("pendingCheckout");
-    if (!pendingData) {
-      return { success: false, orderNumbers: [], error: "No pending checkout found" };
-    }
-
-    const { transactionId, pendingOrders } = JSON.parse(pendingData);
-
-    // Verify payment with Cashfree
-    const verification = await verifyCashfreePayment(transactionId);
-    
-    if (!verification.verified) {
-      sessionStorage.removeItem("pendingCheckout");
-      return {
-        success: false,
-        orderNumbers: [],
-        error: `Payment not completed. Status: ${verification.status}`,
-      };
-    }
-
-    // Payment verified! Create orders via the secure edge function
+    // Step 3: Payment successful — verify + create orders on backend
     const orderNumbers: string[] = [];
 
-    for (const orderData of pendingOrders) {
+    for (const po of pendingOrders) {
       const result = await confirmOrderAfterPayment({
-        transactionId,
-        orderData,
+        razorpay_order_id: paymentResult.razorpay_order_id,
+        razorpay_payment_id: paymentResult.razorpay_payment_id,
+        razorpay_signature: paymentResult.razorpay_signature,
+        orderData: po.orderData,
       });
 
       if (result.success && result.orderNumber) {
@@ -369,29 +322,17 @@ export async function verifyAndCreateOrders(): Promise<OrderResult> {
       }
     }
 
-    // Clean up
-    sessionStorage.removeItem("pendingCheckout");
-
     if (orderNumbers.length === 0) {
       return { success: false, orderNumbers: [], error: "Failed to create orders after payment" };
     }
 
     return { success: true, orderNumbers };
   } catch (error: any) {
-    console.error("Error verifying and creating orders:", error);
+    console.error("Checkout error:", error);
+    // If user cancelled payment, show friendly message
+    if (error.message === "Payment cancelled by user") {
+      return { success: false, orderNumbers: [], error: "Payment was cancelled. No order was created." };
+    }
     return { success: false, orderNumbers: [], error: error.message };
   }
-}
-
-/**
- * Complete checkout process (payment-first flow)
- */
-export async function processCheckout(
-  userId: string,
-  items: CartItem[],
-  breakdown: CheckoutBreakdown,
-  formData: CheckoutFormData,
-  termsVersion?: number
-): Promise<OrderResult> {
-  return initiatePaymentFirst(userId, items, breakdown, formData, termsVersion);
 }

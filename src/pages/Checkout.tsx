@@ -96,13 +96,6 @@ const Checkout = () => {
         version
       );
 
-      if (result.pendingPayment) {
-        // User is being redirected to Cashfree payment page
-        // Don't clear cart or navigate — redirect happens in the service
-        toast.info("Redirecting to payment gateway...");
-        return;
-      }
-
       if (result.success && result.orderNumbers.length > 0) {
         clearCart();
         toast.success("Order placed successfully!", {
