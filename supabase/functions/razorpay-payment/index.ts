@@ -11,6 +11,10 @@ const RAZORPAY_KEY_ID = Deno.env.get("RAZORPAY_KEY_ID") || "";
 const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET") || "";
 const RAZORPAY_API_BASE = "https://api.razorpay.com/v1";
 
+if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+  console.error("[Razorpay] CRITICAL: RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not set!");
+}
+
 function jsonResponse(body: object, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
