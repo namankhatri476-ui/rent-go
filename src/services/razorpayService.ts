@@ -2,6 +2,7 @@
  * Razorpay Payment Gateway - Frontend Integration
  * 
  * Uses Razorpay Checkout.js for in-page payment experience.
+ * All protected endpoints send the user's JWT Bearer token.
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -43,7 +44,20 @@ export interface ConfirmOrderResponse {
 }
 
 /**
- * Create Razorpay order via backend
+ * Get the current user's access token, or throw if not logged in
+ */
+async function getAccessToken(): Promise<string> {
+  const { data: sessionData, error } = await supabase.auth.getSession();
+
+  if (error || !sessionData?.session?.access_token) {
+    throw new Error("Please login first to proceed with payment.");
+  }
+
+  return sessionData.session.access_token;
+}
+
+/**
+ * Create Razorpay order via backend (JWT required)
  */
 export async function createRazorpayOrder(
   request: RazorpayOrderRequest
@@ -51,8 +65,13 @@ export async function createRazorpayOrder(
   console.log("[Razorpay] Creating order:", request);
 
   try {
+    const accessToken = await getAccessToken();
+
     const { data, error } = await supabase.functions.invoke("razorpay-payment", {
       body: request,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
 
     if (error) {
@@ -69,7 +88,7 @@ export async function createRazorpayOrder(
       error: data.error,
     };
   } catch (err: any) {
-    console.error("[Razorpay] Network error:", err);
+    console.error("[Razorpay] Error:", err);
     return { success: false, error: err.message || "Network error" };
   }
 }
@@ -144,6 +163,7 @@ export async function openRazorpayCheckout(options: {
 
 /**
  * Confirm order after payment (server-side verification + order creation)
+ * JWT required
  */
 export async function confirmOrderAfterPayment(
   request: ConfirmOrderRequest
@@ -151,8 +171,13 @@ export async function confirmOrderAfterPayment(
   console.log("[Razorpay] Confirming order:", request.razorpay_payment_id);
 
   try {
+    const accessToken = await getAccessToken();
+
     const { data, error } = await supabase.functions.invoke("razorpay-payment/confirm-order", {
       body: request,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
 
     if (error) {
@@ -167,7 +192,7 @@ export async function confirmOrderAfterPayment(
       error: data.error,
     };
   } catch (err: any) {
-    console.error("[Razorpay] Confirm order network error:", err);
+    console.error("[Razorpay] Confirm order error:", err);
     return { success: false, error: err.message || "Network error" };
   }
 }
