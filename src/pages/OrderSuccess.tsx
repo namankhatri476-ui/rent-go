@@ -1,101 +1,12 @@
-import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { CheckCircle, Package, Calendar, ArrowRight, FileText, Loader2, XCircle } from "lucide-react";
+import { CheckCircle, Package, Calendar, ArrowRight, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { verifyAndCreateOrders } from "@/services/checkoutService";
 
 const OrderSuccess = () => {
   const location = useLocation();
-  const passedOrderNumbers: string[] | undefined = location.state?.orderNumbers;
-  
-  const [orderNumbers, setOrderNumbers] = useState<string[]>(passedOrderNumbers || []);
-  const [isVerifying, setIsVerifying] = useState(!passedOrderNumbers || passedOrderNumbers.length === 0);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // If we have order numbers from navigation state, no need to verify
-    if (passedOrderNumbers && passedOrderNumbers.length > 0) {
-      return;
-    }
-
-    // Check if we're returning from Cashfree payment
-    const pendingData = sessionStorage.getItem("pendingCheckout");
-    if (pendingData) {
-      verifyPaymentAndCreateOrders();
-    } else {
-      setIsVerifying(false);
-    }
-  }, []);
-
-  const verifyPaymentAndCreateOrders = async () => {
-    setIsVerifying(true);
-    try {
-      const result = await verifyAndCreateOrders();
-      if (result.success) {
-        setOrderNumbers(result.orderNumbers);
-        // Clear cart from localStorage
-        try {
-          localStorage.removeItem("cart-items");
-        } catch {}
-      } else {
-        setError(result.error || "Payment verification failed");
-      }
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
-  if (isVerifying) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <main className="flex-1 flex items-center justify-center py-16">
-          <div className="text-center space-y-4">
-            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-            <h2 className="text-xl font-semibold text-foreground">Verifying your payment...</h2>
-            <p className="text-muted-foreground">Please wait while we confirm your payment.</p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <main className="flex-1 flex items-center justify-center py-16">
-          <div className="max-w-lg mx-auto text-center space-y-6 px-4">
-            <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-              <XCircle className="w-10 h-10 text-destructive" />
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-foreground">Payment Failed</h1>
-              <p className="text-muted-foreground">{error}</p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link to="/checkout">
-                <Button variant="hero" size="lg" className="w-full sm:w-auto">
-                  Try Again
-                </Button>
-              </Link>
-              <Link to="/">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                  Go Home
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  const orderNumbers: string[] = location.state?.orderNumbers || [];
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
