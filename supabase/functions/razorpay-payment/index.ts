@@ -9,6 +9,8 @@ const corsHeaders = {
 
 const RAZORPAY_KEY_ID = Deno.env.get("RAZORPAY_KEY_ID") || "";
 const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET") || "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const RAZORPAY_API_BASE = "https://api.razorpay.com/v1";
 
 if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
@@ -26,32 +28,50 @@ function getAuthHeader(): string {
   return "Basic " + btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`);
 }
 
+function requiresAuthForPath(path: string) {
+  return !["webhook", "create-order", "razorpay-payment", "verify-payment"].includes(path);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return new Response("ok", { status: 200, headers: corsHeaders });
   }
 
   try {
     const url = new URL(req.url);
     const path = url.pathname.split("/").pop();
 
+    if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+      return jsonResponse({
+        error: "Razorpay credentials are not configured in edge function secrets",
+      }, 500);
+    }
+
     // Auth check for non-webhook endpoints
     let userId: string | null = null;
-    if (path !== "webhook") {
-      const authHeader = req.headers.get("Authorization");
-      if (!authHeader?.startsWith("Bearer ")) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+    if (path && requiresAuthForPath(path)) {
+      const requestAuthHeader = req.headers.get("Authorization");
+      if (!requestAuthHeader?.startsWith("Bearer ")) {
+        return jsonResponse({ error: "Unauthorized: missing bearer token" }, 401);
       }
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } }
-      );
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        return jsonResponse({ error: "Supabase auth secrets are not configured" }, 500);
       }
-      userId = user.id;
+
+      const token = requestAuthHeader.replace("Bearer ", "").trim();
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: requestAuthHeader } },
+      });
+
+      const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+      const claimUserId = claimsData?.claims?.sub;
+
+      if (claimsError || !claimUserId) {
+        return jsonResponse({ error: "Unauthorized: invalid or expired token" }, 401);
+      }
+
+      userId = claimUserId;
     }
 
     const body = await req.json();
@@ -60,12 +80,13 @@ Deno.serve(async (req) => {
     if (path === "create-order" || path === "razorpay-payment") {
       const { amount, currency, receipt, notes } = body;
 
-      if (!amount) {
-        return jsonResponse({ error: "amount is required" }, 400);
+      const numericAmount = Number(amount);
+      if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+        return jsonResponse({ error: "amount must be a positive number" }, 400);
       }
 
       const orderPayload = {
-        amount: Math.round(amount * 100), // Razorpay expects amount in paise
+        amount: Math.round(numericAmount * 100), // Razorpay expects amount in paise
         currency: currency || "INR",
         receipt: receipt || `rcpt_${Date.now()}`,
         notes: notes || {},
@@ -201,9 +222,18 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
 
+      if (userId && orderData.customer_id && orderData.customer_id !== userId) {
+        return jsonResponse({ success: false, error: "Unauthorized customer_id mismatch" }, 403);
+      }
+
+      const safeOrderData = {
+        ...orderData,
+        customer_id: userId ?? orderData.customer_id,
+      };
+
       const { data: order, error: orderError } = await adminClient
         .from("orders")
-        .insert(orderData)
+        .insert(safeOrderData)
         .select("id, order_number")
         .single();
 
@@ -215,7 +245,7 @@ Deno.serve(async (req) => {
       // Step 4: Create payment record
       await adminClient.from("payments").insert({
         order_id: order.id,
-        amount: orderData.payable_now_total,
+        amount: safeOrderData.payable_now_total,
         payment_method: "razorpay",
         status: "completed",
         payment_gateway: "razorpay",
@@ -289,7 +319,7 @@ Deno.serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ success: true }), {
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
