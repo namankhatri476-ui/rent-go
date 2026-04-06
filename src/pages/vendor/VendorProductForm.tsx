@@ -78,7 +78,7 @@ const VendorProductForm = () => {
   const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
 
   // Variations state
-  const [variations, setVariations] = useState<{ variation_type: string; variation_value: string; price_adjustment: number }[]>([]);
+  const [variations, setVariations] = useState<{ variation_type: string; variation_value: string; price_adjustment: number; landing_cost: number; transport_cost: number; installation_cost: number; maintenance_reserve: number }[]>([]);
 
   // Pricing mode: 'auto' or 'manual'
   const [pricingMode, setPricingMode] = useState<'auto' | 'manual'>('auto');
