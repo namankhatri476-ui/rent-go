@@ -468,10 +468,14 @@ const VendorProductForm = () => {
           variation_type: v.variation_type,
           variation_value: v.variation_value,
           price_adjustment: v.price_adjustment || 0,
+          landing_cost: v.landing_cost || 0,
+          transport_cost: v.transport_cost || 0,
+          installation_cost: v.installation_cost || 0,
+          maintenance_reserve: v.maintenance_reserve || 0,
           display_order: i,
         }));
         if (varRows.length > 0) {
-          const { error: varError } = await supabase.from('product_variations').insert(varRows);
+          const { error: varError } = await supabase.from('product_variations').insert(varRows as any);
           if (varError) throw varError;
         }
       }
