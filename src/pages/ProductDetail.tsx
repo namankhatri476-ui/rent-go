@@ -24,6 +24,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { useLocation } from "@/contexts/LocationContext";
 import { getProductBySlug } from "@/data/products";
+import ProductFAQ from "@/components/ProductFAQ";
 
 // Pricing factors for variant-based auto slab recalculation
 const PRICING_FACTORS: Record<number, number> = {
