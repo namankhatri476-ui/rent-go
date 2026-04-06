@@ -514,23 +514,7 @@ const ProductDetail = () => {
               </div>
 
               {/* Description & Features */}
-              <div className="space-y-4 pt-4 border-t border-border/50">
-                <h2 className="text-lg font-bold text-foreground">About This Product</h2>
-                <p className="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
-                {product.features?.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold text-sm text-foreground mb-2">Key Features</h3>
-                    <ul className="space-y-1.5">
-                      {product.features.map((feature: string, index: number) => (
-                        <li key={index} className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Check className="w-3.5 h-3.5 text-success flex-shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+              <AboutProduct description={product.description || ''} features={product.features || []} />
 
               {/* Specifications */}
               {product.specifications && Object.keys(product.specifications).length > 0 && (
