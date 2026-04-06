@@ -5,6 +5,10 @@ interface Variation {
   variation_type: string;
   variation_value: string;
   price_adjustment: number;
+  landing_cost?: number;
+  transport_cost?: number;
+  installation_cost?: number;
+  maintenance_reserve?: number;
 }
 
 interface ProductVariationsProps {
@@ -31,6 +35,7 @@ const ProductVariations = ({ variations, selectedVariation, onSelect }: ProductV
           <div className="flex flex-wrap gap-2">
             {items.map((item) => {
               const isSelected = selectedVariation === item.id;
+              const hasCosts = ((item.landing_cost || 0) + (item.transport_cost || 0) + (item.installation_cost || 0) + (item.maintenance_reserve || 0)) > 0;
               return (
                 <button
                   key={item.id}
@@ -45,7 +50,7 @@ const ProductVariations = ({ variations, selectedVariation, onSelect }: ProductV
                   `}
                 >
                   {item.variation_value}
-                  {item.price_adjustment > 0 && (
+                  {!hasCosts && item.price_adjustment > 0 && (
                     <Badge variant="secondary" className="ml-2 text-[10px]">+₹{item.price_adjustment}/mo</Badge>
                   )}
                 </button>

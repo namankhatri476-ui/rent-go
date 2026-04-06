@@ -25,6 +25,12 @@ import { toast } from "sonner";
 import { useLocation } from "@/contexts/LocationContext";
 import { getProductBySlug } from "@/data/products";
 
+// Pricing factors for variant-based auto slab recalculation
+const PRICING_FACTORS: Record<number, number> = {
+  1: 0.22, 3: 0.16, 6: 0.12, 11: 0.095, 12: 0.085, 24: 0.065, 36: 0.055,
+};
+const roundToNearest50 = (value: number) => Math.round(value / 50) * 50;
+
 interface RentalPlan {
   id: string;
   label: string;
@@ -99,7 +105,10 @@ const ProductDetail = () => {
 
   const variations = ((product as any)?.product_variations || []).filter((v: any) => v.is_active !== false);
   const selectedVar = variations.find((v: any) => v.id === selectedVariation);
-  const variationAdjustment = selectedVar?.price_adjustment || 0;
+  
+  // Determine if variant has its own cost structure
+  const variantHasCosts = selectedVar && ((selectedVar.landing_cost || 0) + (selectedVar.transport_cost || 0) + (selectedVar.installation_cost || 0) + (selectedVar.maintenance_reserve || 0)) > 0;
+  const variationAdjustment = (!variantHasCosts && selectedVar?.price_adjustment) ? selectedVar.price_adjustment : 0;
 
   const buyPrice = (product as any)?.buy_price || null;
   const advanceDiscountPercent = (product as any)?.advance_discount_percent || 0;
@@ -107,6 +116,26 @@ const ProductDetail = () => {
 
   const getDiscountedPrice = (duration: number) => {
     if (rentalPlans.length === 0) return { monthlyRent: 0, securityDeposit: 0, deliveryFee: 0, installationFee: 0 };
+    
+    // If variant has its own cost structure, recalculate from variant costs
+    if (variantHasCosts && selectedVar) {
+      const varTotal = (selectedVar.landing_cost || 0) + (selectedVar.transport_cost || 0) + (selectedVar.installation_cost || 0) + (selectedVar.maintenance_reserve || 0);
+      const factor = PRICING_FACTORS[duration];
+      const installChargeVisible = (product as any)?.installation_charge_visible ?? true;
+      
+      if (factor) {
+        let rent = roundToNearest50(varTotal * factor);
+        let installFee = 0;
+        if (installChargeVisible) {
+          installFee = selectedVar.installation_cost || 0;
+        } else {
+          rent = roundToNearest50(varTotal * factor + Math.round((selectedVar.installation_cost || 0) / duration));
+        }
+        // Use first plan's delivery fee
+        const basePlan = rentalPlans[0];
+        return { monthlyRent: rent, securityDeposit: rent, deliveryFee: basePlan?.delivery_fee || 0, installationFee: installFee };
+      }
+    }
     
     // Find exact matching plan for the selected duration
     const exactPlan = rentalPlans.find((p: RentalPlan) => p.duration_months === duration);

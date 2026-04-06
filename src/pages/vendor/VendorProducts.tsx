@@ -31,10 +31,17 @@ const VendorProducts = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (productId: string) => {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', productId);
+      // Delete related records first (RLS policies now allow vendor deletion)
+      const { error: varError } = await supabase.from('product_variations').delete().eq('product_id', productId);
+      if (varError) console.warn('Variation cleanup:', varError);
+      
+      const { error: planError } = await supabase.from('rental_plans').delete().eq('product_id', productId);
+      if (planError) console.warn('Plan cleanup:', planError);
+      
+      const { error: locError } = await supabase.from('product_locations').delete().eq('product_id', productId);
+      if (locError) console.warn('Location cleanup:', locError);
+
+      const { error } = await supabase.from('products').delete().eq('id', productId);
       if (error) throw error;
     },
     onSuccess: () => {
