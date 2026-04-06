@@ -579,9 +579,13 @@ export type Database = {
           created_at: string
           display_order: number
           id: string
+          installation_cost: number | null
           is_active: boolean
+          landing_cost: number | null
+          maintenance_reserve: number | null
           price_adjustment: number | null
           product_id: string
+          transport_cost: number | null
           updated_at: string
           variation_type: string
           variation_value: string
@@ -590,9 +594,13 @@ export type Database = {
           created_at?: string
           display_order?: number
           id?: string
+          installation_cost?: number | null
           is_active?: boolean
+          landing_cost?: number | null
+          maintenance_reserve?: number | null
           price_adjustment?: number | null
           product_id: string
+          transport_cost?: number | null
           updated_at?: string
           variation_type: string
           variation_value: string
@@ -601,9 +609,13 @@ export type Database = {
           created_at?: string
           display_order?: number
           id?: string
+          installation_cost?: number | null
           is_active?: boolean
+          landing_cost?: number | null
+          maintenance_reserve?: number | null
           price_adjustment?: number | null
           product_id?: string
+          transport_cost?: number | null
           updated_at?: string
           variation_type?: string
           variation_value?: string
