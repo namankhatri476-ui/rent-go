@@ -25,6 +25,12 @@ import { toast } from "sonner";
 import { useLocation } from "@/contexts/LocationContext";
 import { getProductBySlug } from "@/data/products";
 
+// Pricing factors for variant-based auto slab recalculation
+const PRICING_FACTORS: Record<number, number> = {
+  1: 0.22, 3: 0.16, 6: 0.12, 11: 0.095, 12: 0.085, 24: 0.065, 36: 0.055,
+};
+const roundToNearest50 = (value: number) => Math.round(value / 50) * 50;
+
 interface RentalPlan {
   id: string;
   label: string;
