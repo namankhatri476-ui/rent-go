@@ -24,6 +24,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { useLocation } from "@/contexts/LocationContext";
 import { getProductBySlug } from "@/data/products";
+import ProductFAQ from "@/components/ProductFAQ";
 
 // Pricing factors for variant-based auto slab recalculation
 const PRICING_FACTORS: Record<number, number> = {
@@ -40,6 +41,48 @@ interface RentalPlan {
   delivery_fee: number;
   installation_fee: number;
 }
+
+const AboutProduct = ({ description, features }: { description: string; features: string[] }) => {
+  const [expanded, setExpanded] = useState(false);
+  const needsToggle = (description?.length || 0) > 400 || (features?.length || 0) > 5;
+
+  return (
+    <div className="space-y-4 pt-4 border-t border-border/50">
+      <h2 className="text-lg font-bold text-foreground">About This Product</h2>
+      <div className="relative">
+        <div
+          className={`overflow-hidden transition-all duration-500 ease-in-out ${!expanded && needsToggle ? 'max-h-[200px]' : 'max-h-[2000px]'}`}
+        >
+          <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+          {features?.length > 0 && (
+            <div className="mt-4">
+              <h3 className="font-semibold text-sm text-foreground mb-2">Key Features</h3>
+              <ul className="space-y-1.5">
+                {features.map((feature: string, index: number) => (
+                  <li key={index} className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Check className="w-3.5 h-3.5 text-success flex-shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        {!expanded && needsToggle && (
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+        )}
+      </div>
+      {needsToggle && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-primary text-sm font-semibold hover:underline transition-colors"
+        >
+          {expanded ? '− Read Less' : '+ Read More'}
+        </button>
+      )}
+    </div>
+  );
+};
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -471,23 +514,7 @@ const ProductDetail = () => {
               </div>
 
               {/* Description & Features */}
-              <div className="space-y-4 pt-4 border-t border-border/50">
-                <h2 className="text-lg font-bold text-foreground">About This Product</h2>
-                <p className="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
-                {product.features?.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold text-sm text-foreground mb-2">Key Features</h3>
-                    <ul className="space-y-1.5">
-                      {product.features.map((feature: string, index: number) => (
-                        <li key={index} className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Check className="w-3.5 h-3.5 text-success flex-shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+              <AboutProduct description={product.description || ''} features={product.features || []} />
 
               {/* Specifications */}
               {product.specifications && Object.keys(product.specifications).length > 0 && (
@@ -549,6 +576,9 @@ const ProductDetail = () => {
 
       {/* Related Products */}
       <RelatedProducts product={product} />
+
+      {/* FAQ Section */}
+      <ProductFAQ />
 
       <Footer />
     </div>
