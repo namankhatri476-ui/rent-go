@@ -105,7 +105,10 @@ const ProductDetail = () => {
 
   const variations = ((product as any)?.product_variations || []).filter((v: any) => v.is_active !== false);
   const selectedVar = variations.find((v: any) => v.id === selectedVariation);
-  const variationAdjustment = selectedVar?.price_adjustment || 0;
+  
+  // Determine if variant has its own cost structure
+  const variantHasCosts = selectedVar && ((selectedVar.landing_cost || 0) + (selectedVar.transport_cost || 0) + (selectedVar.installation_cost || 0) + (selectedVar.maintenance_reserve || 0)) > 0;
+  const variationAdjustment = (!variantHasCosts && selectedVar?.price_adjustment) ? selectedVar.price_adjustment : 0;
 
   const buyPrice = (product as any)?.buy_price || null;
   const advanceDiscountPercent = (product as any)?.advance_discount_percent || 0;
