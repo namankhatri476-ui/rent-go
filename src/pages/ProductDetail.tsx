@@ -117,6 +117,26 @@ const ProductDetail = () => {
   const getDiscountedPrice = (duration: number) => {
     if (rentalPlans.length === 0) return { monthlyRent: 0, securityDeposit: 0, deliveryFee: 0, installationFee: 0 };
     
+    // If variant has its own cost structure, recalculate from variant costs
+    if (variantHasCosts && selectedVar) {
+      const varTotal = (selectedVar.landing_cost || 0) + (selectedVar.transport_cost || 0) + (selectedVar.installation_cost || 0) + (selectedVar.maintenance_reserve || 0);
+      const factor = PRICING_FACTORS[duration];
+      const installChargeVisible = (product as any)?.installation_charge_visible ?? true;
+      
+      if (factor) {
+        let rent = roundToNearest50(varTotal * factor);
+        let installFee = 0;
+        if (installChargeVisible) {
+          installFee = selectedVar.installation_cost || 0;
+        } else {
+          rent = roundToNearest50(varTotal * factor + Math.round((selectedVar.installation_cost || 0) / duration));
+        }
+        // Use first plan's delivery fee
+        const basePlan = rentalPlans[0];
+        return { monthlyRent: rent, securityDeposit: rent, deliveryFee: basePlan?.delivery_fee || 0, installationFee: installFee };
+      }
+    }
+    
     // Find exact matching plan for the selected duration
     const exactPlan = rentalPlans.find((p: RentalPlan) => p.duration_months === duration);
     if (exactPlan) {
