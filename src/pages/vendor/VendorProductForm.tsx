@@ -1315,56 +1315,86 @@ const VendorProductForm = () => {
             <CardHeader>
               <CardTitle>Product Variations (Optional)</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Add options like different models, sizes, or capacities (e.g., 1 Ton, 2 Ton for AC).
+                Add variants with their own cost structure (e.g., 1 Ton, 1.5 Ton, 2 Ton AC). Each variant's Total Cost drives its own rental pricing.
               </p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {variations.map((v, index) => (
-                <div key={index} className="flex gap-2 items-end">
-                  <div className="flex-1 space-y-1">
-                    <Label className="text-xs">Type</Label>
-                    <Input
-                      value={v.variation_type}
-                      onChange={(e) => {
-                        const newVars = [...variations];
-                        newVars[index] = { ...newVars[index], variation_type: e.target.value };
-                        setVariations(newVars);
-                      }}
-                      placeholder="e.g., Model, Size, Capacity"
-                    />
+            <CardContent className="space-y-6">
+              {variations.map((v, index) => {
+                const varTotalCost = (v.landing_cost || 0) + (v.transport_cost || 0) + (v.installation_cost || 0) + (v.maintenance_reserve || 0);
+                const varAutoPreview = pricingMode === 'auto' && varTotalCost > 0 && selectedTenures.length > 0
+                  ? selectedTenures.sort((a, b) => a - b).map(tenure => {
+                      const factor = PRICING_FACTORS[tenure];
+                      let rent = roundToNearest50(varTotalCost * factor);
+                      if (!installationChargeVisible && (v.installation_cost || 0) > 0) {
+                        rent = roundToNearest50(varTotalCost * factor + Math.round((v.installation_cost || 0) / tenure));
+                      }
+                      return { tenure, rent };
+                    })
+                  : [];
+
+                return (
+                  <div key={index} className="p-4 border rounded-lg space-y-4 bg-muted/20">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">Variant {index + 1}</span>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => setVariations(variations.filter((_, i) => i !== index))}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Type</Label>
+                        <Input value={v.variation_type} onChange={(e) => { const nv = [...variations]; nv[index] = { ...nv[index], variation_type: e.target.value }; setVariations(nv); }} placeholder="e.g., Capacity" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Value</Label>
+                        <Input value={v.variation_value} onChange={(e) => { const nv = [...variations]; nv[index] = { ...nv[index], variation_value: e.target.value }; setVariations(nv); }} placeholder="e.g., 1.5 Ton" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Landing Cost (₹)</Label>
+                        <Input type="number" min="0" value={v.landing_cost || ''} onChange={(e) => { const nv = [...variations]; nv[index] = { ...nv[index], landing_cost: Number(e.target.value) || 0 }; setVariations(nv); }} placeholder="0" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Transport (₹)</Label>
+                        <Input type="number" min="0" value={v.transport_cost || ''} onChange={(e) => { const nv = [...variations]; nv[index] = { ...nv[index], transport_cost: Number(e.target.value) || 0 }; setVariations(nv); }} placeholder="0" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Installation (₹)</Label>
+                        <Input type="number" min="0" value={v.installation_cost || ''} onChange={(e) => { const nv = [...variations]; nv[index] = { ...nv[index], installation_cost: Number(e.target.value) || 0 }; setVariations(nv); }} placeholder="0" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Maintenance (₹)</Label>
+                        <Input type="number" min="0" value={v.maintenance_reserve || ''} onChange={(e) => { const nv = [...variations]; nv[index] = { ...nv[index], maintenance_reserve: Number(e.target.value) || 0 }; setVariations(nv); }} placeholder="0" />
+                      </div>
+                    </div>
+                    {varTotalCost > 0 && (
+                      <div className="p-2 bg-primary/10 rounded text-xs flex items-center gap-2">
+                        <Info className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span>Variant Total Cost: <strong>₹{varTotalCost.toLocaleString()}</strong></span>
+                      </div>
+                    )}
+                    {varAutoPreview.length > 0 && (
+                      <div className="border rounded overflow-hidden">
+                        <div className="p-2 bg-muted text-xs font-medium">Variant Pricing Preview</div>
+                        <div className="divide-y">
+                          {varAutoPreview.map(({ tenure, rent }) => (
+                            <div key={tenure} className="flex justify-between p-2 text-xs">
+                              <span>{tenure} {tenure === 1 ? 'Month' : 'Months'}</span>
+                              <span className="font-semibold">₹{rent.toLocaleString()}/mo</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <Label className="text-xs">Fallback +₹/mo (if no cost entered)</Label>
+                      <Input type="number" min="0" value={v.price_adjustment || ''} onChange={(e) => { const nv = [...variations]; nv[index] = { ...nv[index], price_adjustment: Number(e.target.value) || 0 }; setVariations(nv); }} placeholder="0" className="w-32" />
+                    </div>
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <Label className="text-xs">Value</Label>
-                    <Input
-                      value={v.variation_value}
-                      onChange={(e) => {
-                        const newVars = [...variations];
-                        newVars[index] = { ...newVars[index], variation_value: e.target.value };
-                        setVariations(newVars);
-                      }}
-                      placeholder="e.g., 1 Ton, 2 Ton"
-                    />
-                  </div>
-                  <div className="w-32 space-y-1">
-                    <Label className="text-xs">+₹/mo</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={v.price_adjustment || ''}
-                      onChange={(e) => {
-                        const newVars = [...variations];
-                        newVars[index] = { ...newVars[index], price_adjustment: Number(e.target.value) || 0 };
-                        setVariations(newVars);
-                      }}
-                      placeholder="0"
-                    />
-                  </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => setVariations(variations.filter((_, i) => i !== index))}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button type="button" variant="outline" size="sm" onClick={() => setVariations([...variations, { variation_type: '', variation_value: '', price_adjustment: 0 }])}>
+                );
+              })}
+              <Button type="button" variant="outline" size="sm" onClick={() => setVariations([...variations, { variation_type: '', variation_value: '', price_adjustment: 0, landing_cost: 0, transport_cost: 0, installation_cost: 0, maintenance_reserve: 0 }])}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Variation
               </Button>
