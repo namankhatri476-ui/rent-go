@@ -582,7 +582,6 @@ const ProductDetail = () => {
 
       <Footer />
     </div>
-    </div>
   );
 };
 
