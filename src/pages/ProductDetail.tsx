@@ -42,6 +42,48 @@ interface RentalPlan {
   installation_fee: number;
 }
 
+const AboutProduct = ({ description, features }: { description: string; features: string[] }) => {
+  const [expanded, setExpanded] = useState(false);
+  const needsToggle = (description?.length || 0) > 400 || (features?.length || 0) > 5;
+
+  return (
+    <div className="space-y-4 pt-4 border-t border-border/50">
+      <h2 className="text-lg font-bold text-foreground">About This Product</h2>
+      <div className="relative">
+        <div
+          className={`overflow-hidden transition-all duration-500 ease-in-out ${!expanded && needsToggle ? 'max-h-[200px]' : 'max-h-[2000px]'}`}
+        >
+          <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+          {features?.length > 0 && (
+            <div className="mt-4">
+              <h3 className="font-semibold text-sm text-foreground mb-2">Key Features</h3>
+              <ul className="space-y-1.5">
+                {features.map((feature: string, index: number) => (
+                  <li key={index} className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Check className="w-3.5 h-3.5 text-success flex-shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        {!expanded && needsToggle && (
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+        )}
+      </div>
+      {needsToggle && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-primary text-sm font-semibold hover:underline transition-colors"
+        >
+          {expanded ? '− Read Less' : '+ Read More'}
+        </button>
+      )}
+    </div>
+  );
+};
+
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
