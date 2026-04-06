@@ -577,7 +577,11 @@ const ProductDetail = () => {
       {/* Related Products */}
       <RelatedProducts product={product} />
 
+      {/* FAQ Section */}
+      <ProductFAQ />
+
       <Footer />
+    </div>
     </div>
   );
 };
