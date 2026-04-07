@@ -77,11 +77,11 @@ const ProductComparison = () => {
                   </div>
                 </div>
               ))}
-              {/* Bottom border for rentpr column */}
+              {/* Bottom border for all columns */}
               <div className="grid grid-cols-[1fr_120px_120px_120px]">
                 <div />
-                <div />
-                <div />
+                <div className="bg-card rounded-b-xl border border-t-0 border-border/60 h-3 shadow-sm" />
+                <div className="bg-card rounded-b-xl border border-t-0 border-border/60 h-3 shadow-sm" />
                 <div className="bg-card rounded-b-xl border border-t-0 border-border/60 h-3 shadow-sm" />
               </div>
             </div>
