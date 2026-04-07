@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Shield, Check, Info, CreditCard, Package, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
+import CouponInput, { type CouponDiscount } from "@/components/CouponInput";
 import {
   Dialog,
   DialogContent,
@@ -10,10 +11,36 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-const CheckoutSummary = () => {
+interface CheckoutSummaryProps {
+  onCouponChange?: (discount: number, couponId: string | null) => void;
+}
+
+const CheckoutSummary = ({ onCouponChange }: CheckoutSummaryProps) => {
   const { items, getBreakdown, updateProtectionPlan } = useCart();
   const breakdown = getBreakdown();
   const [warningProductId, setWarningProductId] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponDiscount | null>(null);
+
+  const calculateCouponDiscount = (coupon: CouponDiscount | null): number => {
+    if (!coupon) return 0;
+    const base = breakdown.payableNow;
+    let discount = 0;
+    if (coupon.discount_type === 'percentage') {
+      discount = Math.round(base * coupon.discount_value / 100);
+      if (coupon.max_discount) discount = Math.min(discount, coupon.max_discount);
+    } else {
+      discount = coupon.discount_value;
+    }
+    return Math.min(discount, base);
+  };
+
+  const couponDiscount = calculateCouponDiscount(appliedCoupon);
+
+  const handleCouponApply = (coupon: CouponDiscount | null) => {
+    setAppliedCoupon(coupon);
+    const disc = calculateCouponDiscount(coupon);
+    onCouponChange?.(disc, coupon?.couponId || null);
+  };
 
   const buyItems = items.filter(i => i.mode === 'buy');
   const rentItems = items.filter(i => i.mode === 'rent');
@@ -107,18 +134,28 @@ const CheckoutSummary = () => {
           </div>
         </div>
 
-        <div className="mt-4 p-3 bg-muted rounded-lg">
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Enter coupon code"
-              className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
-            />
-            <Button variant="secondary" size="sm">
-              Apply
-            </Button>
+        {couponDiscount > 0 && (
+          <div className="flex justify-between text-sm text-green-600">
+            <span>Coupon Discount ({appliedCoupon?.code})</span>
+            <span>- ₹{couponDiscount.toLocaleString()}</span>
+          </div>
+        )}
+
+        <div className="border-t border-border pt-3 mt-3">
+            <div className="flex justify-between">
+              <span className="font-semibold text-foreground">Total Payable Now</span>
+              <span className="font-bold text-xl text-foreground">
+                ₹{(breakdown.payableNow - couponDiscount).toLocaleString()}
+              </span>
+            </div>
           </div>
         </div>
+
+        <CouponInput
+          orderTotal={breakdown.payableNow}
+          onApply={handleCouponApply}
+          appliedCoupon={appliedCoupon}
+        />
       </div>
 
       {/* Monthly Payable Section */}
