@@ -124,24 +124,14 @@ const CheckoutSummary = ({ onCouponChange }: CheckoutSummaryProps) => {
             </div>
           )}
           
-          <div className="border-t border-border pt-3 mt-3">
-            <div className="flex justify-between">
-              <span className="font-semibold text-foreground">Total Payable Now</span>
-              <span className="font-bold text-xl text-foreground">
-                ₹{breakdown.payableNow.toLocaleString()}
-              </span>
+          {couponDiscount > 0 && (
+            <div className="flex justify-between text-sm text-green-600">
+              <span>Coupon Discount ({appliedCoupon?.code})</span>
+              <span>- ₹{couponDiscount.toLocaleString()}</span>
             </div>
-          </div>
-        </div>
+          )}
 
-        {couponDiscount > 0 && (
-          <div className="flex justify-between text-sm text-green-600">
-            <span>Coupon Discount ({appliedCoupon?.code})</span>
-            <span>- ₹{couponDiscount.toLocaleString()}</span>
-          </div>
-        )}
-
-        <div className="border-t border-border pt-3 mt-3">
+          <div className="border-t border-border pt-3 mt-3">
             <div className="flex justify-between">
               <span className="font-semibold text-foreground">Total Payable Now</span>
               <span className="font-bold text-xl text-foreground">
