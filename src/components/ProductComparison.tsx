@@ -36,16 +36,20 @@ const ProductComparison = () => {
             {/* Desktop Table */}
             <div className="hidden md:block">
               {/* Header */}
-              <div className="grid grid-cols-[1fr_100px_100px_120px] gap-0 mb-2">
+              <div className="grid grid-cols-[1fr_120px_120px_120px] gap-0 mb-2">
                 <div />
-                <div className="text-center">
-                  <span className="text-sm font-semibold text-muted-foreground">Purchase</span>
+                <div className="flex items-center justify-center">
+                  <div className="bg-card rounded-t-xl border border-b-0 border-border/60 py-3 px-2 shadow-sm w-full text-center">
+                    <span className="text-sm font-semibold text-muted-foreground">Purchase</span>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <span className="text-sm font-semibold text-muted-foreground">EMI</span>
+                <div className="flex items-center justify-center">
+                  <div className="bg-card rounded-t-xl border border-b-0 border-border/60 py-3 px-2 shadow-sm w-full text-center">
+                    <span className="text-sm font-semibold text-muted-foreground">EMI</span>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <div className="bg-card rounded-t-xl border border-b-0 border-border/60 py-3 px-2 shadow-sm">
+                <div className="flex items-center justify-center">
+                  <div className="bg-card rounded-t-xl border border-b-0 border-border/60 py-3 px-2 shadow-sm w-full text-center">
                     <span className="text-sm font-bold text-primary">rentpr</span>
                   </div>
                 </div>
