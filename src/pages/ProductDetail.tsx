@@ -582,6 +582,9 @@ const ProductDetail = () => {
       {/* Related Products */}
       <RelatedProducts product={product} />
 
+      {/* Comparison Section */}
+      <ProductComparison />
+
       {/* FAQ Section */}
       <ProductFAQ />
 
