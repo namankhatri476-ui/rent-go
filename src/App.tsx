@@ -53,6 +53,7 @@ import AdminFooter from "./pages/admin/AdminFooter";
 import AdminLegal from "./pages/admin/AdminLegal";
 import AdminCancellations from "./pages/admin/AdminCancellations";
 import AdminDocuments from "./pages/admin/AdminDocuments";
+import AdminCoupons from "./pages/admin/AdminCoupons";
 import OrderDocuments from "./pages/OrderDocuments";
 
 const queryClient = new QueryClient();
@@ -323,6 +324,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRoles={['admin']}>
                     <AdminDocuments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/coupons"
+                element={
+                  <ProtectedRoute requiredRoles={['admin']}>
+                    <AdminCoupons />
                   </ProtectedRoute>
                 }
               />

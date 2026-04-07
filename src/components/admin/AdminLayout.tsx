@@ -16,7 +16,8 @@ import {
   CalendarDays,
   FileText,
   Scale,
-  XCircle
+  XCircle,
+  Ticket
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +41,7 @@ const navItems = [
   { href: '/admin/settings', label: 'Settings', icon: Settings },
   { href: '/admin/footer', label: 'Footer', icon: FileText },
   { href: '/admin/legal', label: 'Legal Pages', icon: Scale },
+  { href: '/admin/coupons', label: 'Coupons', icon: Ticket },
 ];
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {
