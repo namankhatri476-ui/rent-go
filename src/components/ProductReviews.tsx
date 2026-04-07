@@ -53,21 +53,21 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
 
   return (
     <section className="py-12 md:py-16 bg-secondary/30">
-      <div className="container mx-auto px-4 max-w-6xl">
+      <div className="mx-auto px-4 max-w-[1400px]">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-start mb-8">
           <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
             Over 1.5 lac{" "}
             <span className="text-primary">Happy Subscribers</span>
           </h2>
-          <div className="w-16 h-1 bg-primary mx-auto rounded-full mb-3" />
+          <div className="w-16 h-1 bg-primary rounded-full mb-3" />
           <p className="text-muted-foreground text-sm md:text-base">
             Here's what they have to say about their Rentpr experience.
           </p>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center justify-center gap-2 mb-8 flex-wrap">
+        <div className="flex items-center justify-start gap-2 mb-8 flex-wrap">
           {TABS.map((tab) => (
             <button
               key={tab}
