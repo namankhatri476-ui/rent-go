@@ -59,7 +59,7 @@ const ProductComparison = () => {
               {features.map((feature, index) => (
                 <div
                   key={feature.label}
-                  className={`grid grid-cols-[1fr_100px_100px_120px] gap-0 ${
+                  className={`grid grid-cols-[1fr_120px_120px_120px] gap-0 ${
                     index < features.length - 1 ? "border-b border-border/30" : ""
                   }`}
                 >
