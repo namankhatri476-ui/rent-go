@@ -86,7 +86,7 @@ const InteractiveRating = ({ currentRating, reviewCount, productId }: Interactiv
         {/* Rating text */}
         <div className="flex items-center gap-1.5">
           <span className="text-sm font-bold text-foreground">
-            {hasRated ? userRating.toFixed(1) : (currentRating || 0).toFixed(1)}
+            {hasRated ? userRating.toFixed(1) : (actualRating || 0).toFixed(1)}
           </span>
           <button
             type="button"
@@ -96,7 +96,7 @@ const InteractiveRating = ({ currentRating, reviewCount, productId }: Interactiv
             }}
             className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
           >
-            ({hasRated ? reviewCount + 1 : reviewCount} review{reviewCount !== 1 ? "s" : ""})
+            ({hasRated ? actualCount + 1 : actualCount} review{actualCount !== 1 ? "s" : ""})
           </button>
         </div>
       </div>
