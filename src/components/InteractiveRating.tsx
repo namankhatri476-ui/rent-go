@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,7 +16,26 @@ const InteractiveRating = ({ currentRating, reviewCount, productId }: Interactiv
   const [userRating, setUserRating] = useState(0);
   const [hasRated, setHasRated] = useState(false);
 
-  // Load saved rating from localStorage on mount / productId change
+  // Fetch actual review count and average from product_reviews table
+  const { data: reviewStats } = useQuery({
+    queryKey: ["review-stats", productId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_reviews")
+        .select("rating")
+        .eq("product_id", productId)
+        .eq("status", "approved");
+      if (error) throw error;
+      const count = data?.length || 0;
+      const avg = count > 0 ? data.reduce((sum, r) => sum + r.rating, 0) / count : 0;
+      return { count, avg };
+    },
+    enabled: !!productId,
+  });
+
+  const actualCount = reviewStats?.count ?? reviewCount;
+  const actualRating = reviewStats?.avg ?? currentRating;
+
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
     if (saved) {
@@ -26,7 +47,7 @@ const InteractiveRating = ({ currentRating, reviewCount, productId }: Interactiv
     }
   }, [storageKey]);
 
-  const displayRating = hoverRating || userRating || currentRating;
+  const displayRating = hoverRating || userRating || actualRating;
 
   const handleRate = (rating: number) => {
     setUserRating(rating);
@@ -65,7 +86,7 @@ const InteractiveRating = ({ currentRating, reviewCount, productId }: Interactiv
         {/* Rating text */}
         <div className="flex items-center gap-1.5">
           <span className="text-sm font-bold text-foreground">
-            {hasRated ? userRating.toFixed(1) : (currentRating || 0).toFixed(1)}
+            {hasRated ? userRating.toFixed(1) : (actualRating || 0).toFixed(1)}
           </span>
           <button
             type="button"
@@ -75,7 +96,7 @@ const InteractiveRating = ({ currentRating, reviewCount, productId }: Interactiv
             }}
             className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
           >
-            ({hasRated ? reviewCount + 1 : reviewCount} review{reviewCount !== 1 ? "s" : ""})
+            ({hasRated ? actualCount + 1 : actualCount} review{actualCount !== 1 ? "s" : ""})
           </button>
         </div>
       </div>
