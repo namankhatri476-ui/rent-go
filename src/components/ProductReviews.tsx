@@ -25,7 +25,7 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
     queryKey: ["product-reviews", productId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("product_reviews" as any)
+        .from("product_reviews")
         .select("*")
         .eq("product_id", productId)
         .eq("status", "approved")
