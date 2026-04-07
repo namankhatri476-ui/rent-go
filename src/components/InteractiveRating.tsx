@@ -67,9 +67,16 @@ const InteractiveRating = ({ currentRating, reviewCount, productId }: Interactiv
           <span className="text-sm font-bold text-foreground">
             {hasRated ? userRating.toFixed(1) : (currentRating || 0).toFixed(1)}
           </span>
-          <span className="text-xs text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById("product-reviews-section");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
+          >
             ({hasRated ? reviewCount + 1 : reviewCount} review{reviewCount !== 1 ? "s" : ""})
-          </span>
+          </button>
         </div>
       </div>
 

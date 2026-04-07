@@ -52,7 +52,7 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
     ));
 
   return (
-    <section className="py-12 md:py-16 bg-secondary/30">
+    <section id="product-reviews-section" className="py-12 md:py-16 bg-secondary/30">
       <div className="mx-auto px-4 max-w-[1400px]">
         {/* Header */}
         <div className="text-start mb-8">
