@@ -24,6 +24,9 @@ const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [termsVersion, setTermsVersion] = useState<number | null>(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+
+  const finalPayable = breakdown.payableNow - couponDiscount;
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -281,14 +284,14 @@ const Checkout = () => {
                       Processing...
                     </span>
                   ) : (
-                    `Pay ₹${breakdown.payableNow.toLocaleString()} Now`
+                    `Pay ₹${finalPayable.toLocaleString()} Now`
                   )}
                 </Button>
               </div>
             </div>
 
             <div>
-              <CheckoutSummary />
+              <CheckoutSummary onCouponChange={(disc) => setCouponDiscount(disc)} />
               <div className="hidden lg:block mt-6">
                 <Button variant="hero" size="xl" className="w-full" onClick={handlePayClick} disabled={isProcessing}>
                   {isProcessing ? (
@@ -297,7 +300,7 @@ const Checkout = () => {
                       Processing...
                     </span>
                   ) : (
-                    `Pay ₹${breakdown.payableNow.toLocaleString()} Now`
+                    `Pay ₹${finalPayable.toLocaleString()} Now`
                   )}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center mt-3">
