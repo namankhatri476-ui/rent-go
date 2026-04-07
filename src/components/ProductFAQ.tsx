@@ -61,7 +61,7 @@ const faqData = [
 const ProductFAQ = () => {
   return (
     <section className="py-12 bg-background">
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="mx-auto px-4 max-w-[1400px]">
         <div className="mb-1">
           <div className="w-12 h-1 bg-primary rounded-full mb-4" />
           <h2 className="text-2xl font-bold text-foreground">
