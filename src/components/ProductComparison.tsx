@@ -118,7 +118,7 @@ const ProductComparison = () => {
 
           {/* Right - Promo Image */}
           <div className="lg:col-span-2 flex justify-center lg:justify-end">
-            <div className="rounded-2xl overflow-hidden shadow-lg max-w-[320px] w-full">
+            <div className="rounded-2xl overflow-hidden shadow-lg w-full">
               <img
                 src={moveInSaleImg}
                 alt="The Great Move-in Sale - Up to 20% OFF on Rentpr"
