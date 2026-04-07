@@ -60,8 +60,7 @@ const CancellationReturnsDrawer = () => {
           {/* Go Back Button */}
           <div className="p-5 border-t border-border/50">
             <Button
-              variant="destructive"
-              className="w-full rounded-full h-12 text-sm font-semibold"
+              className="w-full rounded-full h-12 text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
               onClick={() => setOpen(false)}
             >
               Go back
