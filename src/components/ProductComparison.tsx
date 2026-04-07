@@ -78,7 +78,7 @@ const ProductComparison = () => {
                 </div>
               ))}
               {/* Bottom border for rentpr column */}
-              <div className="grid grid-cols-[1fr_100px_100px_120px]">
+              <div className="grid grid-cols-[1fr_120px_120px_120px]">
                 <div />
                 <div />
                 <div />
