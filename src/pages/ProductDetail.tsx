@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { useLocation } from "@/contexts/LocationContext";
 import { getProductBySlug } from "@/data/products";
 import ProductFAQ from "@/components/ProductFAQ";
+import CancellationReturnsDrawer from "@/components/CancellationReturnsDrawer";
 
 // Pricing factors for variant-based auto slab recalculation
 const PRICING_FACTORS: Record<number, number> = {
@@ -530,6 +531,9 @@ const ProductDetail = () => {
                   </div>
                 </div>
               )}
+
+              {/* Cancellation & Returns */}
+              <CancellationReturnsDrawer />
             </div>
           </div>
         </div>
