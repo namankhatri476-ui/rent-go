@@ -36,16 +36,20 @@ const ProductComparison = () => {
             {/* Desktop Table */}
             <div className="hidden md:block">
               {/* Header */}
-              <div className="grid grid-cols-[1fr_100px_100px_120px] gap-0 mb-2">
+              <div className="grid grid-cols-[1fr_120px_120px_120px] gap-0 mb-2">
                 <div />
-                <div className="text-center">
-                  <span className="text-sm font-semibold text-muted-foreground">Purchase</span>
+                <div className="flex items-center justify-center">
+                  <div className="bg-card rounded-t-xl border border-b-0 border-border/60 py-3 px-2 shadow-sm w-full text-center">
+                    <span className="text-sm font-semibold text-muted-foreground">Purchase</span>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <span className="text-sm font-semibold text-muted-foreground">EMI</span>
+                <div className="flex items-center justify-center">
+                  <div className="bg-card rounded-t-xl border border-b-0 border-border/60 py-3 px-2 shadow-sm w-full text-center">
+                    <span className="text-sm font-semibold text-muted-foreground">EMI</span>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <div className="bg-card rounded-t-xl border border-b-0 border-border/60 py-3 px-2 shadow-sm">
+                <div className="flex items-center justify-center">
+                  <div className="bg-card rounded-t-xl border border-b-0 border-border/60 py-3 px-2 shadow-sm w-full text-center">
                     <span className="text-sm font-bold text-primary">rentpr</span>
                   </div>
                 </div>
@@ -55,17 +59,17 @@ const ProductComparison = () => {
               {features.map((feature, index) => (
                 <div
                   key={feature.label}
-                  className={`grid grid-cols-[1fr_100px_100px_120px] gap-0 ${
+                  className={`grid grid-cols-[1fr_120px_120px_120px] gap-0 ${
                     index < features.length - 1 ? "border-b border-border/30" : ""
                   }`}
                 >
                   <div className="py-4 flex items-center">
                     <span className="text-sm text-foreground">{feature.label}</span>
                   </div>
-                  <div className="py-4 flex items-center justify-center">
+                  <div className="py-4 flex items-center justify-center bg-card border-x border-border/60">
                     {feature.purchase ? <CheckIcon /> : <CrossIcon />}
                   </div>
-                  <div className="py-4 flex items-center justify-center">
+                  <div className="py-4 flex items-center justify-center bg-card border-x border-border/60">
                     {feature.emi ? <CheckIcon /> : <CrossIcon />}
                   </div>
                   <div className="py-4 flex items-center justify-center bg-card border-x border-border/60 shadow-sm">
@@ -73,11 +77,11 @@ const ProductComparison = () => {
                   </div>
                 </div>
               ))}
-              {/* Bottom border for rentpr column */}
-              <div className="grid grid-cols-[1fr_100px_100px_120px]">
+              {/* Bottom border for all columns */}
+              <div className="grid grid-cols-[1fr_120px_120px_120px]">
                 <div />
-                <div />
-                <div />
+                <div className="bg-card rounded-b-xl border border-t-0 border-border/60 h-3 shadow-sm" />
+                <div className="bg-card rounded-b-xl border border-t-0 border-border/60 h-3 shadow-sm" />
                 <div className="bg-card rounded-b-xl border border-t-0 border-border/60 h-3 shadow-sm" />
               </div>
             </div>
