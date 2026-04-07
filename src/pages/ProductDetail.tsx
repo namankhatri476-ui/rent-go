@@ -531,6 +531,9 @@ const ProductDetail = () => {
                   </div>
                 </div>
               )}
+
+              {/* Cancellation & Returns */}
+              <CancellationReturnsDrawer />
             </div>
           </div>
         </div>
