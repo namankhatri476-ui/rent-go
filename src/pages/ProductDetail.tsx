@@ -26,6 +26,7 @@ import { useLocation } from "@/contexts/LocationContext";
 import { getProductBySlug } from "@/data/products";
 import ProductFAQ from "@/components/ProductFAQ";
 import ProductComparison from "@/components/ProductComparison";
+import ProductReviews from "@/components/ProductReviews";
 import CancellationReturnsDrawer from "@/components/CancellationReturnsDrawer";
 
 // Pricing factors for variant-based auto slab recalculation
@@ -581,6 +582,9 @@ const ProductDetail = () => {
 
       {/* Related Products */}
       <RelatedProducts product={product} />
+
+      {/* Reviews Section */}
+      <ProductReviews productId={product.id} />
 
       {/* Comparison Section */}
       <ProductComparison />
