@@ -66,10 +66,10 @@ const ProductComparison = () => {
                   <div className="py-4 flex items-center">
                     <span className="text-sm text-foreground">{feature.label}</span>
                   </div>
-                  <div className="py-4 flex items-center justify-center">
+                  <div className="py-4 flex items-center justify-center bg-card border-x border-border/60">
                     {feature.purchase ? <CheckIcon /> : <CrossIcon />}
                   </div>
-                  <div className="py-4 flex items-center justify-center">
+                  <div className="py-4 flex items-center justify-center bg-card border-x border-border/60">
                     {feature.emi ? <CheckIcon /> : <CrossIcon />}
                   </div>
                   <div className="py-4 flex items-center justify-center bg-card border-x border-border/60 shadow-sm">
