@@ -182,18 +182,18 @@ const AdminDashboard = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {pendingProducts?.slice(0, 6).map((product) => (
-                  <div key={product.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-3 mb-2">
+                  <div key={product.id} className="p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
                       {product.images?.[0] && (
                         <img 
                           src={product.images[0]} 
                           alt={product.name}
-                          className="w-12 h-12 object-cover rounded"
+                          className="w-12 h-12 object-cover rounded flex-shrink-0"
                         />
                       )}
-                      <div>
-                        <p className="font-medium truncate">{product.name}</p>
-                        <p className="text-xs text-muted-foreground">{product.vendors?.business_name}</p>
+                      <div className="min-w-0">
+                        <span className="font-medium text-sm leading-tight line-clamp-2">{product.name}</span>
+                        <span className="text-xs text-muted-foreground block">{product.vendors?.business_name}</span>
                       </div>
                     </div>
                   </div>
