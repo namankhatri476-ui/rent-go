@@ -342,6 +342,16 @@ const ProductDetail = () => {
 
             {/* RIGHT - Product Info */}
             <div className="space-y-5">
+              {/* Location unavailability banner */}
+              {!productAvailable && selectedLocation && (
+                <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
+                  <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-destructive">Currently not delivering to {selectedLocation.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">This product is not available in your selected location. You can still browse details.</p>
+                  </div>
+                </div>
+              )}
               {product.tags?.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {product.tags.map((tag: string) => (
