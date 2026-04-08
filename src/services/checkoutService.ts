@@ -1,6 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CartItem, CheckoutBreakdown, GST_RATE } from "@/types/product";
-import { createRazorpayOrder, openRazorpayCheckout, confirmOrderAfterPayment } from "@/services/razorpayService";
+import {
+  createRazorpayPlan,
+  createRazorpaySubscription,
+  openRazorpaySubscriptionCheckout,
+  confirmOrderAfterPayment,
+} from "@/services/razorpayService";
 
 export interface CheckoutFormData {
   fullName: string;
@@ -201,10 +206,11 @@ async function ensureProductExists(
 }
 
 /**
- * Razorpay Payment Flow:
- * 1. Create Razorpay order on backend
- * 2. Open Razorpay Checkout on frontend (in-page popup)
- * 3. On success, verify signature + create order on backend
+ * Razorpay Subscription Payment Flow:
+ * 1. Create Razorpay Plan (monthly rent + GST + protection)
+ * 2. Create Razorpay Subscription with upfront addons (deposit + fees)
+ * 3. Open Razorpay Checkout with subscription_id
+ * 4. On success, verify signature + create order on backend
  */
 export async function processCheckout(
   userId: string,
@@ -226,6 +232,7 @@ export async function processCheckout(
       item: CartItem;
       orderData: Record<string, unknown>;
       payableNow: number;
+      monthlyTotal: number;
     }> = [];
 
     for (const item of items) {
@@ -249,6 +256,7 @@ export async function processCheckout(
       pendingOrders.push({
         item,
         payableNow,
+        monthlyTotal,
         orderData: {
           order_number: orderNumber,
           customer_id: userId,
@@ -275,42 +283,61 @@ export async function processCheckout(
       });
     }
 
-    // Calculate total payable amount (after coupon discount)
-    const totalPayable = pendingOrders.reduce((sum, po) => sum + po.payableNow, 0) - couponDiscount;
-
-    // Step 1: Create Razorpay order on backend
-    const razorpayOrder = await createRazorpayOrder({
-      amount: totalPayable,
-      receipt: `rcpt_${Date.now()}`,
-      notes: { userId, itemCount: String(items.length) },
-    });
-
-    if (!razorpayOrder.success || !razorpayOrder.orderId || !razorpayOrder.keyId) {
-      return {
-        success: false,
-        orderNumbers: [],
-        error: razorpayOrder.error || "Failed to create payment order",
-      };
-    }
-
-    // Step 2: Open Razorpay Checkout (in-page popup)
-    const paymentResult = await openRazorpayCheckout({
-      orderId: razorpayOrder.orderId,
-      amount: razorpayOrder.amount!,
-      currency: razorpayOrder.currency!,
-      keyId: razorpayOrder.keyId,
-      customerName: formData.fullName,
-      customerEmail: formData.email,
-      customerPhone: formData.phone,
-      description: `Rental Payment - ${items.length} item(s)`,
-    });
-
-    // Step 3: Payment successful — verify + create orders on backend
+    // For subscription flow, process each item as a separate subscription
     const orderNumbers: string[] = [];
 
     for (const po of pendingOrders) {
+      const item = po.item;
+      const monthlyRent = item.selectedPlan.monthlyRent;
+      const gst = Math.round(monthlyRent * GST_RATE);
+      const protectionFee = item.addProtectionPlan ? 99 : 0;
+      const monthlyTotal = monthlyRent + gst + protectionFee;
+
+      // Step 1: Create Razorpay Plan
+      const planResult = await createRazorpayPlan({
+        period: "monthly",
+        interval: 1,
+        item: {
+          name: `${item.product.name} - ${item.selectedPlan.label} Rental`,
+          amount: monthlyTotal, // monthly rent + GST + protection
+          currency: "INR",
+          description: `Monthly rental for ${item.product.name} (${item.selectedPlan.duration} months)`,
+        },
+        notes: { productSlug: item.product.slug, userId },
+      });
+
+      if (!planResult.success || !planResult.planId) {
+        throw new Error(planResult.error || `Failed to create plan for ${item.product.name}`);
+      }
+
+      // Step 2: Create Razorpay Subscription
+      const upfrontAmount = po.payableNow - (couponDiscount / pendingOrders.length);
+
+      const subResult = await createRazorpaySubscription({
+        plan_id: planResult.planId,
+        total_count: item.selectedPlan.duration,
+        quantity: item.quantity,
+        upfront_amount: Math.max(0, upfrontAmount),
+        notes: { userId, productName: item.product.name },
+      });
+
+      if (!subResult.success || !subResult.subscriptionId || !subResult.keyId) {
+        throw new Error(subResult.error || `Failed to create subscription for ${item.product.name}`);
+      }
+
+      // Step 3: Open Razorpay Checkout with subscription_id
+      const paymentResult = await openRazorpaySubscriptionCheckout({
+        subscriptionId: subResult.subscriptionId,
+        keyId: subResult.keyId,
+        customerName: formData.fullName,
+        customerEmail: formData.email,
+        customerPhone: formData.phone,
+        description: `${item.product.name} - Monthly Rental`,
+      });
+
+      // Step 4: Confirm order on backend
       const result = await confirmOrderAfterPayment({
-        razorpay_order_id: paymentResult.razorpay_order_id,
+        razorpay_subscription_id: paymentResult.razorpay_subscription_id,
         razorpay_payment_id: paymentResult.razorpay_payment_id,
         razorpay_signature: paymentResult.razorpay_signature,
         orderData: po.orderData,
@@ -330,7 +357,6 @@ export async function processCheckout(
     return { success: true, orderNumbers };
   } catch (error: any) {
     console.error("Checkout error:", error);
-    // If user cancelled payment, show friendly message
     if (error.message === "Payment cancelled by user") {
       return { success: false, orderNumbers: [], error: "Payment was cancelled. No order was created." };
     }
