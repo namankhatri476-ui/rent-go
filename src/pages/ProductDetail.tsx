@@ -629,30 +629,30 @@ const RelatedProducts = ({ product }: { product: any }) => {
     <section className="py-10 bg-muted/30">
       <div className="container mx-auto px-4">
         <h2 className="text-xl font-bold text-foreground mb-6">Related Products</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
           {relatedProducts.map((rp: any) => {
             const plans = (rp.rental_plans || []).filter((p: any) => p.is_active !== false);
             const lowestRent = plans.length > 0 ? Math.min(...plans.map((p: any) => p.monthly_rent)) : null;
             return (
-              <Link key={rp.id} to={`/product/${rp.slug}`} className="block group">
-                <div className="bg-card rounded-2xl border border-border/60 overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all duration-300">
-                  <div className="aspect-[4/3] relative overflow-hidden bg-muted">
+              <Link key={rp.id} to={`/product/${rp.slug}`} className="block group h-full">
+                <div className="bg-card rounded-2xl border border-border/60 overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all duration-300 h-full flex flex-col">
+                  <div className="aspect-[4/3] relative overflow-hidden bg-white">
                     {rp.images?.[0] ? (
-                      <img src={rp.images[0]} alt={rp.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img src={rp.images[0]} alt={rp.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground">No Image</div>
                     )}
                   </div>
-                  <div className="p-4">
+                  <div className="p-3 md:p-4 flex flex-col flex-1">
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{rp.brand}</p>
-                    <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors line-clamp-2 mt-0.5">{rp.name}</h3>
+                    <h3 className="font-semibold text-xs md:text-sm text-foreground group-hover:text-primary transition-colors line-clamp-2 mt-0.5 flex-1">{rp.name}</h3>
                     {lowestRent && (
-                      <div className="flex items-baseline gap-1 mt-2.5">
-                        <span className="text-lg font-bold text-primary">₹{lowestRent.toLocaleString()}</span>
-                        <span className="text-xs text-muted-foreground">/month</span>
+                      <div className="flex items-baseline gap-1 mt-2">
+                        <span className="text-base md:text-lg font-bold text-primary">₹{lowestRent.toLocaleString()}</span>
+                        <span className="text-[10px] md:text-xs text-muted-foreground">/month</span>
                       </div>
                     )}
-                    <Button variant="outline" size="sm" className="w-full mt-3 rounded-lg text-xs">View Product</Button>
+                    <Button variant="outline" size="sm" className="w-full mt-2 md:mt-3 rounded-lg text-xs">View Product</Button>
                   </div>
                 </div>
               </Link>
