@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, CreditCard, Smartphone, Building2, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import TermsAgreementModal from "@/components/TermsAgreementModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
