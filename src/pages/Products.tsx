@@ -6,7 +6,7 @@ import { useLocation } from "@/contexts/LocationContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
-import { Star, Loader2, MapPin, Truck, Shield, SlidersHorizontal, X } from "lucide-react";
+import { Star, Loader2, MapPin, Truck, Shield, SlidersHorizontal, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -115,6 +115,12 @@ const Products = () => {
     const activePlans = rentalPlans.filter(p => p.is_active !== false);
     if (activePlans.length === 0) return null;
     return Math.min(...activePlans.map(p => p.monthly_rent));
+  };
+
+  const isProductAvailableInLocation = (productId: string) => {
+    if (!selectedLocation?.id) return true; // No location selected = show all as available
+    if (!locationProductIds) return true; // Still loading
+    return locationProductIds.has(productId);
   };
 
   const activeFilterCount = (activeCategoryId && !categorySlug ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 50000 ? 1 : 0);
@@ -237,10 +243,11 @@ const Products = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {products?.map((product) => {
                 const lowestRent = getLowestRent(product.rental_plans);
+                const available = isProductAvailableInLocation(product.id);
                 
                 return (
                   <Link key={product.id} to={`/product/${product.slug}`} className="block group">
-                    <div className="bg-card rounded-2xl border border-border/60 overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all duration-300 h-full flex flex-col">
+                    <div className={`bg-card rounded-2xl border border-border/60 overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all duration-300 h-full flex flex-col ${!available ? 'opacity-80' : ''}`}>
                       <div className="aspect-[4/3] relative overflow-hidden bg-white">
                         {product.images?.[0] ? (
                           <img src={product.images[0]} alt={product.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
@@ -249,6 +256,12 @@ const Products = () => {
                         )}
                         {product.tags?.[0] && (
                           <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground border-0 text-[10px]">{product.tags[0]}</Badge>
+                        )}
+                        {!available && selectedLocation && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-destructive/90 text-destructive-foreground text-[10px] font-medium py-1.5 px-3 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3 h-3" />
+                            Not available in {selectedLocation.name}
+                          </div>
                         )}
                       </div>
                       <div className="p-4 flex-1 flex flex-col">
