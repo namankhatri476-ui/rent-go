@@ -88,6 +88,7 @@ const Checkout = () => {
     setIsProcessing(true);
 
     try {
+      console.log("[Checkout] Starting payment flow...");
       const result = await processCheckout(
         user!.id,
         items,
@@ -100,22 +101,34 @@ const Checkout = () => {
         couponDiscount
       );
 
+      console.log("[Checkout] processCheckout result:", result);
+
       if (result.success && result.orderNumbers.length > 0) {
         clearCart();
-        toast.success("Order placed successfully!", {
-          description: `Order numbers: ${result.orderNumbers.join(", ")}`
+        toast.success("🎉 Payment Successful! Order placed.", {
+          description: `Order number${result.orderNumbers.length > 1 ? 's' : ''}: ${result.orderNumbers.join(", ")}`,
+          duration: 5000,
         });
         navigate("/order-success", { state: { orderNumbers: result.orderNumbers } });
       } else {
-        toast.error("Payment failed", {
-          description: result.error || "Please try again"
+        toast.error("❌ Payment Failed", {
+          description: result.error || "Something went wrong. Please try again.",
+          duration: 6000,
         });
       }
     } catch (error: any) {
-      console.error("Checkout error:", error);
-      toast.error("An error occurred", {
-        description: error.message || "Please try again"
-      });
+      console.error("[Checkout] Error:", error);
+      if (error.message === "Payment cancelled by user") {
+        toast.info("Payment cancelled", {
+          description: "You cancelled the payment. No charges were made.",
+          duration: 4000,
+        });
+      } else {
+        toast.error("❌ Payment Error", {
+          description: error.message || "An unexpected error occurred. Please try again.",
+          duration: 6000,
+        });
+      }
     } finally {
       setIsProcessing(false);
     }
