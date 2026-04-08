@@ -115,7 +115,6 @@ const LocationDrawer = ({ open, onOpenChange }: LocationDrawerProps) => {
   };
 
   const handleClose = (val: boolean) => {
-    if (!val && !selectedLocation) return; // prevent close without selection
     onOpenChange(val);
     if (!val) resetState();
   };
