@@ -276,6 +276,12 @@ const ProductDetail = () => {
 
   const handleAddToCart = (options?: { mode?: 'rent' | 'buy'; buyPrice?: number; payAdvance?: boolean; advanceDiscountPercent?: number }) => {
     if (!requireLocation()) { toast.info("Please select your city first"); return; }
+    if (!productAvailable) {
+      toast.error("Currently not delivering to your location", {
+        description: `This product is not available in ${selectedLocation?.name}. Try selecting a different city.`
+      });
+      return;
+    }
     if (options?.mode === 'buy' && options.buyPrice) {
       const cartPlan = { id: 'buy-' + product.id, duration: 0, label: 'Buy', monthlyRent: 0, securityDeposit: 0 };
       const cartProduct = {
