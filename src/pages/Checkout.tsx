@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, CreditCard, Smartphone, Building2, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import TermsAgreementModal from "@/components/TermsAgreementModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,14 +13,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { processCheckout } from "@/services/checkoutService";
 import { toast } from "sonner";
 
-type PaymentMethod = "upi" | "card" | "netbanking";
-
 const Checkout = () => {
   const { items, getBreakdown, clearCart } = useCart();
   const { user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const breakdown = getBreakdown();
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [termsVersion, setTermsVersion] = useState<number | null>(null);
@@ -36,11 +33,6 @@ const Checkout = () => {
     city: "",
     state: "",
     pincode: "",
-    upiId: "",
-    cardNumber: "",
-    cardExpiry: "",
-    cardCvv: "",
-    bankName: ""
   });
 
   useEffect(() => {
@@ -95,7 +87,7 @@ const Checkout = () => {
         breakdown,
         {
           ...formData,
-          paymentMethod,
+          paymentMethod: "upi",
         },
         version,
         couponDiscount
@@ -221,74 +213,6 @@ const Checkout = () => {
                 </form>
               </div>
 
-              <div className="checkout-section">
-                <h2 className="font-bold text-lg text-foreground mb-6">Payment Method</h2>
-                
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
-                    <button type="button" onClick={() => setPaymentMethod("upi")}
-                      className={`p-4 rounded-xl border-2 transition-all text-center ${paymentMethod === "upi" ? "border-primary bg-secondary" : "border-border hover:border-primary/50"}`}>
-                      <Smartphone className="w-6 h-6 mx-auto mb-2 text-foreground" />
-                      <span className="text-sm font-medium text-foreground">UPI</span>
-                    </button>
-                    <button type="button" onClick={() => setPaymentMethod("card")}
-                      className={`p-4 rounded-xl border-2 transition-all text-center ${paymentMethod === "card" ? "border-primary bg-secondary" : "border-border hover:border-primary/50"}`}>
-                      <CreditCard className="w-6 h-6 mx-auto mb-2 text-foreground" />
-                      <span className="text-sm font-medium text-foreground">Card</span>
-                    </button>
-                    <button type="button" onClick={() => setPaymentMethod("netbanking")}
-                      className={`p-4 rounded-xl border-2 transition-all text-center ${paymentMethod === "netbanking" ? "border-primary bg-secondary" : "border-border hover:border-primary/50"}`}>
-                      <Building2 className="w-6 h-6 mx-auto mb-2 text-foreground" />
-                      <span className="text-sm font-medium text-foreground">Bank</span>
-                    </button>
-                  </div>
-
-                  <div className="pt-4">
-                    {paymentMethod === "upi" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="upiId">UPI ID</Label>
-                        <Input id="upiId" name="upiId" placeholder="yourname@upi" value={formData.upiId} onChange={handleInputChange} />
-                      </div>
-                    )}
-                    {paymentMethod === "card" && (
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="cardNumber">Card Number</Label>
-                          <Input id="cardNumber" name="cardNumber" placeholder="1234 5678 9012 3456" value={formData.cardNumber} onChange={handleInputChange} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="cardExpiry">Expiry Date</Label>
-                            <Input id="cardExpiry" name="cardExpiry" placeholder="MM/YY" value={formData.cardExpiry} onChange={handleInputChange} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="cardCvv">CVV</Label>
-                            <Input id="cardCvv" name="cardCvv" type="password" placeholder="***" value={formData.cardCvv} onChange={handleInputChange} />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {paymentMethod === "netbanking" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="bankName">Select Bank</Label>
-                        <Input id="bankName" name="bankName" placeholder="Enter bank name" value={formData.bankName} onChange={handleInputChange} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-6 p-4 bg-accent/10 rounded-lg border border-accent/20">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-sm text-foreground">Auto-Pay Enabled</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Monthly rent will be auto-debited starting next month. You can cancel anytime.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               <div className="lg:hidden">
                 <Button variant="hero" size="xl" className="w-full" onClick={handlePayClick} disabled={isProcessing}>
