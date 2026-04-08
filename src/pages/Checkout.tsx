@@ -92,7 +92,7 @@ const Checkout = () => {
         breakdown,
         {
           ...formData,
-          paymentMethod,
+          paymentMethod: "upi",
         },
         version,
         couponDiscount
