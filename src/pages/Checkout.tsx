@@ -96,7 +96,8 @@ const Checkout = () => {
           ...formData,
           paymentMethod,
         },
-        version
+        version,
+        couponDiscount
       );
 
       if (result.success && result.orderNumbers.length > 0) {

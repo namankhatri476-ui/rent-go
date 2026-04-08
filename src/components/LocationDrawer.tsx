@@ -121,7 +121,7 @@ const LocationDrawer = ({ open, onOpenChange }: LocationDrawerProps) => {
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
+      <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col [&>button]:z-50 [&>button]:top-5 [&>button]:right-5">
         <SheetHeader className="p-5 pb-3 border-b">
           <SheetTitle className="flex items-center gap-2 text-lg">
             <MapPin className="h-5 w-5 text-primary" />

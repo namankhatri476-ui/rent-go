@@ -51,8 +51,9 @@ const Products = () => {
 
   const activeCategoryId = selectedCategory || categoryFromSlug?.id || null;
 
+  // Fetch ALL approved products (no location filtering — show everything)
   const { data: dbProducts, isLoading } = useQuery({
-    queryKey: ['approved-products', selectedLocation?.id, activeCategoryId],
+    queryKey: ['approved-products', activeCategoryId],
     queryFn: async () => {
       let query = supabase
         .from('products')
@@ -62,21 +63,22 @@ const Products = () => {
       if (activeCategoryId) query = query.eq('category_id', activeCategoryId);
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
-      
-      if (selectedLocation?.id && data) {
-        const { data: plData } = await supabase
-          .from('product_locations')
-          .select('product_id')
-          .eq('location_id', selectedLocation.id);
-        const locationProductIds = new Set((plData || []).map(pl => pl.product_id));
-        
-        return data.filter(product => {
-          if (locationProductIds.has(product.id)) return true;
-          return product.location_id === selectedLocation.id;
-        });
-      }
       return data;
     },
+  });
+
+  // Fetch which products are available in user's selected location
+  const { data: locationProductIds } = useQuery({
+    queryKey: ['location-product-ids', selectedLocation?.id],
+    queryFn: async () => {
+      if (!selectedLocation?.id) return null;
+      const { data: plData } = await supabase
+        .from('product_locations')
+        .select('product_id')
+        .eq('location_id', selectedLocation.id);
+      return new Set((plData || []).map(pl => pl.product_id));
+    },
+    enabled: !!selectedLocation?.id,
   });
 
   const products = useMemo(() => {
