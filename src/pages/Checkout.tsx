@@ -13,14 +13,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { processCheckout } from "@/services/checkoutService";
 import { toast } from "sonner";
 
-type PaymentMethod = "upi" | "card" | "netbanking";
-
 const Checkout = () => {
   const { items, getBreakdown, clearCart } = useCart();
   const { user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const breakdown = getBreakdown();
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [termsVersion, setTermsVersion] = useState<number | null>(null);
