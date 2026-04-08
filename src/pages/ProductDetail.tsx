@@ -91,7 +91,7 @@ const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { requireLocation } = useLocation();
+  const { requireLocation, selectedLocation } = useLocation();
 
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -115,6 +115,26 @@ const ProductDetail = () => {
       return data;
     },
   });
+
+  // Check if product is available in selected location
+  const { data: isAvailableInLocation } = useQuery({
+    queryKey: ['product-location-check', dbProduct?.id, selectedLocation?.id],
+    queryFn: async () => {
+      if (!dbProduct?.id || !selectedLocation?.id) return true;
+      const { data } = await supabase
+        .from('product_locations')
+        .select('id')
+        .eq('product_id', dbProduct.id)
+        .eq('location_id', selectedLocation.id)
+        .maybeSingle();
+      // Also check legacy location_id
+      if (data) return true;
+      return dbProduct.location_id === selectedLocation.id;
+    },
+    enabled: !!dbProduct?.id && !!selectedLocation?.id,
+  });
+
+  const productAvailable = selectedLocation ? (isAvailableInLocation ?? true) : true;
 
   const staticProduct = !dbProduct && slug ? getProductBySlug(slug) : null;
   const product = dbProduct ? dbProduct : staticProduct ? {
