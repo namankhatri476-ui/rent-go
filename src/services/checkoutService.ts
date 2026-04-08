@@ -211,7 +211,8 @@ export async function processCheckout(
   items: CartItem[],
   breakdown: CheckoutBreakdown,
   formData: CheckoutFormData,
-  termsVersion?: number
+  termsVersion?: number,
+  couponDiscount: number = 0
 ): Promise<OrderResult> {
   try {
     // Save address first
@@ -274,8 +275,8 @@ export async function processCheckout(
       });
     }
 
-    // Calculate total payable amount
-    const totalPayable = pendingOrders.reduce((sum, po) => sum + po.payableNow, 0);
+    // Calculate total payable amount (after coupon discount)
+    const totalPayable = pendingOrders.reduce((sum, po) => sum + po.payableNow, 0) - couponDiscount;
 
     // Step 1: Create Razorpay order on backend
     const razorpayOrder = await createRazorpayOrder({

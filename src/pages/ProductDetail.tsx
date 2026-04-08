@@ -91,7 +91,7 @@ const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { requireLocation } = useLocation();
+  const { requireLocation, selectedLocation } = useLocation();
 
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -115,6 +115,26 @@ const ProductDetail = () => {
       return data;
     },
   });
+
+  // Check if product is available in selected location
+  const { data: isAvailableInLocation } = useQuery({
+    queryKey: ['product-location-check', dbProduct?.id, selectedLocation?.id],
+    queryFn: async () => {
+      if (!dbProduct?.id || !selectedLocation?.id) return true;
+      const { data } = await supabase
+        .from('product_locations')
+        .select('id')
+        .eq('product_id', dbProduct.id)
+        .eq('location_id', selectedLocation.id)
+        .maybeSingle();
+      // Also check legacy location_id
+      if (data) return true;
+      return dbProduct.location_id === selectedLocation.id;
+    },
+    enabled: !!dbProduct?.id && !!selectedLocation?.id,
+  });
+
+  const productAvailable = selectedLocation ? (isAvailableInLocation ?? true) : true;
 
   const staticProduct = !dbProduct && slug ? getProductBySlug(slug) : null;
   const product = dbProduct ? dbProduct : staticProduct ? {
@@ -256,6 +276,12 @@ const ProductDetail = () => {
 
   const handleAddToCart = (options?: { mode?: 'rent' | 'buy'; buyPrice?: number; payAdvance?: boolean; advanceDiscountPercent?: number }) => {
     if (!requireLocation()) { toast.info("Please select your city first"); return; }
+    if (!productAvailable) {
+      toast.error("Currently not delivering to your location", {
+        description: `This product is not available in ${selectedLocation?.name}. Try selecting a different city.`
+      });
+      return;
+    }
     if (options?.mode === 'buy' && options.buyPrice) {
       const cartPlan = { id: 'buy-' + product.id, duration: 0, label: 'Buy', monthlyRent: 0, securityDeposit: 0 };
       const cartProduct = {
@@ -316,6 +342,16 @@ const ProductDetail = () => {
 
             {/* RIGHT - Product Info */}
             <div className="space-y-5">
+              {/* Location unavailability banner */}
+              {!productAvailable && selectedLocation && (
+                <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
+                  <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-destructive">Currently not delivering to {selectedLocation.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">This product is not available in your selected location. You can still browse details.</p>
+                  </div>
+                </div>
+              )}
               {product.tags?.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {product.tags.map((tag: string) => (
