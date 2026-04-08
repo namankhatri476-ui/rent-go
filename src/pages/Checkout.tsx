@@ -33,11 +33,6 @@ const Checkout = () => {
     city: "",
     state: "",
     pincode: "",
-    upiId: "",
-    cardNumber: "",
-    cardExpiry: "",
-    cardCvv: "",
-    bankName: ""
   });
 
   useEffect(() => {
