@@ -276,7 +276,7 @@ export async function processCheckout(
           rental_duration_months: item.selectedPlan.duration,
           platform_commission: platformCommission,
           vendor_payout: vendorPayout,
-          status: "confirmed",
+          status: "pending",
           terms_accepted_at: termsVersion ? new Date().toISOString() : null,
           terms_version: termsVersion || null,
         },
