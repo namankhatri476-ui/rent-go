@@ -21,6 +21,7 @@ const Checkout = () => {
   const breakdown = getBreakdown();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [termsVersion, setTermsVersion] = useState<number | null>(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
 
