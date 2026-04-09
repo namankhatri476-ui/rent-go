@@ -70,18 +70,16 @@ const AboutProduct = ({ description, features }: { description: string; features
             </div>
           )}
         </div>
-        {!expanded && needsToggle && (
-          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+        {!expanded && (
+          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
         )}
       </div>
-      {needsToggle && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-primary text-sm font-semibold hover:underline transition-colors"
-        >
-          {expanded ? '− Read Less' : '+ Read More'}
-        </button>
-      )}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="text-primary text-sm font-semibold hover:underline transition-colors"
+      >
+        {expanded ? '− Read Less' : '+ Read More'}
+      </button>
     </div>
   );
 };
