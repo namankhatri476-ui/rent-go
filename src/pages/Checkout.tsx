@@ -77,8 +77,15 @@ const Checkout = () => {
     setIsProcessing(true);
 
     try {
+      if (!user) {
+        toast.error("Please log in to complete your order");
+        setShowAuthModal(true);
+        setIsProcessing(false);
+        return;
+      }
+
       const result = await processCheckout(
-        user?.id || "guest",
+        user.id,
         items,
         breakdown,
         {
