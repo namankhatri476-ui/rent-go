@@ -71,7 +71,7 @@ const Checkout = () => {
 
     try {
       const result = await processCheckout(
-        user!.id,
+        user?.id || "guest",
         items,
         breakdown,
         {
