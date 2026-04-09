@@ -47,14 +47,13 @@ interface RentalPlan {
 
 const AboutProduct = ({ description, features }: { description: string; features: string[] }) => {
   const [expanded, setExpanded] = useState(false);
-  const needsToggle = (description?.length || 0) > 400 || (features?.length || 0) > 5;
 
   return (
     <div className="space-y-4 pt-4 border-t border-border/50">
       <h2 className="text-lg font-bold text-foreground">About This Product</h2>
       <div className="relative">
         <div
-          className={`overflow-hidden transition-all duration-500 ease-in-out ${!expanded && needsToggle ? 'max-h-[200px]' : 'max-h-[2000px]'}`}
+          className={`overflow-hidden transition-all duration-500 ease-in-out ${!expanded ? 'max-h-[4.5em]' : 'max-h-[2000px]'}`}
         >
           <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
           {features?.length > 0 && (
