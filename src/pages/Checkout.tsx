@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, MapPin, User, Mail, Phone, Home, Building, Hash, Lock, ShieldCheck, Truck, CheckCircle2 } from "lucide-react";
 import TermsAgreementModal from "@/components/TermsAgreementModal";
+import AuthModal from "@/components/AuthModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,7 @@ const Checkout = () => {
   const breakdown = getBreakdown();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [termsVersion, setTermsVersion] = useState<number | null>(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
 
@@ -46,12 +48,12 @@ const Checkout = () => {
     }
   }, [profile]);
 
+  // Show auth modal instead of redirecting if not logged in
   useEffect(() => {
     if (!authLoading && !user) {
-      toast.error("Please sign in to checkout");
-      navigate("/auth?redirect=/checkout");
+      setShowAuthModal(true);
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -61,8 +63,7 @@ const Checkout = () => {
     e?.preventDefault();
 
     if (!user) {
-      toast.error("Please sign in to checkout");
-      navigate("/auth?redirect=/checkout");
+      setShowAuthModal(true);
       return;
     }
 
