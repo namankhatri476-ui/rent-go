@@ -352,13 +352,6 @@ const ProductDetail = () => {
                   </div>
                 </div>
               )}
-              {product.tags?.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {product.tags.map((tag: string) => (
-                    <Badge key={tag} className="bg-accent/10 text-accent border-0 text-[10px] font-semibold">{tag}</Badge>
-                  ))}
-                </div>
-              )}
 
               <div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{product.brand}</p>
