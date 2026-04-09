@@ -75,8 +75,26 @@ const CheckoutSummary = ({ onCouponChange }: CheckoutSummaryProps) => {
           </div>
         </div>
 
-        {/* Payable Now Section */}
+        {/* Items with Plan Details */}
         <div className="p-5 space-y-3">
+          {/* Rental Items - Show plan details */}
+          {rentItems.map((item) => (
+            <div key={`plan-${item.product.id}`} className="flex items-center justify-between text-sm pb-2 border-b border-dashed border-border last:border-0 last:pb-0">
+              <div className="flex items-start gap-2 min-w-0 flex-1">
+                <Package className="w-3.5 h-3.5 text-primary/60 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <span className="text-foreground font-medium block truncate max-w-[200px]">{item.product.name}</span>
+                  <span className="text-[11px] text-muted-foreground block">
+                    {item.selectedPlan.label} • {item.selectedPlan.duration} month{item.selectedPlan.duration > 1 ? "s" : ""} rental
+                  </span>
+                </div>
+              </div>
+              <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap ml-2">
+                ₹{item.selectedPlan.monthlyRent.toLocaleString()}/mo
+              </span>
+            </div>
+          ))}
+
           {buyItems.map((item) => (
             <div key={item.product.id} className="flex justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1.5">
