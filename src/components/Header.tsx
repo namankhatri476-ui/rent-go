@@ -25,6 +25,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import LocationSelector from "@/components/LocationSelector";
 import MarqueeBanner from "@/components/MarqueeBanner";
+import AuthModal from "@/components/AuthModal";
 
 const Header = () => {
   const { itemCount } = useCart();
@@ -33,6 +34,7 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const navigate = useNavigate();
   const { selectedLocation } = useLocation();
 
@@ -179,11 +181,9 @@ const Header = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Link to="/auth">
-                  <Button size="sm" className="h-8 px-4 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold">
-                    Login / Register
-                  </Button>
-                </Link>
+                <Button size="sm" className="h-8 px-4 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold" onClick={() => setAuthModalOpen(true)}>
+                  Login / Register
+                </Button>
               )}
             </div>
 
@@ -251,9 +251,7 @@ const Header = () => {
                     </button>
                   </>
                 ) : (
-                  <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                    <Button className="w-full rounded-full">Login / Register</Button>
-                  </Link>
+                  <Button className="w-full rounded-full" onClick={() => { setAuthModalOpen(true); setMobileMenuOpen(false); }}>Login / Register</Button>
                 )}
               </nav>
             </div>
