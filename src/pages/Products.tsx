@@ -211,39 +211,77 @@ const Products = () => {
       <section className="py-3 border-b border-border/50 bg-card">
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Category Filter with Subcategories */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="rounded-full text-xs gap-1.5">
-                  <SlidersHorizontal className="w-3 h-3" />
-                  Category
-                  {selectedCategories.size > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-4 w-4 p-0 flex items-center justify-center text-[9px] rounded-full">
-                      {selectedCategories.size}
-                    </Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-3" align="start">
-                <p className="text-xs font-semibold mb-2 text-foreground">Filter by Category</p>
-                <div className="space-y-1 max-h-64 overflow-y-auto">
-                  {mainCategories.map((cat) => (
-                    <div key={cat.id} className="flex items-center gap-2 py-1">
-                      <Checkbox
-                        id={`cat-${cat.id}`}
-                        checked={selectedCategories.has(cat.id)}
-                        onCheckedChange={() => toggleCategory(cat.id)}
-                      />
-                      <Label htmlFor={`cat-${cat.id}`} className="text-xs cursor-pointer flex-1">
-                        {cat.name}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
+            {/* Show category filter only when no category is selected */}
+            {selectedCategories.size === 0 && !categoryFromSlug && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="rounded-full text-xs gap-1.5">
+                    <SlidersHorizontal className="w-3 h-3" />
+                    Category
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-3" align="start">
+                  <p className="text-xs font-semibold mb-2 text-foreground">Select a Category</p>
+                  <div className="space-y-1 max-h-64 overflow-y-auto">
+                    {mainCategories.map((cat) => {
+                      const subs = getSubcategories(cat.id);
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => toggleCategory(cat.id)}
+                          className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium hover:bg-accent/50 transition-colors flex items-center justify-between"
+                        >
+                          {cat.name}
+                          {subs.length > 0 && (
+                            <span className="text-[10px] text-muted-foreground">{subs.length} sub</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
 
-            {/* Price Filter */}
+            {/* When a category is selected, show its name as a badge + subcategory chips inline */}
+            {(selectedCategories.size > 0 || categoryFromSlug) && (() => {
+              const activeCatId = categoryFromSlug?.id || Array.from(selectedCategories)[0];
+              const activeCat = mainCategories.find(c => c.id === activeCatId) || categoryFromSlug;
+              const subs = activeCatId ? getSubcategories(activeCatId) : [];
+              return (
+                <>
+                  <Badge variant="secondary" className="gap-1.5 text-xs rounded-full pr-1">
+                    {activeCat?.name || 'Category'}
+                    <button
+                      onClick={() => {
+                        setSelectedCategories(new Set());
+                      }}
+                      className="ml-0.5 rounded-full p-0.5 hover:bg-muted transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                  {subs.map(sub => {
+                    const isActive = selectedCategories.has(sub.id);
+                    return (
+                      <button
+                        key={sub.id}
+                        onClick={() => toggleCategory(sub.id)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                          isActive
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-card text-foreground border-border hover:border-primary/50'
+                        }`}
+                      >
+                        {sub.name}
+                      </button>
+                    );
+                  })}
+                </>
+              );
+            })()}
+
+            {/* Price Filter - always visible */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="rounded-full text-xs gap-1.5">
@@ -268,37 +306,6 @@ const Products = () => {
               </Button>
             )}
           </div>
-
-          {/* Subcategory chips shown below when a parent category is selected */}
-          {Array.from(selectedCategories).map(catId => {
-            const cat = mainCategories.find(c => c.id === catId);
-            if (!cat) return null;
-            const subs = getSubcategories(catId);
-            if (subs.length === 0) return null;
-            return (
-              <div key={catId} className="mt-3 border-t border-border/40 pt-3">
-                <p className="text-[11px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">{cat.name}</p>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {subs.map(sub => {
-                    const isActive = selectedCategories.has(sub.id);
-                    return (
-                      <button
-                        key={sub.id}
-                        onClick={() => toggleCategory(sub.id)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                          isActive
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-card text-foreground border-border hover:border-primary/50'
-                        }`}
-                      >
-                        {sub.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
         </div>
       </section>
 
