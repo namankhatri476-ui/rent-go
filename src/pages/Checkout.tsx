@@ -113,18 +113,6 @@ const Checkout = () => {
     }
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <main className="flex-1 flex items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -334,14 +322,6 @@ const Checkout = () => {
         open={showTerms}
         onClose={() => setShowTerms(false)}
         onAccept={handleTermsAccepted}
-      />
-
-      <AuthModal
-        open={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        title="Sign in to Checkout"
-        description="Please sign in or create an account to complete your order"
-        onSuccess={() => setShowAuthModal(false)}
       />
     </div>
   );
