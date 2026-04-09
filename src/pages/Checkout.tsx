@@ -56,7 +56,7 @@ const Checkout = () => {
   const handlePayClick = (e?: React.FormEvent) => {
     e?.preventDefault();
 
-    // Guest checkout — no login check needed
+    if (!formData.fullName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.state || !formData.pincode) {
       toast.error("Please fill in all required fields");
       return;
     }
