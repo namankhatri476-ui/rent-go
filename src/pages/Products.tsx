@@ -227,50 +227,18 @@ const Products = () => {
               <PopoverContent className="w-64 p-3" align="start">
                 <p className="text-xs font-semibold mb-2 text-foreground">Filter by Category</p>
                 <div className="space-y-1 max-h-64 overflow-y-auto">
-                  {mainCategories.map((cat) => {
-                    const subs = getSubcategories(cat.id);
-                    const isExpanded = expandedCategories.has(cat.id);
-                    const hasSubs = subs.length > 0;
-
-                    return (
-                      <div key={cat.id}>
-                        <div className="flex items-center gap-2 py-1">
-                          <Checkbox
-                            id={`cat-${cat.id}`}
-                            checked={selectedCategories.has(cat.id)}
-                            onCheckedChange={() => toggleCategory(cat.id)}
-                          />
-                          <Label htmlFor={`cat-${cat.id}`} className="text-xs cursor-pointer flex-1">
-                            {cat.name}
-                          </Label>
-                          {hasSubs && (
-                            <button
-                              onClick={() => toggleExpanded(cat.id)}
-                              className="p-0.5 hover:bg-muted rounded"
-                            >
-                              <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                            </button>
-                          )}
-                        </div>
-                        {hasSubs && isExpanded && (
-                          <div className="pl-6 space-y-1 pb-1">
-                            {subs.map(sub => (
-                              <div key={sub.id} className="flex items-center gap-2 py-0.5">
-                                <Checkbox
-                                  id={`cat-${sub.id}`}
-                                  checked={selectedCategories.has(sub.id)}
-                                  onCheckedChange={() => toggleCategory(sub.id)}
-                                />
-                                <Label htmlFor={`cat-${sub.id}`} className="text-[11px] cursor-pointer text-muted-foreground">
-                                  {sub.name}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {mainCategories.map((cat) => (
+                    <div key={cat.id} className="flex items-center gap-2 py-1">
+                      <Checkbox
+                        id={`cat-${cat.id}`}
+                        checked={selectedCategories.has(cat.id)}
+                        onCheckedChange={() => toggleCategory(cat.id)}
+                      />
+                      <Label htmlFor={`cat-${cat.id}`} className="text-xs cursor-pointer flex-1">
+                        {cat.name}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
               </PopoverContent>
             </Popover>
@@ -300,6 +268,37 @@ const Products = () => {
               </Button>
             )}
           </div>
+
+          {/* Subcategory chips shown below when a parent category is selected */}
+          {Array.from(selectedCategories).map(catId => {
+            const cat = mainCategories.find(c => c.id === catId);
+            if (!cat) return null;
+            const subs = getSubcategories(catId);
+            if (subs.length === 0) return null;
+            return (
+              <div key={catId} className="mt-3 border-t border-border/40 pt-3">
+                <p className="text-[11px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">{cat.name}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {subs.map(sub => {
+                    const isActive = selectedCategories.has(sub.id);
+                    return (
+                      <button
+                        key={sub.id}
+                        onClick={() => toggleCategory(sub.id)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                          isActive
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-card text-foreground border-border hover:border-primary/50'
+                        }`}
+                      >
+                        {sub.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
