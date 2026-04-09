@@ -62,6 +62,12 @@ const Checkout = () => {
       return;
     }
 
+    // If not logged in, show login modal first
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
     setShowTerms(true);
   };
 
