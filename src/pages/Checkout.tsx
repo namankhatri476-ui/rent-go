@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, MapPin, User, Mail, Phone, Home, Building, Hash, Lock, ShieldCheck, Truck, CheckCircle2 } from "lucide-react";
 import TermsAgreementModal from "@/components/TermsAgreementModal";
+import AuthModal from "@/components/AuthModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,7 @@ const Checkout = () => {
   const breakdown = getBreakdown();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [termsVersion, setTermsVersion] = useState<number | null>(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
 
@@ -60,6 +62,12 @@ const Checkout = () => {
       return;
     }
 
+    // If not logged in, show login modal first
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
     setShowTerms(true);
   };
 
@@ -69,8 +77,15 @@ const Checkout = () => {
     setIsProcessing(true);
 
     try {
+      if (!user) {
+        toast.error("Please log in to complete your order");
+        setShowAuthModal(true);
+        setIsProcessing(false);
+        return;
+      }
+
       const result = await processCheckout(
-        user?.id || "guest",
+        user.id,
         items,
         breakdown,
         {
@@ -321,6 +336,17 @@ const Checkout = () => {
         open={showTerms}
         onClose={() => setShowTerms(false)}
         onAccept={handleTermsAccepted}
+      />
+
+      <AuthModal
+        open={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => {
+          setShowAuthModal(false);
+          toast.success("Logged in! You can now proceed with payment.");
+          // After login, auto-show terms to continue checkout
+          setTimeout(() => setShowTerms(true), 500);
+        }}
       />
     </div>
   );
