@@ -8,24 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, FolderTree } from 'lucide-react';
+import { Plus, Pencil, Trash2, FolderTree, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 const AdminCategories = () => {
@@ -38,6 +29,7 @@ const AdminCategories = () => {
     description: '',
     image_url: '',
     is_active: true,
+    parent_id: null as string | null,
   });
 
   const { data: categories, isLoading } = useQuery({
@@ -52,8 +44,13 @@ const AdminCategories = () => {
     },
   });
 
+  // Separate main categories and subcategories
+  const mainCategories = categories?.filter(c => !c.parent_id) || [];
+  const getSubcategories = (parentId: string) => 
+    categories?.filter(c => c.parent_id === parentId) || [];
+
   const createMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+    mutationFn: async (data: any) => {
       const { error } = await supabase.from('categories').insert(data);
       if (error) throw error;
     },
@@ -69,7 +66,7 @@ const AdminCategories = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
       const { error } = await supabase.from('categories').update(data).eq('id', id);
       if (error) throw error;
     },
@@ -94,19 +91,13 @@ const AdminCategories = () => {
       toast.success('Category deleted successfully');
     },
     onError: (error) => {
-      toast.error('Failed to delete category. It may have products associated.');
+      toast.error('Failed to delete category. It may have products or subcategories associated.');
       console.error(error);
     },
   });
 
   const resetForm = () => {
-    setFormData({
-      name: '',
-      slug: '',
-      description: '',
-      image_url: '',
-      is_active: true,
-    });
+    setFormData({ name: '', slug: '', description: '', image_url: '', is_active: true, parent_id: null });
     setEditingCategory(null);
     setIsDialogOpen(false);
   };
@@ -119,16 +110,15 @@ const AdminCategories = () => {
       description: category.description || '',
       image_url: category.image_url || '',
       is_active: category.is_active,
+      parent_id: category.parent_id || null,
     });
     setIsDialogOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Auto-generate slug if empty
     const slug = formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-');
-    const dataToSubmit = { ...formData, slug };
+    const dataToSubmit = { ...formData, slug, parent_id: formData.parent_id || null };
 
     if (editingCategory) {
       updateMutation.mutate({ id: editingCategory.id, data: dataToSubmit });
@@ -137,13 +127,65 @@ const AdminCategories = () => {
     }
   };
 
+  const CategoryRow = ({ category, level = 0 }: { category: any; level?: number }) => {
+    const subs = getSubcategories(category.id);
+    return (
+      <>
+        <TableRow key={category.id}>
+          <TableCell className="font-medium">
+            <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 24}px` }}>
+              {level > 0 && <ChevronRight className="w-3 h-3 text-muted-foreground" />}
+              {category.image_url && (
+                <img src={category.image_url} alt={category.name} className="w-8 h-8 object-cover rounded" />
+              )}
+              <span>{category.name}</span>
+              {level === 0 && subs.length > 0 && (
+                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                  {subs.length} sub
+                </span>
+              )}
+            </div>
+          </TableCell>
+          <TableCell className="text-muted-foreground">{category.slug}</TableCell>
+          <TableCell className="max-w-xs truncate">{category.description || '-'}</TableCell>
+          <TableCell>
+            <span className={`px-2 py-1 rounded-full text-xs ${
+              category.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+            }`}>
+              {category.is_active ? 'Active' : 'Inactive'}
+            </span>
+          </TableCell>
+          <TableCell>{format(new Date(category.created_at), 'MMM dd, yyyy')}</TableCell>
+          <TableCell>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="icon" onClick={() => handleEdit(category)}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost" size="icon" className="text-destructive"
+                onClick={() => {
+                  if (confirm('Are you sure you want to delete this category?')) {
+                    deleteMutation.mutate(category.id);
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </TableCell>
+        </TableRow>
+        {subs.map(sub => <CategoryRow key={sub.id} category={sub} level={level + 1} />)}
+      </>
+    );
+  };
+
   return (
     <AdminLayout>
       <div className="p-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">Category Management</h1>
-            <p className="text-muted-foreground">Manage rental product categories</p>
+            <p className="text-muted-foreground">Manage rental product categories & subcategories</p>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -155,37 +197,51 @@ const AdminCategories = () => {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>
-                  {editingCategory ? 'Edit Category' : 'Add Category'}
-                </DialogTitle>
+                <DialogTitle>{editingCategory ? 'Edit Category' : 'Add Category'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
+                  <Label htmlFor="parent_id">Parent Category (optional)</Label>
+                  <Select
+                    value={formData.parent_id || 'none'}
+                    onValueChange={(val) => setFormData({ ...formData, parent_id: val === 'none' ? null : val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="None (Main Category)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None (Main Category)</SelectItem>
+                      {mainCategories
+                        .filter(c => c.id !== editingCategory?.id)
+                        .map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
                   <Input
-                    id="name"
-                    value={formData.name}
+                    id="name" value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., Printers"
-                    required
+                    placeholder="e.g., Washing Machines" required
                   />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="slug">Slug</Label>
                   <Input
-                    id="slug"
-                    value={formData.slug}
+                    id="slug" value={formData.slug}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    placeholder="e.g., printers (auto-generated if empty)"
+                    placeholder="e.g., washing-machines (auto-generated if empty)"
                   />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
-                    id="description"
-                    value={formData.description}
+                    id="description" value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Category description..."
                   />
@@ -194,8 +250,7 @@ const AdminCategories = () => {
                 <div className="space-y-2">
                   <Label htmlFor="image_url">Image URL</Label>
                   <Input
-                    id="image_url"
-                    value={formData.image_url}
+                    id="image_url" value={formData.image_url}
                     onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                     placeholder="https://..."
                   />
@@ -204,23 +259,15 @@ const AdminCategories = () => {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="is_active">Active</Label>
                   <Switch
-                    id="is_active"
-                    checked={formData.is_active}
+                    id="is_active" checked={formData.is_active}
                     onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                   />
                 </div>
 
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                  >
-                    {createMutation.isPending || updateMutation.isPending 
-                      ? 'Saving...' 
-                      : editingCategory ? 'Update' : 'Create'}
+                  <Button type="button" variant="outline" onClick={resetForm}>Cancel</Button>
+                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                    {createMutation.isPending || updateMutation.isPending ? 'Saving...' : editingCategory ? 'Update' : 'Create'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -228,7 +275,6 @@ const AdminCategories = () => {
           </Dialog>
         </div>
 
-        {/* Categories Table */}
         <Card>
           <CardHeader>
             <CardTitle>Categories ({categories?.length || 0})</CardTitle>
@@ -255,60 +301,8 @@ const AdminCategories = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {categories?.map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-3">
-                          {category.image_url && (
-                            <img 
-                              src={category.image_url} 
-                              alt={category.name}
-                              className="w-8 h-8 object-cover rounded"
-                            />
-                          )}
-                          {category.name}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{category.slug}</TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {category.description || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          category.is_active 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {category.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(category.created_at), 'MMM dd, yyyy')}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(category)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
-                            onClick={() => {
-                              if (confirm('Are you sure you want to delete this category?')) {
-                                deleteMutation.mutate(category.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                  {mainCategories.map(cat => (
+                    <CategoryRow key={cat.id} category={cat} />
                   ))}
                 </TableBody>
               </Table>

@@ -6,20 +6,22 @@ import { useLocation } from "@/contexts/LocationContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
-import { Star, Loader2, MapPin, Truck, Shield, SlidersHorizontal, X, AlertTriangle } from "lucide-react";
+import { Star, Loader2, MapPin, Truck, Shield, SlidersHorizontal, X, AlertTriangle, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { printerProducts } from "@/data/products";
 
 const Products = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const { selectedLocation } = useLocation();
   const [searchParams] = useSearchParams();
   const categorySlug = searchParams.get('category');
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const { data: categoryFromSlug } = useQuery({
     queryKey: ['category-by-slug', categorySlug],
@@ -27,7 +29,7 @@ const Products = () => {
       if (!categorySlug) return null;
       const { data, error } = await supabase
         .from('categories')
-        .select('id, name, slug')
+        .select('id, name, slug, parent_id')
         .eq('slug', categorySlug)
         .maybeSingle();
       if (error) throw error;
@@ -36,12 +38,12 @@ const Products = () => {
     enabled: !!categorySlug,
   });
 
-  const { data: categories } = useQuery({
-    queryKey: ['all-categories'],
+  const { data: allCategories } = useQuery({
+    queryKey: ['all-categories-with-subs'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
-        .select('id, name, slug')
+        .select('id, name, slug, parent_id')
         .eq('is_active', true)
         .order('name');
       if (error) throw error;
@@ -49,25 +51,51 @@ const Products = () => {
     },
   });
 
-  const activeCategoryId = selectedCategory || categoryFromSlug?.id || null;
+  const mainCategories = allCategories?.filter(c => !c.parent_id) || [];
+  const getSubcategories = (parentId: string) =>
+    allCategories?.filter(c => c.parent_id === parentId) || [];
 
-  // Fetch ALL approved products (no location filtering — show everything)
+  // Build active category IDs for filtering (includes selected + their subcategories)
+  const activeCategoryIds = useMemo(() => {
+    const ids = new Set<string>();
+    
+    // From URL slug
+    if (categoryFromSlug) {
+      ids.add(categoryFromSlug.id);
+      // If it's a main category, include its subcategories too
+      if (!categoryFromSlug.parent_id) {
+        getSubcategories(categoryFromSlug.id).forEach(sub => ids.add(sub.id));
+      }
+    }
+    
+    // From manual selection
+    selectedCategories.forEach(id => {
+      ids.add(id);
+      // If a main category is selected, include its subcategories
+      const subs = getSubcategories(id);
+      subs.forEach(sub => ids.add(sub.id));
+    });
+    
+    return ids;
+  }, [selectedCategories, categoryFromSlug, allCategories]);
+
   const { data: dbProducts, isLoading } = useQuery({
-    queryKey: ['approved-products', activeCategoryId],
+    queryKey: ['approved-products', Array.from(activeCategoryIds)],
     queryFn: async () => {
       let query = supabase
         .from('products')
         .select(`*, categories (name), rental_plans (*)`)
         .eq('status', 'approved')
         .eq('in_stock', true);
-      if (activeCategoryId) query = query.eq('category_id', activeCategoryId);
+      if (activeCategoryIds.size > 0) {
+        query = query.in('category_id', Array.from(activeCategoryIds));
+      }
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
-  // Fetch which products are available in user's selected location
   const { data: locationProductIds } = useQuery({
     queryKey: ['location-product-ids', selectedLocation?.id],
     queryFn: async () => {
@@ -83,9 +111,11 @@ const Products = () => {
 
   const products = useMemo(() => {
     const dbProductsList = dbProducts || [];
-    const activeCatName = categories?.find(c => c.id === activeCategoryId)?.name || categoryFromSlug?.name;
+    const activeCatNames = new Set(
+      allCategories?.filter(c => activeCategoryIds.has(c.id)).map(c => c.name.toLowerCase()) || []
+    );
     const staticProducts = printerProducts
-      .filter(p => !activeCategoryId || p.category.toLowerCase() === (activeCatName?.toLowerCase() || ''))
+      .filter(p => activeCategoryIds.size === 0 || activeCatNames.has(p.category.toLowerCase()))
       .map(p => ({
         id: p.id, name: p.name, brand: p.brand, slug: p.slug, description: p.description,
         images: p.images, rating: p.rating, review_count: p.reviewCount, tags: p.tags,
@@ -99,7 +129,6 @@ const Products = () => {
     const uniqueStaticProducts = staticProducts.filter(p => !dbSlugs.has(p.slug));
     let allProducts = [...dbProductsList, ...uniqueStaticProducts];
 
-    // Price filter
     allProducts = allProducts.filter(p => {
       const plans = (p.rental_plans || []).filter((rp: any) => rp.is_active !== false);
       if (plans.length === 0) return true;
@@ -108,7 +137,7 @@ const Products = () => {
     });
 
     return allProducts;
-  }, [dbProducts, activeCategoryId, categories, categoryFromSlug, priceRange]);
+  }, [dbProducts, activeCategoryIds, allCategories, priceRange]);
 
   const getLowestRent = (rentalPlans: any[]) => {
     if (!rentalPlans || rentalPlans.length === 0) return null;
@@ -118,23 +147,39 @@ const Products = () => {
   };
 
   const isProductAvailableInLocation = (productId: string) => {
-    if (!selectedLocation?.id) return true; // No location selected = show all as available
-    if (!locationProductIds) return true; // Still loading
+    if (!selectedLocation?.id) return true;
+    if (!locationProductIds) return true;
     return locationProductIds.has(productId);
   };
 
-  const activeFilterCount = (activeCategoryId && !categorySlug ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 50000 ? 1 : 0);
+  const toggleCategory = (id: string) => {
+    setSelectedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleExpanded = (id: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const activeFilterCount = (selectedCategories.size > 0 ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 50000 ? 1 : 0);
 
   const clearFilters = () => {
-    setSelectedCategory(null);
+    setSelectedCategories(new Set());
     setPriceRange([0, 50000]);
+    setExpandedCategories(new Set());
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
 
-      {/* Page Header */}
       <section className="py-6 border-b border-border/50 bg-card">
         <div className="container mx-auto px-4">
           <nav className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
@@ -145,7 +190,7 @@ const Products = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-foreground">
-                {categoryFromSlug?.name || (categories?.find(c => c.id === activeCategoryId)?.name) || 'Products'} on Rent {selectedLocation ? `in ${selectedLocation.name}` : ''}
+                {categoryFromSlug?.name || 'Products'} on Rent {selectedLocation ? `in ${selectedLocation.name}` : ''}
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {products?.length || 0} products available
@@ -166,28 +211,66 @@ const Products = () => {
       <section className="py-3 border-b border-border/50 bg-card">
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Category Filter */}
+            {/* Category Filter with Subcategories */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="rounded-full text-xs gap-1.5">
                   <SlidersHorizontal className="w-3 h-3" />
                   Category
-                  {activeCategoryId && !categorySlug && <Badge variant="secondary" className="ml-1 h-4 w-4 p-0 flex items-center justify-center text-[9px] rounded-full">1</Badge>}
+                  {selectedCategories.size > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-4 w-4 p-0 flex items-center justify-center text-[9px] rounded-full">
+                      {selectedCategories.size}
+                    </Badge>
+                  )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-56 p-3" align="start">
+              <PopoverContent className="w-64 p-3" align="start">
                 <p className="text-xs font-semibold mb-2 text-foreground">Filter by Category</p>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {categories?.map((cat) => (
-                    <div key={cat.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`cat-${cat.id}`}
-                        checked={activeCategoryId === cat.id}
-                        onCheckedChange={(checked) => setSelectedCategory(checked ? cat.id : null)}
-                      />
-                      <Label htmlFor={`cat-${cat.id}`} className="text-xs cursor-pointer">{cat.name}</Label>
-                    </div>
-                  ))}
+                <div className="space-y-1 max-h-64 overflow-y-auto">
+                  {mainCategories.map((cat) => {
+                    const subs = getSubcategories(cat.id);
+                    const isExpanded = expandedCategories.has(cat.id);
+                    const hasSubs = subs.length > 0;
+
+                    return (
+                      <div key={cat.id}>
+                        <div className="flex items-center gap-2 py-1">
+                          <Checkbox
+                            id={`cat-${cat.id}`}
+                            checked={selectedCategories.has(cat.id)}
+                            onCheckedChange={() => toggleCategory(cat.id)}
+                          />
+                          <Label htmlFor={`cat-${cat.id}`} className="text-xs cursor-pointer flex-1">
+                            {cat.name}
+                          </Label>
+                          {hasSubs && (
+                            <button
+                              onClick={() => toggleExpanded(cat.id)}
+                              className="p-0.5 hover:bg-muted rounded"
+                            >
+                              <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            </button>
+                          )}
+                        </div>
+                        {hasSubs && isExpanded && (
+                          <div className="pl-6 space-y-1 pb-1">
+                            {subs.map(sub => (
+                              <div key={sub.id} className="flex items-center gap-2 py-0.5">
+                                <Checkbox
+                                  id={`cat-${sub.id}`}
+                                  checked={selectedCategories.has(sub.id)}
+                                  onCheckedChange={() => toggleCategory(sub.id)}
+                                />
+                                <Label htmlFor={`cat-${sub.id}`} className="text-[11px] cursor-pointer text-muted-foreground">
+                                  {sub.name}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </PopoverContent>
             </Popover>
@@ -203,14 +286,7 @@ const Products = () => {
               </PopoverTrigger>
               <PopoverContent className="w-64 p-4" align="start">
                 <p className="text-xs font-semibold mb-3 text-foreground">Monthly Rent Range</p>
-                <Slider
-                  min={0}
-                  max={50000}
-                  step={500}
-                  value={priceRange}
-                  onValueChange={(val) => setPriceRange(val as [number, number])}
-                  className="mb-3"
-                />
+                <Slider min={0} max={50000} step={500} value={priceRange} onValueChange={(val) => setPriceRange(val as [number, number])} className="mb-3" />
                 <div className="flex justify-between text-[10px] text-muted-foreground">
                   <span>₹{priceRange[0].toLocaleString()}</span>
                   <span>₹{priceRange[1].toLocaleString()}</span>
@@ -267,13 +343,11 @@ const Products = () => {
                       <div className="p-4 flex-1 flex flex-col">
                         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{product.brand}</p>
                         <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors line-clamp-2 mt-0.5">{product.name}</h3>
-                        
                         <div className="flex items-center gap-1 mt-2">
                           <Star className="w-3.5 h-3.5 fill-accent text-accent" />
                           <span className="text-xs font-medium">{product.rating || 0}</span>
                           <span className="text-[10px] text-muted-foreground">({product.review_count || 0})</span>
                         </div>
-
                         <div className="mt-auto pt-3">
                           {lowestRent && (
                             <div className="flex items-baseline gap-1">
