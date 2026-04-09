@@ -296,6 +296,8 @@ const Header = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </>
   );
 };
