@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, MapPin, User, Mail, Phone, Home, Building, Hash, Lock, ShieldCheck, Truck, CheckCircle2 } from "lucide-react";
 import TermsAgreementModal from "@/components/TermsAgreementModal";
-import TermsAgreementModal from "@/components/TermsAgreementModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
