@@ -16,12 +16,11 @@ import { toast } from "sonner";
 
 const Checkout = () => {
   const { items, getBreakdown, clearCart } = useCart();
-  const { user, profile, isLoading: authLoading } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const breakdown = getBreakdown();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [termsVersion, setTermsVersion] = useState<number | null>(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
 
@@ -48,12 +47,7 @@ const Checkout = () => {
     }
   }, [profile]);
 
-  // Show auth modal instead of redirecting if not logged in
-  useEffect(() => {
-    if (!authLoading && !user) {
-      setShowAuthModal(true);
-    }
-  }, [user, authLoading]);
+  // No login required — guest checkout allowed
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -62,12 +56,7 @@ const Checkout = () => {
   const handlePayClick = (e?: React.FormEvent) => {
     e?.preventDefault();
 
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
-
-    if (!formData.fullName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.state || !formData.pincode) {
+    // Guest checkout — no login check needed
       toast.error("Please fill in all required fields");
       return;
     }
