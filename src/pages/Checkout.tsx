@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, MapPin, User, Mail, Phone, Home, Building, Hash, Lock, ShieldCheck, Truck, CheckCircle2 } from "lucide-react";
 import TermsAgreementModal from "@/components/TermsAgreementModal";
-import AuthModal from "@/components/AuthModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,12 +15,11 @@ import { toast } from "sonner";
 
 const Checkout = () => {
   const { items, getBreakdown, clearCart } = useCart();
-  const { user, profile, isLoading: authLoading } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const breakdown = getBreakdown();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [termsVersion, setTermsVersion] = useState<number | null>(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
 
@@ -48,12 +46,7 @@ const Checkout = () => {
     }
   }, [profile]);
 
-  // Show auth modal instead of redirecting if not logged in
-  useEffect(() => {
-    if (!authLoading && !user) {
-      setShowAuthModal(true);
-    }
-  }, [user, authLoading]);
+  // No login required — guest checkout allowed
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -61,11 +54,6 @@ const Checkout = () => {
 
   const handlePayClick = (e?: React.FormEvent) => {
     e?.preventDefault();
-
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
 
     if (!formData.fullName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.state || !formData.pincode) {
       toast.error("Please fill in all required fields");
@@ -82,7 +70,7 @@ const Checkout = () => {
 
     try {
       const result = await processCheckout(
-        user!.id,
+        user?.id || "guest",
         items,
         breakdown,
         {
@@ -123,18 +111,6 @@ const Checkout = () => {
       setIsProcessing(false);
     }
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <main className="flex-1 flex items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
 
   if (items.length === 0) {
     return (
@@ -345,14 +321,6 @@ const Checkout = () => {
         open={showTerms}
         onClose={() => setShowTerms(false)}
         onAccept={handleTermsAccepted}
-      />
-
-      <AuthModal
-        open={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        title="Sign in to Checkout"
-        description="Please sign in or create an account to complete your order"
-        onSuccess={() => setShowAuthModal(false)}
       />
     </div>
   );

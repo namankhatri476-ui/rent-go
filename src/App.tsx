@@ -80,23 +80,9 @@ const App = () => (
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/legal/:slug" element={<LegalPage />} />
               
-              {/* Protected checkout */}
-              <Route
-                path="/checkout"
-                element={
-                  <ProtectedRoute>
-                    <Checkout />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/order-success"
-                element={
-                  <ProtectedRoute>
-                    <OrderSuccess />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Guest checkout allowed */}
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/order-success" element={<OrderSuccess />} />
               <Route
                 path="/my-orders"
                 element={
