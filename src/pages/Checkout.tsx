@@ -346,6 +346,14 @@ const Checkout = () => {
         onClose={() => setShowTerms(false)}
         onAccept={handleTermsAccepted}
       />
+
+      <AuthModal
+        open={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="Sign in to Checkout"
+        description="Please sign in or create an account to complete your order"
+        onSuccess={() => setShowAuthModal(false)}
+      />
     </div>
   );
 };
