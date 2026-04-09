@@ -1,12 +1,17 @@
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { CheckCircle, Package, Calendar, ArrowRight, FileText } from "lucide-react";
+import { CheckCircle, Package, Calendar, ArrowRight, FileText, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import AuthModal from "@/components/AuthModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 const OrderSuccess = () => {
   const location = useLocation();
   const orderNumbers: string[] = location.state?.orderNumbers || [];
+  const { user } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -57,6 +62,25 @@ const OrderSuccess = () => {
               </div>
             </div>
 
+            {/* Create Account / Login Prompt — only for guest users */}
+            {!user && (
+              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 text-left space-y-3 animate-fade-in" style={{ animationDelay: "0.25s" }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <UserPlus className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-foreground">Create Account to Track Your Order</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Sign up or log in to track your order status, manage rentals, and get updates on delivery.
+                </p>
+                <Button onClick={() => setShowAuthModal(true)} className="gap-2 mt-2">
+                  <UserPlus className="w-4 h-4" />
+                  Create Account / Sign In
+                </Button>
+              </div>
+            )}
+
             <div className="bg-accent/5 border border-accent/20 rounded-2xl p-6 text-left space-y-3 animate-fade-in" style={{ animationDelay: "0.3s" }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
@@ -95,6 +119,14 @@ const OrderSuccess = () => {
       </main>
 
       <Footer />
+
+      <AuthModal
+        open={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="Create Your Account"
+        description="Sign up to track your order and manage your rentals"
+        onSuccess={() => setShowAuthModal(false)}
+      />
     </div>
   );
 };
