@@ -337,6 +337,17 @@ const Checkout = () => {
         onClose={() => setShowTerms(false)}
         onAccept={handleTermsAccepted}
       />
+
+      <AuthModal
+        open={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => {
+          setShowAuthModal(false);
+          toast.success("Logged in! You can now proceed with payment.");
+          // After login, auto-show terms to continue checkout
+          setTimeout(() => setShowTerms(true), 500);
+        }}
+      />
     </div>
   );
 };
