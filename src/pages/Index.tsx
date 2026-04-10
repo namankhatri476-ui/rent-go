@@ -33,8 +33,9 @@ const Index = () => {
         .from('categories')
         .select('*')
         .eq('is_active', true)
+        .is('parent_id', null)
         .order('name')
-        .limit(20);
+        .limit(4);
       if (error) throw error;
       return data;
     },

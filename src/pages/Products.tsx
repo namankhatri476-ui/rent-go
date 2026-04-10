@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "@/contexts/LocationContext";
@@ -18,6 +18,7 @@ const Products = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const { selectedLocation } = useLocation();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const categorySlug = searchParams.get('category');
 
   const { data: categoryFromSlug } = useQuery({
@@ -164,6 +165,10 @@ const Products = () => {
   const clearCategory = () => {
     setSelectedMainCategory(null);
     setSelectedSubcategories(new Set());
+    // Also clear the URL param if navigated via ?category=
+    if (categorySlug) {
+      navigate('/products', { replace: true });
+    }
   };
 
   const clearFilters = () => {
