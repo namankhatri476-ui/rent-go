@@ -53,9 +53,13 @@ const AdminProducts = () => {
       productId: string; status: ProductStatus; rejectionReason?: string;
       protectionPlanPrice?: number; protectionValue?: number | null;
     }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('You must be logged in to perform this action');
+
       const updateData: any = { status };
       if (status === 'approved') {
         updateData.approved_at = new Date().toISOString();
+        updateData.approved_by = user.id;
         if (protectionPlanPrice !== undefined) updateData.protection_plan_price = protectionPlanPrice;
         if (protectionValue !== undefined) updateData.protection_value = protectionValue;
       }
@@ -63,8 +67,12 @@ const AdminProducts = () => {
         updateData.rejection_reason = rejectionReason;
       }
       
-      const { error } = await supabase.from('products').update(updateData).eq('id', productId);
-      if (error) throw error;
+      const { error, count } = await supabase
+        .from('products')
+        .update(updateData)
+        .eq('id', productId)
+        .select();
+      if (error) throw new Error(error.message || 'Database update failed');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
@@ -73,9 +81,10 @@ const AdminProducts = () => {
       setSelectedProduct(null);
       setRejectionReason('');
     },
-    onError: (error) => {
-      toast.error('Failed to update product status');
-      console.error(error);
+    onError: (error: any) => {
+      const msg = error?.message || 'Failed to update product status';
+      toast.error(msg);
+      console.error('Product status update error:', error);
     },
   });
 
